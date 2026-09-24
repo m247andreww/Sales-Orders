@@ -202,21 +202,28 @@ def cmd_salesperson_history(args: argparse.Namespace) -> int:
     return 0
 
 
+def cmd_employee_leaves(args: argparse.Namespace) -> int:
+    with unit_of_work(_actor(args)) as conn:
+        moved = service.employee_leaves(conn, args.email, date.fromisoformat(args.last_day))
+    print(f"{args.email} deactivated; {moved} account(s) moved to House from the day after {args.last_day}")
+    return 0
+
+
+def cmd_allocate_account(args: argparse.Namespace) -> int:
+    with unit_of_work(_actor(args)) as conn:
+        service.allocate_account(
+            conn, args.customer, args.email, date.fromisoformat(args.from_date), args.source
+        )
+    print(f"{args.customer} allocated to {args.email} from {args.from_date}")
+    return 0
+
+
 def _pct(value: Any) -> str:
     return "-" if value is None else f"{value:.1f}"
 
 
-def build_parser() -> argparse.ArgumentParser:
-    parser = argparse.ArgumentParser(prog="sales-orders", description=__doc__)
-    parser.add_argument("--actor", help="who is acting (audit trail); default $SALES_ORDERS_ACTOR or OS user")
-    sub = parser.add_subparsers(dest="command", required=True)
-
-    sub.add_parser("migrate", help="upgrade the database to the latest schema").set_defaults(func=cmd_migrate)
-
-    p = sub.add_parser("load-master-data", help="load employees, suppliers, customers, FX rates")
-    p.add_argument("file")
-    p.set_defaults(func=cmd_load_master_data)
-
+def _add_order_commands(sub: Any) -> None:
+    """Orders: load, show, workflow, checks."""
     p = sub.add_parser("load-order", help="record an order submission (idempotent)")
     p.add_argument("file")
     p.set_defaults(func=cmd_load_order)
@@ -231,6 +238,21 @@ def build_parser() -> argparse.ArgumentParser:
     p.add_argument("--reason", required=True)
     p.set_defaults(func=cmd_status)
 
+    p = sub.add_parser("check", help="record the outcome of a pre-processing check")
+    p.add_argument("order_number")
+    p.add_argument("check_type")
+    p.add_argument("status", choices=["passed", "failed", "waived", "not_applicable", "pending"])
+    p.add_argument("--notes")
+    p.add_argument("--evidence", help="sha256 of a supporting document already recorded")
+    p.set_defaults(func=cmd_check)
+
+
+def _add_master_data_commands(sub: Any) -> None:
+    """Master data, AW SOs Register / SN, account ownership."""
+    p = sub.add_parser("load-master-data", help="load employees, suppliers, customers, FX rates")
+    p.add_argument("file")
+    p.set_defaults(func=cmd_load_master_data)
+
     p = sub.add_parser("load-register", help="load an AW SOs Register CSV export and source pending SNs")
     p.add_argument("file")
     p.add_argument("--source", required=True, help="where the export came from, e.g. the Google Sheet id")
@@ -241,6 +263,27 @@ def build_parser() -> argparse.ArgumentParser:
     p.add_argument("--sn", help="SN chosen by a person, e.g. SN260533 (must be on the Register)")
     p.set_defaults(func=cmd_assign_sn)
 
+    p = sub.add_parser("salesperson-history", help="propose account-allocation history from the Register")
+    p.add_argument("--client", help="one customer (name as on the Register)")
+    p.set_defaults(func=cmd_salesperson_history)
+
+    p = sub.add_parser(
+        "allocate-account", help="allocate a customer account (e.g. from House) to a salesperson"
+    )
+    p.add_argument("customer", help="customer legal name")
+    p.add_argument("email", help="salesperson email")
+    p.add_argument("from_date", help="YYYY-MM-DD")
+    p.add_argument("--source", default="CFO", help="authority for the allocation")
+    p.set_defaults(func=cmd_allocate_account)
+
+    p = sub.add_parser("employee-leaves", help="leaver routine: move their accounts to House, deactivate")
+    p.add_argument("email")
+    p.add_argument("last_day", help="YYYY-MM-DD, last working day")
+    p.set_defaults(func=cmd_employee_leaves)
+
+
+def _add_arr_commands(sub: Any) -> None:
+    """ARR position, ARR refs."""
     p = sub.add_parser("arr", help="ARR position by contract")
     p.add_argument("--as-of", help="YYYY-MM-DD (default today)")
     p.set_defaults(func=cmd_arr)
@@ -254,17 +297,15 @@ def build_parser() -> argparse.ArgumentParser:
     p = sub.add_parser("arr-outstanding", help="report processed recurring lines missing an ARR ref")
     p.set_defaults(func=cmd_arr_outstanding)
 
-    p = sub.add_parser("salesperson-history", help="propose account-allocation history from the Register")
-    p.add_argument("--client", help="one customer (name as on the Register)")
-    p.set_defaults(func=cmd_salesperson_history)
 
-    p = sub.add_parser("check", help="record the outcome of a pre-processing check")
-    p.add_argument("order_number")
-    p.add_argument("check_type")
-    p.add_argument("status", choices=["passed", "failed", "waived", "not_applicable", "pending"])
-    p.add_argument("--notes")
-    p.add_argument("--evidence", help="sha256 of a supporting document already recorded")
-    p.set_defaults(func=cmd_check)
+def build_parser() -> argparse.ArgumentParser:
+    parser = argparse.ArgumentParser(prog="sales-orders", description=__doc__)
+    parser.add_argument("--actor", help="who is acting (audit trail); default $SALES_ORDERS_ACTOR or OS user")
+    sub = parser.add_subparsers(dest="command", required=True)
+    sub.add_parser("migrate", help="upgrade the database to the latest schema").set_defaults(func=cmd_migrate)
+    _add_order_commands(sub)
+    _add_master_data_commands(sub)
+    _add_arr_commands(sub)
     return parser
 
 

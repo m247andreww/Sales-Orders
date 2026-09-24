@@ -47,6 +47,8 @@ sales-orders show SO-000001
 sales-orders arr --as-of 2026-10-31                         # ARR by contract (after approval)
 sales-orders arr-outstanding                                # processed recurring lines missing an ARR ref
 sales-orders link-arr SN269001 3 TST001-26                  # attach ARR ref after processing
+sales-orders employee-leaves person@managed.co.uk 2026-10-31   # leaver: accounts -> House
+sales-orders allocate-account "Customer Ltd" person@managed.co.uk 2027-01-01   # House -> salesperson
 ```
 
 The test order is **synthetic** (no real customer data). It deliberately covers every pattern found in
@@ -96,14 +98,16 @@ CI runs all three on every push (`.github/workflows/ci.yml`).
 | B | AW SOs stays on its current account: **accepted risk**, mitigated by the Register mirror | ADR 0003 |
 | C | NN = customer **not pre-existing when the salesperson was allocated**; E = pre-existing. Mismatches are warnings | migration 0007 |
 | D | ARR ref follows processing: never blocks; error after processing, reported daily | migration 0006, `arr-outstanding` |
+| E | House = finance-controlled; leavers' accounts go to House until reallocated; House/Legacy orders are E | migration 0008, `employee-leaves`, `allocate-account` |
+| F | Azure on hold; alternatives compared | ADR 0004 |
 
 **Still needed**
 
 | # | Decision |
 |---|---|
-| 1 | Source of account-allocation history (CRM? ARR file "AM" column?), or confirm the Register-derived proposal |
-| 2 | NN/E rule for House / Legacy / Auto Renew / Cust Success accounts |
-| 3 | Hosting: Azure on hold; alternatives under review |
+| 1 | Source of account-ownership history (CRM? ARR file "AM" column?), or confirm the Register-derived proposal |
+| 2 | Are "Auto Renew" and "Cust Success" House accounts, or something else? |
+| 3 | Hosting provider (ADR 0004) |
 
 ## Roadmap
 

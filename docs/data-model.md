@@ -128,7 +128,7 @@ Every transition is recorded in `sales_order_status_history` with who and why.
 | `STALE_FX_RATE` | warning | FX rate older than `max_fx_rate_age_days` at receipt |
 | `CHECK_FAILED` | error | A pre-processing check was recorded as failed |
 
-Errors block approval unless the rule's `blocks_approval` is false in `sales.exception_rule` (the catalogue of every rule); warnings inform. `ARR_LINE_NO_ARR_REF` is a warning before processing and an error after, and never blocks (CFO decision). `REPORTING_CATEGORY_MISMATCH`, `NO_ACCOUNT_ALLOCATION`, `SALESPERSON_NOT_ACCOUNT_OWNER` (warnings): NN/E is checked against `customer_account_allocation`: NN when the customer had no order before the account was allocated to its owner. Add a rule = add one `UNION ALL` branch in a new migration.
+Errors block approval unless the rule's `blocks_approval` is false in `sales.exception_rule` (the catalogue of every rule); warnings inform. `ARR_LINE_NO_ARR_REF` is a warning before processing and an error after, and never blocks (CFO decision). `REPORTING_CATEGORY_MISMATCH`, `NO_ACCOUNT_ALLOCATION`, `SALESPERSON_NOT_ACCOUNT_OWNER` (warnings): NN/E is checked against `customer_account_allocation`: NN when the customer had no order before the account was allocated to its owner; House/Legacy accounts (not allocated to a salesperson) are always E. `OWNER_HAS_LEFT` (warning): an inactive employee still owns accounts. Routines: `sales.employee_leaves()` (accounts to House), `sales.allocate_account()`. Add a rule = add one `UNION ALL` branch in a new migration.
 
 ## GL, products, ARR and SN (migration 0004)
 

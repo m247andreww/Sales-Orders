@@ -868,6 +868,25 @@ def arr_refs_outstanding(conn: Connection) -> list[dict[str, Any]]:
     ).fetchall()
 
 
+def employee_leaves(conn: Connection, email: str, last_day: date) -> int:
+    """Leaver routine: close the leaver's accounts on their last day, move them to House (finance) from the
+    next day, and deactivate the employee. One audited transaction. Returns the number of accounts moved."""
+    row = _required(
+        _one(conn, "SELECT sales.employee_leaves(%s, %s) AS moved", (email, last_day)), "employee_leaves"
+    )
+    return int(row["moved"])
+
+
+def allocate_account(
+    conn: Connection, customer_legal_name: str, email: str, from_date: date, source: str
+) -> None:
+    """Give a customer account (typically from House) to a salesperson from a date."""
+    conn.execute(
+        "SELECT sales.allocate_account(%s, %s, %s, %s)",
+        (_customer_id(conn, customer_legal_name), email, from_date, source),
+    )
+
+
 def register_salesperson_history(conn: Connection, client: str | None = None) -> list[dict[str, Any]]:
     """Evidence for building account-allocation history: a proposal to confirm, never auto-loaded."""
     return conn.execute(

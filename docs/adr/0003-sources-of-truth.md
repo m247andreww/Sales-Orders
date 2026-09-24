@@ -50,6 +50,19 @@ when (one owner at a time; non-person owners allowed). Warnings, never blocks:
 `sales-orders salesperson-history` proposes allocation history from the Register for confirmation; it is
 never loaded automatically.
 
+## House and Legacy accounts (CFO, 2026-09-24)
+
+- **House** = controlled by finance, not allocated to a salesperson. **When a salesperson leaves, all of
+  their accounts go to House until a new salesperson is allocated** (`sales-orders employee-leaves`,
+  then `sales-orders allocate-account`). Both are single audited transactions.
+- **Legacy** = historic Register label (salesperson left before this policy). Kept for history only.
+- Orders on House/Legacy accounts are **E**, never NN. A named salesperson on a House account order is
+  flagged (`SALESPERSON_NOT_ACCOUNT_OWNER`); an inactive owner still holding accounts is flagged
+  (`OWNER_HAS_LEFT`).
+- A salesperson taking over a House account inherits a pre-existing customer, so their orders on it are E.
+- **Auto Renew** and **Cust Success** appear on the Register as owners (35 NN/E-coded orders, all Auto
+  Renew, 9 of them coded NN) but are not defined; the database refuses them as owners until they are.
+
 ## ARR ref follows processing (CFO, 2026-09-24)
 
 A missing ARR ref never blocks approval. It is a warning before processing and an **error** after,

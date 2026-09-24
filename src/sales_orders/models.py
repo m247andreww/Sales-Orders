@@ -135,7 +135,9 @@ class AccountAllocationIn(StrictModel):
 
     customer_legal_name: NonEmpty
     owner_email: EmailStr | None = None
-    house_account: str | None = None  # non-person owner: House, Legacy, Auto Renew, Cust Success
+    house_account: str | None = (
+        None  # non-person owner: House (finance; leavers go here) or Legacy (historic)
+    )
     allocated_from: date
     allocated_to: date | None = None
     source: NonEmpty  # 'CRM', 'CFO', 'inferred from Register (confirmed by CFO)'
