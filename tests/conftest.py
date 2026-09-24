@@ -73,6 +73,15 @@ def conn(database_url: str) -> Iterator[Connection]:
             yield connection
 
 
+CFO = "andrew.whitford@managed.co.uk"  # the only approver (migration 0003)
+FINANCE = "test.finance@example.com"  # an ordinary employee from the test master data
+
+
+def act_as(conn: Connection, actor: str) -> None:
+    """Switch the acting user for the rest of the test transaction."""
+    set_actor(conn, actor)
+
+
 def fixture_json(name: str) -> dict[str, Any]:
     data: dict[str, Any] = json.loads((FIXTURES / name).read_text(encoding="utf-8"))
     return data

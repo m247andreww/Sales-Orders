@@ -176,6 +176,7 @@ class OrderLineIn(StrictModel):
     unit_cost: Money  # in cost_currency, per billing period
     fx_rate: FxRateRef | None = None
     unit_sell: Money  # in order currency, per billing period
+    margin_rationale: str | None = None  # required (here or at order level) if sold below cost
     notes: str | None = None
 
     @model_validator(mode="after")
@@ -214,7 +215,7 @@ class OrderSubmissionIn(StrictModel):
     submitted_by_email: EmailStr
     account_manager_email: EmailStr | None = None
     is_expedited: bool = False
-    margin_exception_reason: str | None = None
+    margin_exception_reason: str | None = None  # order-level rationale for any loss
     stated_totals: StatedTotalsIn | None = None
     notes: str | None = None
     documents: tuple[DocumentIn, ...] = ()

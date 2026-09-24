@@ -111,7 +111,6 @@ def cmd_check(args: argparse.Namespace) -> int:
             args.order_number,
             check_type=args.check_type,
             status=args.status,
-            checked_by_email=args.by,
             notes=args.notes,
             evidence_sha256=args.evidence,
         )
@@ -152,7 +151,6 @@ def build_parser() -> argparse.ArgumentParser:
     p.add_argument("order_number")
     p.add_argument("check_type")
     p.add_argument("status", choices=["passed", "failed", "waived", "not_applicable", "pending"])
-    p.add_argument("--by", required=True, help="email of the employee who performed the check")
     p.add_argument("--notes")
     p.add_argument("--evidence", help="sha256 of a supporting document already recorded")
     p.set_defaults(func=cmd_check)

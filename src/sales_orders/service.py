@@ -444,8 +444,8 @@ def _insert_line(
         INSERT INTO sales.sales_order_line
             (sales_order_id, line_number, product_id, sku, description, line_category_code, supplier_id,
              supplier_quote_id, quantity, billing_frequency_code, billing_periods, cost_currency_code,
-             unit_cost_in_cost_currency, fx_rate_id, unit_sell, notes)
-        VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
+             unit_cost_in_cost_currency, fx_rate_id, unit_sell, margin_rationale, notes)
+        VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
         """,
         (
             order_id,
@@ -463,6 +463,7 @@ def _insert_line(
             line.unit_cost,
             fx_rate_id,
             line.unit_sell,
+            line.margin_rationale,
             line.notes,
         ),
     )
@@ -508,21 +509,21 @@ def record_check(
     *,
     check_type: str,
     status: str,
-    checked_by_email: str,
     notes: str | None = None,
     evidence_sha256: str | None = None,
 ) -> None:
+    """Record a check outcome. The checker is always the acting employee (set by the database)."""
     order_id = _order_id(conn, order_number)
-    checker = _employee_id(conn, checked_by_email)
     evidence = _document_id(conn, evidence_sha256) if evidence_sha256 else None
     updated = conn.execute(
         """
         UPDATE sales.sales_order_check
-           SET check_status_code = %s, checked_by_employee_id = %s, checked_at = now(),
-               notes = COALESCE(%s, notes), evidence_document_id = COALESCE(%s, evidence_document_id)
+           SET check_status_code = %s,
+               notes = COALESCE(%s, notes),
+               evidence_document_id = COALESCE(%s, evidence_document_id)
          WHERE sales_order_id = %s AND check_type_code = %s
         """,
-        (status, checker, notes, evidence, order_id, check_type),
+        (status, notes, evidence, order_id, check_type),
     )
     if updated.rowcount != 1:
         raise SalesOrderError(f"order {order_number} has no {check_type!r} check")

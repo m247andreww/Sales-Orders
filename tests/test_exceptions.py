@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from typing import Any
 
-from conftest import load
+from conftest import CFO, FINANCE, act_as, load
 
 from sales_orders import service
 from sales_orders.db import Connection
@@ -42,36 +42,61 @@ def test_stated_totals_within_tolerance(
     assert _rules(conn, order_json) == set()
 
 
-def test_negative_line_margin(
+def test_loss_line_without_rationale(
     conn: Connection, master_data: MasterDataIn, order_json: dict[str, Any]
 ) -> None:
     order_json["lines"][1]["unit_sell"] = "600.00"
     order_json.pop("stated_totals")
-    assert _rules(conn, order_json) == {"NEGATIVE_LINE_MARGIN"}
-
-
-def test_low_margin_warns_and_requires_approval(
-    conn: Connection, master_data: MasterDataIn, order_json: dict[str, Any]
-) -> None:
-    order_json["lines"] = [order_json["lines"][2]]  # CSP line alone: 9.14% GM
-    order_json.pop("stated_totals")
     result = load(conn, order_json)
     assert {e["rule_code"] for e in service.order_exceptions(conn, result.order_number)} == {
-        "LOW_ORDER_MARGIN"
+        "LOSS_LINE_NO_RATIONALE"
     }
     assert "margin_approval" in _checks(conn, result.order_number)
 
 
-def test_margin_exception_reason_clears_warning(
+def test_loss_line_with_line_rationale(
+    conn: Connection, master_data: MasterDataIn, order_json: dict[str, Any]
+) -> None:
+    order_json["lines"][1]["unit_sell"] = "600.00"
+    order_json["lines"][1]["margin_rationale"] = "PM day discounted to win the managed service"
+    order_json.pop("stated_totals")
+    result = load(conn, order_json)
+    assert service.order_exceptions(conn, result.order_number) == []
+    assert "margin_approval" in _checks(conn, result.order_number)  # still needs CFO sign-off
+
+
+def test_order_loss_without_rationale(
     conn: Connection, master_data: MasterDataIn, order_json: dict[str, Any]
 ) -> None:
     order_json["lines"] = [order_json["lines"][2]]
+    order_json["lines"][0]["unit_sell"] = "15.00"  # CSP below cost
+    order_json["lines"][0]["margin_rationale"] = "line-level note only"
     order_json.pop("stated_totals")
+    assert _rules(conn, order_json) == {"ORDER_LOSS_NO_RATIONALE"}
+
+
+def test_order_rationale_covers_everything(
+    conn: Connection, master_data: MasterDataIn, order_json: dict[str, Any]
+) -> None:
+    order_json["lines"] = [order_json["lines"][2]]
+    order_json["lines"][0]["unit_sell"] = "15.00"
     order_json["margin_exception_reason"] = "Strategic CSP win approved by CFO"
+    order_json.pop("stated_totals")
     assert _rules(conn, order_json) == set()
 
 
+def test_low_but_positive_margin_is_not_an_exception(
+    conn: Connection, master_data: MasterDataIn, order_json: dict[str, Any]
+) -> None:
+    order_json["lines"] = [order_json["lines"][2]]  # CSP alone: 9.14% GM, no minimum any more
+    order_json.pop("stated_totals")
+    result = load(conn, order_json)
+    assert service.order_exceptions(conn, result.order_number) == []
+    assert "margin_approval" not in _checks(conn, result.order_number)
+
+
 def test_high_risk_customer(conn: Connection, master_data: MasterDataIn, order_json: dict[str, Any]) -> None:
+    act_as(conn, CFO)  # non-standard terms are CFO-only
     conn.execute(
         """UPDATE sales.customer_credit_terms SET effective_to = DATE '2026-05-31'
             WHERE customer_id = (SELECT customer_id FROM sales.customer)"""
@@ -80,10 +105,9 @@ def test_high_risk_customer(conn: Connection, master_data: MasterDataIn, order_j
         """INSERT INTO sales.customer_credit_terms
                (customer_id, effective_from, recurring_terms_days, recurring_payment_method_code,
                 one_off_terms_days, one_off_prepayment_required, risk_rating_code, is_non_standard,
-                reason, approved_by_employee_id, approved_at)
+                reason)
            SELECT customer_id, DATE '2026-06-01', 30, 'direct_debit', 0, true, 'high', true,
-                  'Customer entered a CVA', (SELECT employee_id FROM sales.employee
-                                             WHERE email = 'test.cfo@example.com'), now()
+                  'Customer entered a Company Voluntary Arrangement'
              FROM sales.customer"""
     )
     number = load(conn, order_json).order_number
@@ -111,7 +135,9 @@ def test_supplier_not_approved(
 
 
 def test_stale_fx_rate(conn: Connection, master_data: MasterDataIn, order_json: dict[str, Any]) -> None:
-    order_json["source_email"]["received_at"] = "2026-09-30T10:00:00+01:00"
+    order_json["source_email"]["received_at"] = (
+        "2026-10-20T10:00:00+01:00"  # 40 days after the rate; limit 28
+    )
     assert _rules(conn, order_json) == {"STALE_FX_RATE"}
 
 
@@ -124,12 +150,8 @@ def test_missing_signed_order(
 
 def test_failed_check(conn: Connection, master_data: MasterDataIn, order_json: dict[str, Any]) -> None:
     number = load(conn, order_json).order_number
+    act_as(conn, FINANCE)
     service.record_check(
-        conn,
-        number,
-        check_type="direct_debit_mandate",
-        status="failed",
-        checked_by_email="test.finance@example.com",
-        notes="No mandate on file",
+        conn, number, check_type="direct_debit_mandate", status="failed", notes="No mandate on file"
     )
     assert {e["rule_code"] for e in service.order_exceptions(conn, number)} == {"CHECK_FAILED"}

@@ -78,22 +78,26 @@ def _supplier_account(conn: Connection, order_id: int, _s: OrderSubmissionIn) ->
     return None
 
 
-def _margin(conn: Connection, order_id: int, _s: OrderSubmissionIn) -> tuple[str, str] | None:
+def _loss(conn: Connection, order_id: int, _s: OrderSubmissionIn) -> tuple[str, str] | None:
+    """No minimum margin (CFO, 2026-09-24), but any sale below cost needs CFO approval."""
     row = conn.execute(
         """
-        SELECT s.gross_margin_pct, p.numeric_value AS min_pct
-          FROM sales.v_sales_order_summary s
-          CROSS JOIN sales.policy_setting p
-         WHERE s.sales_order_id = %s AND p.setting_key = 'min_order_gm_pct'
+        SELECT count(*) FILTER (WHERE l.gross_margin < 0) AS loss_lines,
+               COALESCE(sum(l.gross_margin), 0)           AS order_margin
+          FROM sales.sales_order_line l
+         WHERE l.sales_order_id = %s
         """,
         (order_id,),
     ).fetchone()
-    if row is None or row["gross_margin_pct"] is None:
+    if row is None:
         return None
-    gm: Decimal = row["gross_margin_pct"]
-    minimum: Decimal = row["min_pct"]
-    if gm < minimum:
-        return ("margin_approval", f"Order GM {gm}% is below policy minimum {minimum}%")
+    loss_lines: int = row["loss_lines"]
+    order_margin: Decimal = row["order_margin"]
+    if loss_lines or order_margin < 0:
+        return (
+            "margin_approval",
+            f"{loss_lines} line(s) below cost; order margin {order_margin}. CFO approval required",
+        )
     return None
 
 
@@ -104,7 +108,7 @@ RULES: tuple[CheckRule, ...] = (
     _gdap,
     _direct_debit,
     _supplier_account,
-    _margin,
+    _loss,
 )
 
 

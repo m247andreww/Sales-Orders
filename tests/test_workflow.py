@@ -6,24 +6,18 @@ from typing import Any
 
 import psycopg
 import pytest
-from conftest import load, savepoint_rejects
+from conftest import CFO, FINANCE, act_as, load, savepoint_rejects
 
 from sales_orders import service
 from sales_orders.db import Connection
 from sales_orders.models import MasterDataIn
 
-FINANCE = "test.finance@example.com"
-
 
 def _pass_all_checks(conn: Connection, order_number: str) -> None:
+    act_as(conn, FINANCE)
     for c in service.order_checks(conn, order_number):
         service.record_check(
-            conn,
-            order_number,
-            check_type=c["check_type_code"],
-            status="passed",
-            checked_by_email=FINANCE,
-            notes="evidence seen",
+            conn, order_number, check_type=c["check_type_code"], status="passed", notes="evidence seen"
         )
 
 
@@ -31,6 +25,7 @@ def _approved_order(conn: Connection, order_json: dict[str, Any]) -> str:
     number = load(conn, order_json).order_number
     service.change_status(conn, number, "validated", "reviewed")
     _pass_all_checks(conn, number)
+    act_as(conn, CFO)
     service.change_status(conn, number, "approved", "all checks passed")
     return number
 
@@ -53,6 +48,7 @@ def test_approval_blocked_while_checks_pending(
 ) -> None:
     number = load(conn, order_json).order_number
     service.change_status(conn, number, "validated", "reviewed")
+    act_as(conn, CFO)
     assert "checks are unresolved" in _status_change_fails(conn, number, "approved")
 
 
@@ -64,6 +60,7 @@ def test_approval_blocked_by_error_exception(
     number = load(conn, order_json).order_number
     service.change_status(conn, number, "validated", "reviewed")
     _pass_all_checks(conn, number)
+    act_as(conn, CFO)
     assert "error-level exceptions" in _status_change_fails(conn, number, "approved")
 
 

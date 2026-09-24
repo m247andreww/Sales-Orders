@@ -5,7 +5,7 @@ from __future__ import annotations
 from typing import Any
 
 import pytest
-from conftest import load, savepoint_rejects
+from conftest import CFO, act_as, load, savepoint_rejects
 from psycopg import sql
 
 from sales_orders import service
@@ -95,7 +95,8 @@ def test_credit_terms_cannot_overlap(conn: Connection, master_data: MasterDataIn
     assert "customer_credit_terms_no_overlap" in msg
 
 
-def test_non_standard_terms_need_reason_and_approver(conn: Connection, master_data: MasterDataIn) -> None:
+def test_non_standard_terms_need_reason(conn: Connection, master_data: MasterDataIn) -> None:
+    act_as(conn, CFO)
     msg = savepoint_rejects(
         conn,
         """INSERT INTO sales.customer_credit_terms (customer_id, effective_from, effective_to,
@@ -113,10 +114,10 @@ def test_audit_log_is_append_only(conn: Connection, master_data: MasterDataIn) -
 
 
 def test_waived_check_needs_note(conn: Connection, order_id: int) -> None:
+    act_as(conn, CFO)
     msg = savepoint_rejects(
         conn,
-        """UPDATE sales.sales_order_check SET check_status_code = 'waived', notes = NULL,
-                  checked_by_employee_id = (SELECT min(employee_id) FROM sales.employee), checked_at = now()
+        """UPDATE sales.sales_order_check SET check_status_code = 'waived', notes = NULL
             WHERE sales_order_id = %s""",
         (order_id,),
     )
