@@ -51,8 +51,9 @@ non-standard terms, record them with reason and approver.
 - **ARR:** the ARR ref follows processing and never blocks approval. When the ARR file assigns it,
   `sales-orders link-arr <SN> <line> <ARR ref>`. Run `sales-orders arr-outstanding` daily and report every
   line it lists as an error. Part-period co-term charges are `arr_treatment: "stub"`.
-- **Reporting category:** NN = net new customer, E = existing customer. Report any
-  REPORTING_CATEGORY_MISMATCH warning; never silently recode.
+- **Reporting category:** NN = customer not pre-existing when the salesperson was allocated the account;
+  E = pre-existing. Report REPORTING_CATEGORY_MISMATCH / NO_ACCOUNT_ALLOCATION /
+  SALESPERSON_NOT_ACCOUNT_OWNER warnings; never silently recode.
 
 ## 6. Load and review
 

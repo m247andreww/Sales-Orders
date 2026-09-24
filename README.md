@@ -94,15 +94,16 @@ CI runs all three on every push (`.github/workflows/ci.yml`).
 
 | A | This database is the system of record **from 24 Sep 2026**; the SQLite build is defunct | ADR 0003 |
 | B | AW SOs stays on its current account: **accepted risk**, mitigated by the Register mirror | ADR 0003 |
-| C | NN = net new customer, E = existing customer; mismatches are warnings | migration 0006 |
+| C | NN = customer **not pre-existing when the salesperson was allocated**; E = pre-existing. Mismatches are warnings | migration 0007 |
 | D | ARR ref follows processing: never blocks; error after processing, reported daily | migration 0006, `arr-outstanding` |
 
 **Still needed**
 
 | # | Decision |
 |---|---|
-| 1 | Confirm the net-new window: 12 months (current practice) or strictly the first order (0) |
-| 2 | Private networking vs office IP allow-list; where scheduled syncs run |
+| 1 | Source of account-allocation history (CRM? ARR file "AM" column?), or confirm the Register-derived proposal |
+| 2 | NN/E rule for House / Legacy / Auto Renew / Cust Success accounts |
+| 3 | Hosting: Azure on hold; alternatives under review |
 
 ## Roadmap
 

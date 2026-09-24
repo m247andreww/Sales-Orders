@@ -190,6 +190,18 @@ def cmd_arr_outstanding(args: argparse.Namespace) -> int:
     return 1  # non-zero so a scheduled run flags it
 
 
+def cmd_salesperson_history(args: argparse.Namespace) -> int:
+    with unit_of_work(_actor(args)) as conn:
+        rows = service.register_salesperson_history(conn, args.client)
+    print("PROPOSAL ONLY: first/last order each salesperson handled, from the AW SOs Register.")
+    print("Confirm allocation dates before loading them as account_allocations master data.")
+    for r in rows:
+        print(
+            f"  {r['client']:<30} {r['salesperson'] or '-':<22} {r['first_order']} .. {r['last_order']}  ({r['orders']} orders)"
+        )
+    return 0
+
+
 def _pct(value: Any) -> str:
     return "-" if value is None else f"{value:.1f}"
 
@@ -241,6 +253,10 @@ def build_parser() -> argparse.ArgumentParser:
 
     p = sub.add_parser("arr-outstanding", help="report processed recurring lines missing an ARR ref")
     p.set_defaults(func=cmd_arr_outstanding)
+
+    p = sub.add_parser("salesperson-history", help="propose account-allocation history from the Register")
+    p.add_argument("--client", help="one customer (name as on the Register)")
+    p.set_defaults(func=cmd_salesperson_history)
 
     p = sub.add_parser("check", help="record the outcome of a pre-processing check")
     p.add_argument("order_number")

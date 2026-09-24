@@ -223,6 +223,24 @@ def load_master_data(conn: Connection, data: MasterDataIn) -> None:
             ),
         )
 
+    for al in data.account_allocations:
+        customer_id = _customer_id(conn, al.customer_legal_name)
+        owner = _employee_id(conn, al.owner_email) if al.owner_email else None
+        exists = _one(
+            conn,
+            """SELECT 1 FROM sales.customer_account_allocation
+                WHERE customer_id = %s AND allocated_from = %s""",
+            (customer_id, al.allocated_from),
+        )
+        if exists:
+            continue  # history: change it by closing a period and adding a new one
+        conn.execute(
+            """INSERT INTO sales.customer_account_allocation
+                   (customer_id, employee_id, house_account, allocated_from, allocated_to, source)
+               VALUES (%s, %s, %s, %s, %s, %s)""",
+            (customer_id, owner, al.house_account, al.allocated_from, al.allocated_to, al.source),
+        )
+
     for fx in data.fx_rates:
         conn.execute(
             """
@@ -847,6 +865,16 @@ def arr_refs_outstanding(conn: Connection) -> list[dict[str, Any]]:
     """Processed recurring lines still missing their ARR ref (the monitored 'future error')."""
     return conn.execute(
         "SELECT * FROM sales.v_arr_ref_outstanding ORDER BY days_outstanding DESC NULLS LAST, order_number, line_number"
+    ).fetchall()
+
+
+def register_salesperson_history(conn: Connection, client: str | None = None) -> list[dict[str, Any]]:
+    """Evidence for building account-allocation history: a proposal to confirm, never auto-loaded."""
+    return conn.execute(
+        """SELECT client, salesperson, first_order, last_order, orders FROM sales.v_register_salesperson_history
+            WHERE %(client)s::text IS NULL OR client_key = sales.normalised_name(%(client)s)
+            ORDER BY client_key, first_order""",
+        {"client": client},
     ).fetchall()
 
 

@@ -86,5 +86,5 @@ These are the owner's stated preferences; follow them in every session.
 - **ISAM** = Internal Sales Account Manager — submits orders to New Orders; the Financial Controller processes.
 - **SN** = sales order number from AW SOs: YY + 4-digit counter (SN260533); legacy 4-digit; LO / CA suffixes.
 - **LO** = Last Order (reversal of the contract being renewed). **CA** = cancellation.
-- **NN** = net new customer, **E** = existing customer (CFO). Net-new window is `new_customer_window_months` (default 12).
+- **NN** = net new: the customer was NOT pre-existing when the salesperson was allocated to the account; **E** = it was (CFO). Needs `customer_account_allocation`; never infer allocations without CFO confirmation.
 - **CVA** = Company Voluntary Arrangement (UK insolvency procedure; treat as high credit risk). Not to be confused with CVL (Creditors' Voluntary Liquidation).

@@ -33,15 +33,22 @@ AW SOs (the SN master) is owned by a personal Gmail account. The CFO has decided
 `sales.register_entry` with a sync log (`sales.register_sync`), so the database always holds the
 Register as at its last sync. Sync regularly; the copy is only as current as the last sync.
 
-## Reporting categories: NN = net new customer, E = existing customer (CFO, 2026-09-24)
+## Reporting categories NN / E (CFO, 2026-09-24, refined)
 
-Tested against the Register (Jan 2024 to Sep 2026):
-- Strictly ("NN only if no earlier order"), 171 of 172 "Expansion NN" and 18 of 18 "Churn NN" rows are miscoded.
-- As practised, NN tracks "first 12 months as a customer" far better (91 of 116 measurable "Expansion NN").
-- The Register's own "New Logo" column contradicts the suffix on 91 rows (73 "Existing" coded NN, 18 "New Logo" coded E).
+**Net new (NN) = the customer was not pre-existing at the time the salesperson was allocated to the
+account; Existing (E) = it was.** It is about who won the customer, not the customer's age.
 
-So the window is `policy_setting.new_customer_window_months` (default 12; 0 = strict first order), and a
-mismatch is a warning (`REPORTING_CATEGORY_MISMATCH`), never a block. The CFO should confirm the window.
+Evidence (Register, Jan 2024 to Sep 2026; allocation date approximated by the first order each salesperson
+handled for the customer, because the Register does not record allocations):
+- 284 of 302 NN/E rows agree with this rule (94%). The 18 disagreements are candidate miscodes.
+- Earlier interpretations fitted far worse ("first order only": under 40%; "first 12 months": about 55%).
+- 34 rows are owned by House / Legacy / Auto Renew / Cust Success, where the rule needs a decision.
+
+Implementation (migration 0007): `sales.customer_account_allocation` holds who owned each account from
+when (one owner at a time; non-person owners allowed). Warnings, never blocks:
+`REPORTING_CATEGORY_MISMATCH`, `NO_ACCOUNT_ALLOCATION` (cannot verify), `SALESPERSON_NOT_ACCOUNT_OWNER`.
+`sales-orders salesperson-history` proposes allocation history from the Register for confirmation; it is
+never loaded automatically.
 
 ## ARR ref follows processing (CFO, 2026-09-24)
 

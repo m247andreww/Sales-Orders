@@ -130,6 +130,23 @@ class ArrContractIn(StrictModel):
     notice_period_days: int | None = Field(default=None, ge=0)
 
 
+class AccountAllocationIn(StrictModel):
+    """Who owned the customer account, and when. Exactly one of owner_email / house_account."""
+
+    customer_legal_name: NonEmpty
+    owner_email: EmailStr | None = None
+    house_account: str | None = None  # non-person owner: House, Legacy, Auto Renew, Cust Success
+    allocated_from: date
+    allocated_to: date | None = None
+    source: NonEmpty  # 'CRM', 'CFO', 'inferred from Register (confirmed by CFO)'
+
+    @model_validator(mode="after")
+    def _one_owner(self) -> AccountAllocationIn:
+        if (self.owner_email is None) == (self.house_account is None):
+            raise ValueError("give exactly one of owner_email or house_account")
+        return self
+
+
 class CustomerIn(StrictModel):
     legal_name: NonEmpty
     trading_name: str | None = None
@@ -167,6 +184,7 @@ class MasterDataIn(StrictModel):
     customers: tuple[CustomerIn, ...] = ()
     products: tuple[ProductIn, ...] = ()
     arr_contracts: tuple[ArrContractIn, ...] = ()
+    account_allocations: tuple[AccountAllocationIn, ...] = ()
     fx_rates: tuple[FxRateIn, ...] = ()
 
 

@@ -204,6 +204,14 @@
       "notice_period_days": 90
     }
   ],
+  "account_allocations": [
+    {
+      "customer_legal_name": "Test Customer Ltd",
+      "owner_email": "test.territory@example.com",
+      "allocated_from": "2026-01-01",
+      "source": "test fixture"
+    }
+  ],
   "fx_rates": [
     {
       "from_currency": "USD",

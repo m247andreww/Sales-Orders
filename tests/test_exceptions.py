@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from typing import Any
 
-from conftest import CFO, FINANCE, act_as, load
+from conftest import CFO, FINANCE, act_as, load, savepoint_rejects
 
 from sales_orders import service
 from sales_orders.db import Connection
@@ -166,42 +166,74 @@ def _register_history(conn: Connection, first_order: str) -> None:
     )
 
 
-def test_nn_on_existing_customer_is_flagged(
+# Fixture: Test Customer's account was allocated to the territory manager on 2026-01-01.
+
+
+def test_nn_on_customer_pre_existing_at_allocation(
     conn: Connection, master_data: MasterDataIn, order_json: dict[str, Any]
 ) -> None:
-    _register_history(conn, "2024-03-01")  # customer since 2024: existing
+    _register_history(conn, "2024-03-01")  # customer before the salesperson was allocated: existing
     order_json.update(order_type="VOLUME", reporting_category="EXPANSION_NN")
-    number = load(conn, order_json).order_number
-    exceptions = service.order_exceptions(conn, number)
+    exceptions = service.order_exceptions(conn, load(conn, order_json).order_number)
     assert [(e["rule_code"], e["severity"]) for e in exceptions] == [
         ("REPORTING_CATEGORY_MISMATCH", "warning")
     ]
-    assert "expected EXPANSION_E" in exceptions[0]["message"]
+    assert (
+        "was pre-existing when the account was allocated on 2026-01-01: expected EXPANSION_E"
+        in exceptions[0]["message"]
+    )
 
 
-def test_e_on_new_customer_is_flagged(
+def test_e_on_customer_won_by_the_salesperson(
     conn: Connection, master_data: MasterDataIn, order_json: dict[str, Any]
 ) -> None:
-    order_json.update(order_type="VOLUME", reporting_category="EXPANSION_E")  # no earlier orders at all
+    _register_history(conn, "2026-03-01")  # first order after allocation: the salesperson won it
+    order_json.update(order_type="VOLUME", reporting_category="EXPANSION_E")
     exceptions = service.order_exceptions(conn, load(conn, order_json).order_number)
     assert [e["rule_code"] for e in exceptions] == ["REPORTING_CATEGORY_MISMATCH"]
     assert "expected EXPANSION_NN" in exceptions[0]["message"]
 
 
-def test_nn_within_new_customer_window_is_correct(
+def test_correct_nn_and_e_raise_nothing(
     conn: Connection, master_data: MasterDataIn, order_json: dict[str, Any]
 ) -> None:
-    _register_history(conn, "2026-03-01")  # 6 months before: still net new under the 12-month window
+    _register_history(conn, "2026-03-01")
     order_json.update(order_type="VOLUME", reporting_category="EXPANSION_NN")
     assert _rules(conn, order_json) == set()
 
 
-def test_new_customer_window_is_a_policy_setting(
+def test_age_of_customer_is_irrelevant(
     conn: Connection, master_data: MasterDataIn, order_json: dict[str, Any]
 ) -> None:
-    _register_history(conn, "2026-03-01")
-    conn.execute(
-        "UPDATE sales.policy_setting SET numeric_value = 0 WHERE setting_key = 'new_customer_window_months'"
-    )
+    """Won by the salesperson two years ago is still NN; the old 12-month idea no longer applies."""
+    conn.execute("UPDATE sales.customer_account_allocation SET allocated_from = DATE '2024-01-01'")
+    _register_history(conn, "2024-06-01")
     order_json.update(order_type="VOLUME", reporting_category="EXPANSION_NN")
-    assert _rules(conn, order_json) == {"REPORTING_CATEGORY_MISMATCH"}
+    assert _rules(conn, order_json) == set()
+
+
+def test_no_account_owner_means_nn_e_unverifiable(
+    conn: Connection, master_data: MasterDataIn, order_json: dict[str, Any]
+) -> None:
+    conn.execute("DELETE FROM sales.customer_account_allocation")
+    order_json.update(order_type="VOLUME", reporting_category="EXPANSION_E")
+    assert _rules(conn, order_json) == {"NO_ACCOUNT_ALLOCATION"}
+
+
+def test_salesperson_must_be_account_owner(
+    conn: Connection, master_data: MasterDataIn, order_json: dict[str, Any]
+) -> None:
+    order_json["account_manager_email"] = "test.isam@example.com"
+    exceptions = service.order_exceptions(conn, load(conn, order_json).order_number)
+    assert [(e["rule_code"], e["severity"]) for e in exceptions] == [
+        ("SALESPERSON_NOT_ACCOUNT_OWNER", "warning")
+    ]
+
+
+def test_account_owners_cannot_overlap(conn: Connection, master_data: MasterDataIn) -> None:
+    msg = savepoint_rejects(
+        conn,
+        """INSERT INTO sales.customer_account_allocation (customer_id, house_account, allocated_from, source)
+           SELECT customer_id, 'House', DATE '2026-06-01', 'test' FROM sales.customer""",
+    )
+    assert "customer_account_allocation_no_overlap" in msg
