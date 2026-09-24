@@ -815,6 +815,41 @@ def load_register(conn: Connection, parsed: ParsedRegister, source: str) -> int:
 # ============================================================================ ARR
 
 
+def link_arr_ref(conn: Connection, order_ref: str, line_number: int, arr_ref: str) -> None:
+    """Attach the ARR ref (from the ARR file) to a recurring line, also after processing.
+
+    The database allows this one change on a locked line, checks the contract belongs to the same
+    customer, and posts the line's ARR movement if the order is already processed.
+    """
+    order_id = _order_id(conn, order_ref)
+    contract = _one(conn, "SELECT arr_contract_id FROM sales.arr_contract WHERE arr_ref = %s", (arr_ref,))
+    if contract is None:
+        raise UnknownReferenceError("ARR ref", arr_ref)
+    line = _one(
+        conn,
+        """SELECT arr_contract_id, arr_treatment_code FROM sales.sales_order_line
+            WHERE sales_order_id = %s AND line_number = %s""",
+        (order_id, line_number),
+    )
+    if line is None:
+        raise SalesOrderError(f"order {order_ref} has no line {line_number}")
+    if line["arr_treatment_code"] != "arr":
+        raise SalesOrderError(f"line {line_number} is not an ARR line ({line['arr_treatment_code']})")
+    if line["arr_contract_id"] is not None:
+        raise SalesOrderError(f"line {line_number} already has an ARR ref")
+    conn.execute(
+        "UPDATE sales.sales_order_line SET arr_contract_id = %s WHERE sales_order_id = %s AND line_number = %s",
+        (contract["arr_contract_id"], order_id, line_number),
+    )
+
+
+def arr_refs_outstanding(conn: Connection) -> list[dict[str, Any]]:
+    """Processed recurring lines still missing their ARR ref (the monitored 'future error')."""
+    return conn.execute(
+        "SELECT * FROM sales.v_arr_ref_outstanding ORDER BY days_outstanding DESC NULLS LAST, order_number, line_number"
+    ).fetchall()
+
+
 def arr_position(conn: Connection, as_of: date) -> list[dict[str, Any]]:
     return conn.execute("SELECT * FROM sales.arr_at(%s) ORDER BY arr_ref", (as_of,)).fetchall()
 

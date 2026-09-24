@@ -128,7 +128,7 @@ Every transition is recorded in `sales_order_status_history` with who and why.
 | `STALE_FX_RATE` | warning | FX rate older than `max_fx_rate_age_days` at receipt |
 | `CHECK_FAILED` | error | A pre-processing check was recorded as failed |
 
-Errors block approval; warnings inform. Add a rule = add one `UNION ALL` branch in a new migration.
+Errors block approval unless the rule's `blocks_approval` is false in `sales.exception_rule` (the catalogue of every rule); warnings inform. `ARR_LINE_NO_ARR_REF` is a warning before processing and an error after, and never blocks (CFO decision). `REPORTING_CATEGORY_MISMATCH` (warning): NN/E suffix disagrees with customer history. Add a rule = add one `UNION ALL` branch in a new migration.
 
 ## GL, products, ARR and SN (migration 0004)
 

@@ -165,6 +165,31 @@ def cmd_arr(args: argparse.Namespace) -> int:
     return 0
 
 
+def cmd_link_arr(args: argparse.Namespace) -> int:
+    with unit_of_work(_actor(args)) as conn:
+        service.link_arr_ref(conn, args.order_number, args.line_number, args.arr_ref)
+    print(f"{args.order_number} line {args.line_number} -> {args.arr_ref}")
+    return 0
+
+
+def cmd_arr_outstanding(args: argparse.Namespace) -> int:
+    with unit_of_work(_actor(args)) as conn:
+        rows = service.arr_refs_outstanding(conn)
+    if not rows:
+        print("No processed recurring lines are missing an ARR ref.")
+        return 0
+    total = sum((r["mrr_not_in_arr"] for r in rows), start=Decimal(0))
+    print(
+        f"ERROR: {len(rows)} processed recurring line(s) have no ARR ref; {service.money(total)} MRR missing from ARR"
+    )
+    for r in rows:
+        print(
+            f"  {r['sn_ref'] or r['order_number']} line {r['line_number']} {r['customer_name']}: {r['description'][:40]}"
+            f" | MRR {service.money(r['mrr_not_in_arr'])} | {r['days_outstanding']} day(s) since approval"
+        )
+    return 1  # non-zero so a scheduled run flags it
+
+
 def _pct(value: Any) -> str:
     return "-" if value is None else f"{value:.1f}"
 
@@ -207,6 +232,15 @@ def build_parser() -> argparse.ArgumentParser:
     p = sub.add_parser("arr", help="ARR position by contract")
     p.add_argument("--as-of", help="YYYY-MM-DD (default today)")
     p.set_defaults(func=cmd_arr)
+
+    p = sub.add_parser("link-arr", help="attach the ARR ref to a recurring line (allowed after processing)")
+    p.add_argument("order_number", help="SN or SO- number")
+    p.add_argument("line_number", type=int)
+    p.add_argument("arr_ref", help="e.g. NAP008-26, from the ARR file")
+    p.set_defaults(func=cmd_link_arr)
+
+    p = sub.add_parser("arr-outstanding", help="report processed recurring lines missing an ARR ref")
+    p.set_defaults(func=cmd_arr_outstanding)
 
     p = sub.add_parser("check", help="record the outcome of a pre-processing check")
     p.add_argument("order_number")

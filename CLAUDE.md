@@ -18,6 +18,8 @@ practice every time, even for a "test" change.
 - Master data is never created implicitly by an order load. Unknown references fail the whole load.
 - Every business table: `created_*`, `updated_*`, `row_version`, `sales.attach_standard_triggers(...)`.
 - New exception rule → new `UNION ALL` branch in `sales.v_sales_order_exception` + a test that trips only it.
+- Every exception rule is listed in `sales.exception_rule` with `blocks_approval` (a test enforces this).
+- ARR refs follow processing: never block approval; report with `arr-outstanding`.
 - New check rule → function in `src/sales_orders/checks.py` + `RULES` + a test.
 - No real customer data in git (fixtures are synthetic; `.gitignore` blocks `/data/` and `*.eml`).
 - Before pushing: `ruff check . && ruff format --check . && mypy && pytest` must all pass.
@@ -57,8 +59,10 @@ These are the owner's stated preferences; follow them in every session.
   `load-register` / `assign-sn`. The database never writes to AW SOs.
 - ARR refs (TIL030, NAP008-26): the **ARR file**. GL codes: **Xero** chart of accounts.
 - Order content, checks, approvals, credit terms: **this database**.
-- Earlier Claude build (SQLite + 66-rule knowledge base) lives in OneDrive
-  `3 AW Filing/10. Claude/Sales Orders`. Read its README/knowledge before changing shared rules.
+- **This database is the system of record (from 24 Sep 2026).** The earlier SQLite build in OneDrive
+  `3 AW Filing/10. Claude/Sales Orders` is DEFUNCT: never read from, write to or sync it. Its rules
+  are carried over below.
+- AW SOs stays on a personal Google account (CFO decision; accepted risk). Keep the Register mirror current.
 
 ## Business rules adopted from the CFO's existing rulebook
 
@@ -82,5 +86,5 @@ These are the owner's stated preferences; follow them in every session.
 - **ISAM** = Internal Sales Account Manager — submits orders to New Orders; the Financial Controller processes.
 - **SN** = sales order number from AW SOs: YY + 4-digit counter (SN260533); legacy 4-digit; LO / CA suffixes.
 - **LO** = Last Order (reversal of the contract being renewed). **CA** = cancellation.
-- **NN / E** reporting suffixes: definitions not yet confirmed by the CFO — do not assume.
+- **NN** = net new customer, **E** = existing customer (CFO). Net-new window is `new_customer_window_months` (default 12).
 - **CVA** = Company Voluntary Arrangement (UK insolvency procedure; treat as high credit risk). Not to be confused with CVL (Creditors' Voluntary Liquidation).

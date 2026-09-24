@@ -10,7 +10,7 @@ Follow every step; do not skip checks because an order looks routine.
 
 ## 1. Find and read the whole email
 
-- Search `neworders@managed.co.uk` (Microsoft 365 connector, `mailboxOwnerEmail`).
+- Never use the defunct SQLite build. Search `neworders@managed.co.uk` (Microsoft 365 connector, `mailboxOwnerEmail`).
 - Read the **entire thread** including forwards and replies: later messages often change terms
   (e.g. a finance reply restricting credit terms). Note the RFC Message-ID — it is the idempotency key.
 - List every attachment and what it is (signed order, customer PO, supplier quote, DD mandate,
@@ -48,8 +48,11 @@ non-standard terms, record them with reason and approver.
   candidates — ask the CFO, then `--sn SNxxxxxx`.
 - **GL:** every line needs revenue (1xxx) and cost (2xxx) codes; product and category defaults apply.
   Never invent a GL code; if unknown, leave it and report the NO_GL_CODE exception.
-- **ARR:** every recurring line needs the ARR ref from the ARR file (AAA999-YY). Part-period co-term
-  charges are `arr_treatment: "stub"`.
+- **ARR:** the ARR ref follows processing and never blocks approval. When the ARR file assigns it,
+  `sales-orders link-arr <SN> <line> <ARR ref>`. Run `sales-orders arr-outstanding` daily and report every
+  line it lists as an error. Part-period co-term charges are `arr_treatment: "stub"`.
+- **Reporting category:** NN = net new customer, E = existing customer. Report any
+  REPORTING_CATEGORY_MISMATCH warning; never silently recode.
 
 ## 6. Load and review
 

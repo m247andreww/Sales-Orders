@@ -155,3 +155,53 @@ def test_failed_check(conn: Connection, master_data: MasterDataIn, order_json: d
         conn, number, check_type="direct_debit_mandate", status="failed", notes="No mandate on file"
     )
     assert {e["rule_code"] for e in service.order_exceptions(conn, number)} == {"CHECK_FAILED"}
+
+
+def _register_history(conn: Connection, first_order: str) -> None:
+    conn.execute(
+        """INSERT INTO sales.register_entry (sn_ref, register_sync_id, date_issued, client, project, revenue)
+           SELECT 'SN248001', register_sync_id, %s::date, 'Test Customer', 'Earlier order', 100
+             FROM sales.register_sync LIMIT 1""",
+        (first_order,),
+    )
+
+
+def test_nn_on_existing_customer_is_flagged(
+    conn: Connection, master_data: MasterDataIn, order_json: dict[str, Any]
+) -> None:
+    _register_history(conn, "2024-03-01")  # customer since 2024: existing
+    order_json.update(order_type="VOLUME", reporting_category="EXPANSION_NN")
+    number = load(conn, order_json).order_number
+    exceptions = service.order_exceptions(conn, number)
+    assert [(e["rule_code"], e["severity"]) for e in exceptions] == [
+        ("REPORTING_CATEGORY_MISMATCH", "warning")
+    ]
+    assert "expected EXPANSION_E" in exceptions[0]["message"]
+
+
+def test_e_on_new_customer_is_flagged(
+    conn: Connection, master_data: MasterDataIn, order_json: dict[str, Any]
+) -> None:
+    order_json.update(order_type="VOLUME", reporting_category="EXPANSION_E")  # no earlier orders at all
+    exceptions = service.order_exceptions(conn, load(conn, order_json).order_number)
+    assert [e["rule_code"] for e in exceptions] == ["REPORTING_CATEGORY_MISMATCH"]
+    assert "expected EXPANSION_NN" in exceptions[0]["message"]
+
+
+def test_nn_within_new_customer_window_is_correct(
+    conn: Connection, master_data: MasterDataIn, order_json: dict[str, Any]
+) -> None:
+    _register_history(conn, "2026-03-01")  # 6 months before: still net new under the 12-month window
+    order_json.update(order_type="VOLUME", reporting_category="EXPANSION_NN")
+    assert _rules(conn, order_json) == set()
+
+
+def test_new_customer_window_is_a_policy_setting(
+    conn: Connection, master_data: MasterDataIn, order_json: dict[str, Any]
+) -> None:
+    _register_history(conn, "2026-03-01")
+    conn.execute(
+        "UPDATE sales.policy_setting SET numeric_value = 0 WHERE setting_key = 'new_customer_window_months'"
+    )
+    order_json.update(order_type="VOLUME", reporting_category="EXPANSION_NN")
+    assert _rules(conn, order_json) == {"REPORTING_CATEGORY_MISMATCH"}

@@ -45,6 +45,8 @@ SALES_ORDERS_ACTOR=test.finance@example.com sales-orders status SO-000001 valida
 SALES_ORDERS_ACTOR=test.finance@example.com sales-orders check SO-000001 direct_debit_mandate passed --notes "mandate ref TEST"
 sales-orders show SO-000001
 sales-orders arr --as-of 2026-10-31                         # ARR by contract (after approval)
+sales-orders arr-outstanding                                # processed recurring lines missing an ARR ref
+sales-orders link-arr SN269001 3 TST001-26                  # attach ARR ref after processing
 ```
 
 The test order is **synthetic** (no real customer data). It deliberately covers every pattern found in
@@ -90,15 +92,17 @@ CI runs all three on every push (`.github/workflows/ci.yml`).
 | 3 | **Only the CFO** approves orders, waives checks, approves losses, sets non-standard terms | migration 0003; personal Entra login required in production |
 | 4 | SN refs sourced from **AW SOs**; GL codes, product database, ARR database | migration 0004 |
 
+| A | This database is the system of record **from 24 Sep 2026**; the SQLite build is defunct | ADR 0003 |
+| B | AW SOs stays on its current account: **accepted risk**, mitigated by the Register mirror | ADR 0003 |
+| C | NN = net new customer, E = existing customer; mismatches are warnings | migration 0006 |
+| D | ARR ref follows processing: never blocks; error after processing, reported daily | migration 0006, `arr-outstanding` |
+
 **Still needed**
 
 | # | Decision |
 |---|---|
-| A | Is this database the successor to the SQLite build in OneDrive, and on what date does it become the record? (ADR 0003) |
-| B | Move AW SOs from a personal Gmail account to a Managed247 account |
-| C | Definitions of the NN / E reporting categories (Expansion NN vs Expansion E, Churn NN vs Churn E) |
-| D | Should recurring lines without an ARR ref block approval (current: yes, error)? |
-| E | Private networking vs office IP allow-list; where scheduled syncs run |
+| 1 | Confirm the net-new window: 12 months (current practice) or strictly the first order (0) |
+| 2 | Private networking vs office IP allow-list; where scheduled syncs run |
 
 ## Roadmap
 

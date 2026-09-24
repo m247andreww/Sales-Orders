@@ -69,12 +69,68 @@ def test_ledger_is_append_only(
     assert msg == "sales.arr_movement is append-only; post a reversing entry instead"
 
 
-def test_recurring_line_needs_arr_ref(
+def test_missing_arr_ref_does_not_block_approval(
+    conn: Connection, master_data: MasterDataIn, order_json: dict[str, Any]
+) -> None:
+    """CFO decision 4: the ARR ref follows processing. Warning before, error after, never a block."""
+    order_json["lines"][2].pop("arr_ref")
+    number = load(conn, order_json).order_number
+    assert [(e["rule_code"], e["severity"]) for e in service.order_exceptions(conn, number)] == [
+        ("ARR_LINE_NO_ARR_REF", "warning")
+    ]
+    _approve(conn, number)
+    assert [(e["rule_code"], e["severity"]) for e in service.order_exceptions(conn, number)] == [
+        ("ARR_LINE_NO_ARR_REF", "error")
+    ]
+    outstanding = service.arr_refs_outstanding(conn)
+    assert [(r["line_number"], r["mrr_not_in_arr"]) for r in outstanding] == [(3, D("465.00"))]
+    assert set(_arr(conn, date(2027, 1, 1))) == {"TST002-26"}  # M365 not yet in ARR
+
+
+def test_linking_arr_ref_after_processing_posts_arr(
     conn: Connection, master_data: MasterDataIn, order_json: dict[str, Any]
 ) -> None:
     order_json["lines"][2].pop("arr_ref")
-    rules = {e["rule_code"] for e in service.order_exceptions(conn, load(conn, order_json).order_number)}
-    assert rules == {"ARR_LINE_NO_ARR_REF"}
+    number = load(conn, order_json).order_number
+    _approve(conn, number)
+    service.link_arr_ref(conn, "SN269001", 3, "TST001-26")
+    assert service.order_exceptions(conn, number) == []
+    assert service.arr_refs_outstanding(conn) == []
+    assert _arr(conn, date(2026, 10, 1))["TST001-26"] == (D("465.00"), D("5580.00"))
+
+
+def test_only_the_arr_link_is_allowed_on_a_locked_line(
+    conn: Connection, master_data: MasterDataIn, order_json: dict[str, Any]
+) -> None:
+    order_json["lines"][2].pop("arr_ref")
+    number = load(conn, order_json).order_number
+    _approve(conn, number)
+    msg = savepoint_rejects(
+        conn,
+        """UPDATE sales.sales_order_line
+              SET arr_contract_id = (SELECT arr_contract_id FROM sales.arr_contract WHERE arr_ref = 'TST001-26'),
+                  unit_sell = 1
+            WHERE line_number = 3""",
+    )
+    assert "lines are locked" in msg
+
+
+def test_arr_link_must_be_same_customer(
+    conn: Connection, master_data: MasterDataIn, order_json: dict[str, Any]
+) -> None:
+    conn.execute(
+        """INSERT INTO sales.customer (legal_name) VALUES ('Other Test Co');
+           INSERT INTO sales.arr_contract (arr_ref, customer_id, description, start_date)
+           SELECT 'OTH001-26', customer_id, 'Other', DATE '2026-01-01' FROM sales.customer WHERE legal_name = 'Other Test Co'"""
+    )
+    order_json["lines"][2].pop("arr_ref")
+    number = load(conn, order_json).order_number
+    _approve(conn, number)
+    with (
+        pytest.raises(psycopg.Error, match="ARR contract belongs to a different customer"),
+        conn.transaction(),
+    ):
+        service.link_arr_ref(conn, number, 3, "OTH001-26")
 
 
 def test_stub_lines_are_not_arr(
@@ -94,19 +150,6 @@ def test_one_off_line_cannot_be_arr(
     order_json["lines"][0]["arr_treatment"] = "arr"
     with pytest.raises(psycopg.Error, match="a one-off line cannot be ARR"), conn.transaction():
         load(conn, order_json)
-
-
-def test_arr_ref_must_belong_to_customer(
-    conn: Connection, master_data: MasterDataIn, order_json: dict[str, Any]
-) -> None:
-    conn.execute(
-        """INSERT INTO sales.customer (legal_name) VALUES ('Other Test Co');
-           INSERT INTO sales.arr_contract (arr_ref, customer_id, description, start_date)
-           SELECT 'OTH001-26', customer_id, 'Other', DATE '2026-01-01' FROM sales.customer WHERE legal_name = 'Other Test Co'"""
-    )
-    order_json["lines"][2]["arr_ref"] = "OTH001-26"
-    rules = {e["rule_code"] for e in service.order_exceptions(conn, load(conn, order_json).order_number)}
-    assert "ARR_CONTRACT_OTHER_CUSTOMER" in rules
 
 
 def test_churn_posts_negative_arr(
