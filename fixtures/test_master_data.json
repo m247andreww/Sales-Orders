@@ -1,0 +1,85 @@
+{
+  "employees": [
+    {
+      "email": "test.isam@example.com",
+      "full_name": "Test Internal Sales",
+      "job_title": "Internal Sales Account Manager"
+    },
+    {
+      "email": "test.territory@example.com",
+      "full_name": "Test Territory Manager",
+      "job_title": "Territory Manager"
+    },
+    {
+      "email": "test.finance@example.com",
+      "full_name": "Test Financial Controller",
+      "job_title": "Financial Controller"
+    },
+    {
+      "email": "test.cfo@example.com",
+      "full_name": "Test CFO",
+      "job_title": "Chief Financial Officer"
+    }
+  ],
+  "suppliers": [
+    {
+      "name": "Managed247 (internal delivery)",
+      "is_internal": true,
+      "account_status": "approved"
+    },
+    {
+      "name": "Test CSP Distributor Ltd",
+      "account_status": "approved",
+      "payment_terms_days": 30
+    },
+    {
+      "name": "Test US Hardware Inc",
+      "account_status": "approved",
+      "payment_terms_days": 30,
+      "default_currency": "USD"
+    }
+  ],
+  "customers": [
+    {
+      "legal_name": "Test Customer Ltd",
+      "trading_name": "Test Customer",
+      "company_number": "00000000",
+      "notes": "SYNTHETIC TEST CUSTOMER - never invoice",
+      "credit_terms": [
+        {
+          "effective_from": "2026-01-01",
+          "recurring_terms_days": 30,
+          "recurring_payment_method": "direct_debit",
+          "one_off_terms_days": 30,
+          "risk_rating": "standard"
+        }
+      ],
+      "contacts": [
+        {
+          "email": "it.admin@test-customer.example",
+          "full_name": "Test Admin",
+          "role_description": "M365 admin"
+        },
+        {
+          "email": "procurement@test-customer.example",
+          "role_description": "Procurement"
+        }
+      ],
+      "m365_tenants": [
+        {
+          "tenant_guid": "00000000-0000-4000-8000-000000000001",
+          "primary_domain": "testcustomer.onmicrosoft.com"
+        }
+      ]
+    }
+  ],
+  "fx_rates": [
+    {
+      "from_currency": "USD",
+      "to_currency": "GBP",
+      "rate_date": "2026-09-10",
+      "rate": "0.73905160",
+      "source": "XE mid-market"
+    }
+  ]
+}

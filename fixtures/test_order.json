@@ -1,0 +1,145 @@
+{
+  "source_email": {
+    "mailbox": "neworders@managed.co.uk",
+    "internet_message_id": "<test-order-0001@example.com>",
+    "subject": "NEW ORDER - Test Customer Ltd - Office & US Store Fit-out (TEST)",
+    "sender_email": "test.isam@example.com",
+    "received_at": "2026-09-10T15:56:24+01:00",
+    "body_text": "Synthetic test submission. Pricing details as per table."
+  },
+  "customer_legal_name": "Test Customer Ltd",
+  "title": "Office & US Store Fit-out (TEST)",
+  "order_type": "new",
+  "quote_reference": "Test Customer - Office & US Store Fit-out Quote (01.09.2026)",
+  "customer_po_reference": "TEST-PO-0001",
+  "m365_tenant_guid": "00000000-0000-4000-8000-000000000001",
+  "signed_date": "2026-09-09",
+  "submitted_by_email": "test.isam@example.com",
+  "account_manager_email": "test.territory@example.com",
+  "stated_totals": {
+    "net_cost": "10770.99",
+    "net_sell": "15611.61",
+    "gross_margin": "4840.62"
+  },
+  "documents": [
+    {
+      "document_type": "signed_order",
+      "file_name": "Test Customer - Fit-out Quote (signed).pdf",
+      "content_type": "application/pdf",
+      "size_bytes": 2013040,
+      "sha256": "f7e3476f02510051c40d54ec44281b69ff159dce4ffd94a67128e290e064331f",
+      "storage_uri": "sharepoint://Finance/SalesOrders/TEST/signed-order.pdf"
+    },
+    {
+      "document_type": "customer_po",
+      "file_name": "TEST-PO-0001.pdf",
+      "content_type": "application/pdf",
+      "size_bytes": 255406,
+      "sha256": "f314234cd7bee80f93469e1f0c8eb858b8aa89817a221b39894ef11656e0746a",
+      "storage_uri": "sharepoint://Finance/SalesOrders/TEST/customer-po.pdf"
+    },
+    {
+      "document_type": "supplier_quote",
+      "file_name": "TUS-Q-0001.pdf",
+      "content_type": "application/pdf",
+      "size_bytes": 681268,
+      "sha256": "d5bfa778a2e8f581699373f7a5bea2be3629e66f25fa80a19ab5ef7f0b243752",
+      "storage_uri": "sharepoint://Finance/SalesOrders/TEST/supplier-quote.pdf"
+    }
+  ],
+  "supplier_quotes": [
+    {
+      "supplier_name": "Test US Hardware Inc",
+      "supplier_reference": "TUS-Q-0001",
+      "quote_date": "2026-09-08",
+      "currency": "USD",
+      "document_sha256": "d5bfa778a2e8f581699373f7a5bea2be3629e66f25fa80a19ab5ef7f0b243752"
+    }
+  ],
+  "lines": [
+    {
+      "sku": "PS-L3-SSC-DAY",
+      "description": "Senior Solutions Consultant (day)",
+      "line_category": "professional_services",
+      "supplier_name": "Managed247 (internal delivery)",
+      "quantity": "3",
+      "billing_frequency": "one_off",
+      "billing_periods": 1,
+      "unit_cost": "700.00",
+      "unit_sell": "1195.00"
+    },
+    {
+      "sku": "PS-PMO-DAY",
+      "description": "Project Manager (day)",
+      "line_category": "professional_services",
+      "supplier_name": "Managed247 (internal delivery)",
+      "quantity": "1",
+      "billing_frequency": "one_off",
+      "billing_periods": 1,
+      "unit_cost": "630.00",
+      "unit_sell": "850.00"
+    },
+    {
+      "sku": "CFQ7TTC0LCHC:0002",
+      "description": "Microsoft 365 Business Premium - Annual commit / Monthly billing",
+      "line_category": "licence",
+      "supplier_name": "Test CSP Distributor Ltd",
+      "quantity": "25",
+      "billing_frequency": "monthly",
+      "billing_periods": 12,
+      "unit_cost": "16.90",
+      "unit_sell": "18.60"
+    },
+    {
+      "sku": "GW-MAX",
+      "description": "Cloud gateway (US store)",
+      "line_category": "hardware",
+      "supplier_name": "Test US Hardware Inc",
+      "supplier_quote_reference": "TUS-Q-0001",
+      "quantity": "2",
+      "billing_frequency": "one_off",
+      "billing_periods": 1,
+      "cost_currency": "USD",
+      "unit_cost": "275.00",
+      "fx_rate": {
+        "rate_date": "2026-09-10",
+        "source": "XE mid-market"
+      },
+      "unit_sell": "253.89"
+    },
+    {
+      "sku": "NET-500",
+      "description": "500M x 20M cable internet (US store), 36 months",
+      "line_category": "connectivity",
+      "supplier_name": "Test US Hardware Inc",
+      "supplier_quote_reference": "TUS-Q-0001",
+      "quantity": "1",
+      "billing_frequency": "monthly",
+      "billing_periods": 36,
+      "cost_currency": "USD",
+      "unit_cost": "95.00",
+      "fx_rate": {
+        "rate_date": "2026-09-10",
+        "source": "XE mid-market"
+      },
+      "unit_sell": "140.33"
+    },
+    {
+      "sku": "TAX-NY",
+      "description": "NY State sales tax on hardware (recharged at cost)",
+      "line_category": "tax_pass_through",
+      "supplier_name": "Test US Hardware Inc",
+      "supplier_quote_reference": "TUS-Q-0001",
+      "quantity": "1",
+      "billing_frequency": "one_off",
+      "billing_periods": 1,
+      "cost_currency": "USD",
+      "unit_cost": "50.00",
+      "fx_rate": {
+        "rate_date": "2026-09-10",
+        "source": "XE mid-market"
+      },
+      "unit_sell": "36.9526"
+    }
+  ]
+}
