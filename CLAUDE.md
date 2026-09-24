@@ -73,7 +73,11 @@ These are the owner's stated preferences; follow them in every session.
 - Salesperson = the account manager cc'd on the order email, not the ISAM who prepares it.
 - House = finance-controlled account. When a salesperson leaves, ALL their accounts go to House until a new
   salesperson is allocated (`employee-leaves`, `allocate-account`). House/Legacy orders are E, never NN.
-- Legacy = historic Register label only. Auto Renew / Cust Success are undefined: ask, never assume.
+- Legacy = historic Register label only. Auto Renew / Cust Success = House (CFO).
+- Ownership history: changes only when a different NAMED salesperson appears; House-labelled orders never
+  end a salesperson's ownership. Build with `build-account-history`; it never overwrites existing history.
+- Code edits: the formatter re-wraps lines, so a text replace can silently miss. Verify every edit landed
+  (grep or a test) — twice this happened and only a test caught it.
 - LAST_ORDER (…LO) rows are Register reversals: excluded from bookings and ARR.
 - Read the FULL email thread (salesorders@ / neworders@) — the first email is not the order of
   record if it was amended.

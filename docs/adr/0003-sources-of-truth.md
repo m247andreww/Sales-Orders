@@ -60,8 +60,20 @@ never loaded automatically.
   flagged (`SALESPERSON_NOT_ACCOUNT_OWNER`); an inactive owner still holding accounts is flagged
   (`OWNER_HAS_LEFT`).
 - A salesperson taking over a House account inherits a pre-existing customer, so their orders on it are E.
-- **Auto Renew** and **Cust Success** appear on the Register as owners (35 NN/E-coded orders, all Auto
-  Renew, 9 of them coded NN) but are not defined; the database refuses them as owners until they are.
+- **Auto Renew** and **Cust Success** are **House** (CFO, 2026-09-24). Legacy is also treated as House
+  when building history, because leavers' accounts now go to House.
+
+## Account-ownership history (built from the Register, CFO instruction 2026-09-24)
+
+Rule (migration 0009): ownership changes only when a different **named** salesperson appears on an order;
+House-labelled orders (central renewals) never end a salesperson's ownership. A customer whose first
+Register order is marked "Existing" pre-dates the Register (`customer.existed_before`), so it is Existing
+for its first salesperson. Customers that already have history are never overwritten.
+
+Dry run on the live Register (2026-09-24): 85 customers, 142 ownership periods, 36 customers pre-dating the
+Register, 2 same-day clashes decided (later SN wins) and 8 alternations between named salespeople on 6
+customers, all listed by `sales-orders build-account-history` for CFO review. Real names and results are
+not stored in the repository.
 
 ## ARR ref follows processing (CFO, 2026-09-24)
 

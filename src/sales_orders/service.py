@@ -241,6 +241,18 @@ def load_master_data(conn: Connection, data: MasterDataIn) -> None:
             (customer_id, owner, al.house_account, al.allocated_from, al.allocated_to, al.source),
         )
 
+    for ra in data.register_owner_aliases:
+        owner = _employee_id(conn, ra.owner_email) if ra.owner_email else None
+        conn.execute(
+            """INSERT INTO sales.register_owner_alias (register_label, employee_id, house_account)
+               VALUES (lower(btrim(%s)), %s, %s)
+               ON CONFLICT (register_label) DO UPDATE
+                  SET employee_id = EXCLUDED.employee_id, house_account = EXCLUDED.house_account
+                WHERE (sales.register_owner_alias.employee_id, sales.register_owner_alias.house_account)
+                      IS DISTINCT FROM (EXCLUDED.employee_id, EXCLUDED.house_account)""",
+            (ra.register_label, owner, ra.house_account),
+        )
+
     for fx in data.fx_rates:
         conn.execute(
             """
@@ -885,6 +897,25 @@ def allocate_account(
         "SELECT sales.allocate_account(%s, %s, %s, %s)",
         (_customer_id(conn, customer_legal_name), email, from_date, source),
     )
+
+
+def build_account_history(conn: Connection, source: str) -> dict[str, Any]:
+    """Build ownership history from the Register for every customer that has none yet (CFO rules:
+    ownership changes only when a different named salesperson appears; House labels never end it)."""
+    result = _required(_one(conn, "SELECT * FROM sales.build_account_history(%s)", (source,)), "build result")
+    return {
+        **result,
+        "unmapped_labels": conn.execute(
+            "SELECT * FROM sales.v_register_unmapped_owner ORDER BY orders DESC"
+        ).fetchall(),
+        "conflicts": conn.execute(
+            "SELECT * FROM sales.v_account_history_conflict ORDER BY customer, allocated_from"
+        ).fetchall(),
+        "decisions": conn.execute(
+            """SELECT c.legal_name AS customer, r.on_date, r.note FROM sales.account_history_review r
+                 JOIN sales.customer c USING (customer_id) ORDER BY c.legal_name, r.on_date"""
+        ).fetchall(),
+    }
 
 
 def register_salesperson_history(conn: Connection, client: str | None = None) -> list[dict[str, Any]]:

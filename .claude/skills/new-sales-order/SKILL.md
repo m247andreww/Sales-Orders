@@ -54,6 +54,8 @@ non-standard terms, record them with reason and approver.
 - **Reporting category:** NN = customer not pre-existing when the salesperson was allocated the account;
   E = pre-existing. Report REPORTING_CATEGORY_MISMATCH / NO_ACCOUNT_ALLOCATION /
   SALESPERSON_NOT_ACCOUNT_OWNER warnings; never silently recode. House/Legacy accounts are always E.
+- **Account history:** after a Register sync, `sales-orders build-account-history` fills any customer
+  with no ownership history and lists decisions for the CFO; never edit history silently.
 - **Leavers:** when told a salesperson has left, run `sales-orders employee-leaves <email> <last day>`
   (accounts go to House), and `allocate-account` when a new salesperson takes an account over.
 

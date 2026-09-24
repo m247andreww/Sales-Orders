@@ -47,6 +47,7 @@ sales-orders show SO-000001
 sales-orders arr --as-of 2026-10-31                         # ARR by contract (after approval)
 sales-orders arr-outstanding                                # processed recurring lines missing an ARR ref
 sales-orders link-arr SN269001 3 TST001-26                  # attach ARR ref after processing
+sales-orders build-account-history                          # ownership history from the Register
 sales-orders employee-leaves person@managed.co.uk 2026-10-31   # leaver: accounts -> House
 sales-orders allocate-account "Customer Ltd" person@managed.co.uk 2027-01-01   # House -> salesperson
 ```
@@ -100,14 +101,14 @@ CI runs all three on every push (`.github/workflows/ci.yml`).
 | D | ARR ref follows processing: never blocks; error after processing, reported daily | migration 0006, `arr-outstanding` |
 | E | House = finance-controlled; leavers' accounts go to House until reallocated; House/Legacy orders are E | migration 0008, `employee-leaves`, `allocate-account` |
 | F | Azure on hold; alternatives compared | ADR 0004 |
+| G | Auto Renew / Cust Success = House; ownership history built from the Register | migration 0009, `build-account-history` |
 
 **Still needed**
 
 | # | Decision |
 |---|---|
-| 1 | Source of account-ownership history (CRM? ARR file "AM" column?), or confirm the Register-derived proposal |
-| 2 | Are "Auto Renew" and "Cust Success" House accounts, or something else? |
-| 3 | Hosting provider (ADR 0004) |
+| 1 | Review the account-history exceptions listed by `build-account-history` (same-day clashes, alternating salespeople) |
+| 2 | Hosting provider (ADR 0004) |
 
 ## Roadmap
 

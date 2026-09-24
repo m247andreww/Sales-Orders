@@ -218,6 +218,29 @@ def cmd_allocate_account(args: argparse.Namespace) -> int:
     return 0
 
 
+def cmd_build_account_history(args: argparse.Namespace) -> int:
+    with unit_of_work(_actor(args)) as conn:
+        r = service.build_account_history(conn, args.source)
+    print(
+        f"Account history built for {r['customers_built']} customer(s): {r['periods_created']} ownership period(s)."
+    )
+    if r["customers_skipped"]:
+        print(
+            f"{r['customers_skipped']} customer(s) skipped: Register salesperson labels with no owner mapping:"
+        )
+        for u in r["unmapped_labels"]:
+            print(f"  '{u['salesperson']}' ({u['orders']} orders, {u['first_seen']}..{u['last_seen']})")
+    if r["decisions"]:
+        print("For CFO review: decisions the build had to make:")
+        for d in r["decisions"]:
+            print(f"  {d['customer']}: {d['note']}")
+    if r["conflicts"]:
+        print("For CFO review: accounts where named salespeople alternate:")
+        for c in r["conflicts"]:
+            print(f"  {c['customer']}: back to {c['returns_to']} from {c['allocated_from']}")
+    return 0
+
+
 def _pct(value: Any) -> str:
     return "-" if value is None else f"{value:.1f}"
 
@@ -275,6 +298,12 @@ def _add_master_data_commands(sub: Any) -> None:
     p.add_argument("from_date", help="YYYY-MM-DD")
     p.add_argument("--source", default="CFO", help="authority for the allocation")
     p.set_defaults(func=cmd_allocate_account)
+
+    p = sub.add_parser(
+        "build-account-history", help="derive account ownership from the Register (unfilled customers)"
+    )
+    p.add_argument("--source", default="AW SOs Register (built at CFO instruction 2026-09-24)")
+    p.set_defaults(func=cmd_build_account_history)
 
     p = sub.add_parser("employee-leaves", help="leaver routine: move their accounts to House, deactivate")
     p.add_argument("email")

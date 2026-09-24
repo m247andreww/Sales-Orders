@@ -149,6 +149,20 @@ class AccountAllocationIn(StrictModel):
         return self
 
 
+class RegisterOwnerAliasIn(StrictModel):
+    """Maps a Register "Salesperson" label (e.g. "John Smith") to an employee or a house account."""
+
+    register_label: NonEmpty
+    owner_email: EmailStr | None = None
+    house_account: str | None = None
+
+    @model_validator(mode="after")
+    def _one_owner(self) -> RegisterOwnerAliasIn:
+        if (self.owner_email is None) == (self.house_account is None):
+            raise ValueError("give exactly one of owner_email or house_account")
+        return self
+
+
 class CustomerIn(StrictModel):
     legal_name: NonEmpty
     trading_name: str | None = None
@@ -187,6 +201,7 @@ class MasterDataIn(StrictModel):
     products: tuple[ProductIn, ...] = ()
     arr_contracts: tuple[ArrContractIn, ...] = ()
     account_allocations: tuple[AccountAllocationIn, ...] = ()
+    register_owner_aliases: tuple[RegisterOwnerAliasIn, ...] = ()
     fx_rates: tuple[FxRateIn, ...] = ()
 
 
