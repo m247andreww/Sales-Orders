@@ -22,6 +22,9 @@ practice every time, even for a "test" change.
 - No real customer data in git (fixtures are synthetic; `.gitignore` blocks `/data/` and `*.eml`).
 - Before pushing: `ruff check . && ruff format --check . && mypy && pytest` must all pass.
 - Parameterised SQL only; dynamic identifiers via `psycopg.sql`.
+- Views list their columns explicitly — never `SELECT *` / `t.*` (PostgreSQL freezes the list at creation).
+- Behaviour must never depend on cluster-wide state (roles are shared across databases); use per-database settings.
+- A test must be able to fail: no tautological assertions.
 
 ## Local database
 
@@ -48,6 +51,26 @@ These are the owner's stated preferences; follow them in every session.
 - UK English. Cancellation communications go out as Johnathon from contract.admin@.
 - Learn from the owner's language and preferences and record new ones here.
 
+## Sources of truth (ADR 0003)
+
+- SN refs: **AW SOs Register** (Google Sheet). Never generate or guess an SN; source it with
+  `load-register` / `assign-sn`. The database never writes to AW SOs.
+- ARR refs (TIL030, NAP008-26): the **ARR file**. GL codes: **Xero** chart of accounts.
+- Order content, checks, approvals, credit terms: **this database**.
+- Earlier Claude build (SQLite + 66-rule knowledge base) lives in OneDrive
+  `3 AW Filing/10. Claude/Sales Orders`. Read its README/knowledge before changing shared rules.
+
+## Business rules adopted from the CFO's existing rulebook
+
+- "Never guess the next SN. Orders enter unconfirmed; AW SOs assigns the SN."
+- Term rule: if an order email states a clearly wrong term, the term starts on the email date and
+  months are counted inclusively to the co-term date (Sep→May = 9).
+- Microsoft CSP SKUs (CFQ7…) → GL 1233 Cloud Services: Office 365 / COS 2233.
+- Salesperson = the account manager cc'd on the order email, not the ISAM who prepares it.
+- LAST_ORDER (…LO) rows are Register reversals: excluded from bookings and ARR.
+- Read the FULL email thread (salesorders@ / neworders@) — the first email is not the order of
+  record if it was amended.
+
 ## Domain vocabulary (from the New Orders mailbox)
 
 - **GM** = gross margin (sell − cost). **Recurring** column = number of billing periods.
@@ -57,4 +80,7 @@ These are the owner's stated preferences; follow them in every session.
 - **GDAP** = Microsoft granular delegated admin relationship with the customer tenant.
 - **PS** = professional services, priced from the rate card (e.g. `PS-L3-SSC-DAY`).
 - **ISAM** = Internal Sales Account Manager — submits orders to New Orders; the Financial Controller processes.
+- **SN** = sales order number from AW SOs: YY + 4-digit counter (SN260533); legacy 4-digit; LO / CA suffixes.
+- **LO** = Last Order (reversal of the contract being renewed). **CA** = cancellation.
+- **NN / E** reporting suffixes: definitions not yet confirmed by the CFO — do not assume.
 - **CVA** = Company Voluntary Arrangement (UK insolvency procedure; treat as high credit risk). Not to be confused with CVL (Creditors' Voluntary Liquidation).

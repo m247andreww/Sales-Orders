@@ -134,7 +134,7 @@ def test_orders_must_be_created_as_received(conn: Connection, master_data: Maste
         conn,
         """INSERT INTO sales.sales_order (customer_id, title, order_type_code, status_code, received_at,
                                           submitted_by_employee_id)
-           SELECT customer_id, 'x', 'new', 'approved', now(), (SELECT min(employee_id) FROM sales.employee)
+           SELECT customer_id, 'x', 'NEW_ORDER', 'approved', now(), (SELECT min(employee_id) FROM sales.employee)
              FROM sales.customer LIMIT 1""",
     )
     assert "must start in status received" in msg

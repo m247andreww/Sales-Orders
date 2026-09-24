@@ -104,7 +104,7 @@ Every transition is recorded in `sales_order_status_history` with who and why.
 | One-off lines have exactly one period | `CHECK` |
 | Supplier quote belongs to the line's supplier | trigger `validate_line` |
 | Only permitted status transitions | `order_status_transition` + trigger |
-| Approval gate | trigger: blocks `approved` while error exceptions or unresolved checks exist |
+| Approval gate | trigger: CFO only (personal login in production); blocks while error exceptions or unresolved checks exist |
 | Frozen after approval | triggers `validate_line`, `lock_commercials` |
 | Credit terms periods never overlap | `EXCLUDE USING gist` |
 | Non-standard terms need reason + approver | `CHECK` |
@@ -112,13 +112,13 @@ Every transition is recorded in `sales_order_status_history` with who and why.
 | Full audit trail, append-only | `audit.change_log` + triggers; UPDATE/DELETE blocked |
 | App cannot delete anything | role grants (`db/bootstrap/grants.sql`) |
 
-## Exception rules (`sales.v_sales_order_exception`)
+## Exception rules (`sales.v_sales_order_exception_all`)
 
 | Rule | Severity | Meaning |
 |---|---|---|
 | `NO_LINES` | error | Order has no lines |
-| `NEGATIVE_LINE_MARGIN` | error | A line sells below cost |
-| `LOW_ORDER_MARGIN` | warning | GM% below `policy_setting.min_order_gm_pct` with no `margin_exception_reason` |
+| `LOSS_LINE_NO_RATIONALE` | error | A line sells below cost with no line or order rationale |
+| `ORDER_LOSS_NO_RATIONALE` | error | The order sells below cost overall with no order-level rationale |
 | `TAX_LINE_MARKED_UP` | error | A tax pass-through line is sold at a price other than cost |
 | `STATED_TOTAL_MISMATCH` | error | Emailed totals differ from computed by more than `stated_total_tolerance` |
 | `MISSING_SIGNED_ORDER` | error | No signed order document linked |
@@ -129,6 +129,32 @@ Every transition is recorded in `sales_order_status_history` with who and why.
 | `CHECK_FAILED` | error | A pre-processing check was recorded as failed |
 
 Errors block approval; warnings inform. Add a rule = add one `UNION ALL` branch in a new migration.
+
+## GL, products, ARR and SN (migration 0004)
+
+| Table | Purpose |
+|---|---|
+| `gl_account` | Mirror of the Xero chart. Lines carry `revenue_gl_code` (must be class REVENUE) and `cost_gl_code` (must be type DIRECTCOSTS). Deferred-revenue 72xx accounts are rejected on lines. |
+| `service_category` | The 14 Register categories; Cloud Services defaults to 1233/2233 |
+| `product` | Product database: SKU, category, default GL pair, default supplier, list price/cost |
+| `arr_contract` | One row per ARR ref, per customer, with term dates and notice period |
+| `arr_movement` | **Append-only ledger**: new / expansion / contraction / price change / renewal / churn. Posted automatically when an order is approved |
+| `register_entry` | Read-only mirror of the AW SOs Register (replaced each sync), the source of SN refs |
+
+GL defaulting order for a line: stated on the line → product → service category (→ CSP rule for CFQ7 SKUs).
+
+ARR: `sales.arr_at(date)` gives MRR/ARR by contract on any date; `sales.arr_bridge(from, to)` gives the
+movement analysis between two dates. MRR per line = quantity × unit price ÷ months per billing period.
+
+SN sourcing: `sales.v_sn_candidate` scores Register rows for the same customer (normalised name, trading
+name or Xero tracking name) within 7 days: +3 project matches title, +2 same day (else +1), +3 revenue
+within £1. Only a unique best match is assigned; LO/CA rows and SNs already used are never candidates.
+A manually chosen SN must exist on the Register for that customer.
+
+Additional exception rules (`v_sales_order_exception_all`): `SN_NOT_ASSIGNED`, `NO_GL_CODE`,
+`NO_SERVICE_CATEGORY`, `ARR_LINE_NO_ARR_REF`, `ARR_CONTRACT_OTHER_CUSTOMER` (errors),
+`RECURRING_LINE_NO_DATES` (warning). Margin rules (0003): `LOSS_LINE_NO_RATIONALE`,
+`ORDER_LOSS_NO_RATIONALE` replace the old minimum-margin rule.
 
 ## Conventions
 

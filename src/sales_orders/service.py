@@ -7,6 +7,7 @@ failure part-way through (e.g. an unknown supplier on line 7) writes nothing at 
 from __future__ import annotations
 
 from dataclasses import dataclass
+from datetime import date
 from decimal import Decimal
 from typing import Any
 
@@ -20,6 +21,7 @@ from sales_orders.models import (
     OrderLineIn,
     OrderSubmissionIn,
 )
+from sales_orders.register import ParsedRegister
 
 # ============================================================================ lookups
 
@@ -65,10 +67,15 @@ def _document_id(conn: Connection, sha256: str) -> int:
     return int(row["document_id"])
 
 
-def _order_id(conn: Connection, order_number: str) -> int:
-    row = _one(conn, "SELECT sales_order_id FROM sales.sales_order WHERE order_number = %s", (order_number,))
+def _order_id(conn: Connection, order_ref: str) -> int:
+    """Resolve an order by its internal number (SO-000123) or its SN reference (SN260533)."""
+    row = _one(
+        conn,
+        "SELECT sales_order_id FROM sales.sales_order WHERE order_number = %s OR sn_ref = upper(%s)",
+        (order_ref, order_ref),
+    )
     if row is None:
-        raise OrderNotFoundError(order_number)
+        raise OrderNotFoundError(order_ref)
     return int(row["sales_order_id"])
 
 
@@ -76,7 +83,26 @@ def _order_id(conn: Connection, order_number: str) -> int:
 
 
 def load_master_data(conn: Connection, data: MasterDataIn) -> None:
-    """Idempotently insert or update employees, suppliers, customers and FX rates."""
+    """Idempotently insert or update GL accounts, employees, suppliers, customers, products,
+    ARR contracts and FX rates (in dependency order)."""
+    for g in data.gl_accounts:
+        conn.execute(
+            """
+            INSERT INTO sales.gl_account (account_code, name, account_class, account_type, tax_type, xero_account_id)
+            VALUES (%s, %s, %s, %s, %s, %s)
+            ON CONFLICT (account_code) DO UPDATE
+               SET name = EXCLUDED.name, account_class = EXCLUDED.account_class,
+                   account_type = EXCLUDED.account_type, tax_type = EXCLUDED.tax_type,
+                   xero_account_id = COALESCE(EXCLUDED.xero_account_id, sales.gl_account.xero_account_id)
+             WHERE (sales.gl_account.name, sales.gl_account.account_class, sales.gl_account.account_type,
+                    sales.gl_account.tax_type)
+                   IS DISTINCT FROM (EXCLUDED.name, EXCLUDED.account_class, EXCLUDED.account_type, EXCLUDED.tax_type)
+                OR (EXCLUDED.xero_account_id IS NOT NULL
+                    AND sales.gl_account.xero_account_id IS DISTINCT FROM EXCLUDED.xero_account_id)
+            """,
+            (g.account_code, g.name, g.account_class, g.account_type, g.tax_type, g.xero_account_id),
+        )
+
     for e in data.employees:
         conn.execute(
             """
@@ -121,6 +147,82 @@ def load_master_data(conn: Connection, data: MasterDataIn) -> None:
     for c in data.customers:
         _load_customer(conn, c)
 
+    for pr in data.products:
+        default_supplier = _supplier_id(conn, pr.default_supplier_name) if pr.default_supplier_name else None
+        conn.execute(
+            """
+            INSERT INTO sales.product (sku, name, line_category_code, service_category_code, description,
+                                       vendor_part_number, default_supplier_id, default_billing_frequency_code,
+                                       default_revenue_gl_code, default_cost_gl_code, list_price, list_cost)
+            VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
+            ON CONFLICT ((upper(sku))) DO UPDATE
+               SET name = EXCLUDED.name, line_category_code = EXCLUDED.line_category_code,
+                   service_category_code = EXCLUDED.service_category_code,
+                   description = EXCLUDED.description, vendor_part_number = EXCLUDED.vendor_part_number,
+                   default_supplier_id = EXCLUDED.default_supplier_id,
+                   default_billing_frequency_code = EXCLUDED.default_billing_frequency_code,
+                   default_revenue_gl_code = EXCLUDED.default_revenue_gl_code,
+                   default_cost_gl_code = EXCLUDED.default_cost_gl_code,
+                   list_price = EXCLUDED.list_price, list_cost = EXCLUDED.list_cost
+             WHERE (sales.product.name, sales.product.line_category_code, sales.product.service_category_code,
+                    sales.product.description, sales.product.vendor_part_number, sales.product.default_supplier_id,
+                    sales.product.default_billing_frequency_code, sales.product.default_revenue_gl_code,
+                    sales.product.default_cost_gl_code, sales.product.list_price, sales.product.list_cost)
+                   IS DISTINCT FROM
+                   (EXCLUDED.name, EXCLUDED.line_category_code, EXCLUDED.service_category_code,
+                    EXCLUDED.description, EXCLUDED.vendor_part_number, EXCLUDED.default_supplier_id,
+                    EXCLUDED.default_billing_frequency_code, EXCLUDED.default_revenue_gl_code,
+                    EXCLUDED.default_cost_gl_code, EXCLUDED.list_price, EXCLUDED.list_cost)
+            """,
+            (
+                pr.sku,
+                pr.name,
+                pr.line_category,
+                pr.service_category,
+                pr.description,
+                pr.vendor_part_number,
+                default_supplier,
+                pr.default_billing_frequency,
+                pr.default_revenue_gl_code,
+                pr.default_cost_gl_code,
+                pr.list_price,
+                pr.list_cost,
+            ),
+        )
+
+    for a in data.arr_contracts:
+        customer_id = _customer_id(conn, a.customer_legal_name)
+        existing = _one(conn, "SELECT customer_id FROM sales.arr_contract WHERE arr_ref = %s", (a.arr_ref,))
+        if existing is not None and int(existing["customer_id"]) != customer_id:
+            raise SalesOrderError(f"ARR ref {a.arr_ref} already belongs to another customer")
+        conn.execute(
+            """
+            INSERT INTO sales.arr_contract (arr_ref, customer_id, description, service_category_code,
+                                            start_date, end_date, auto_renews, notice_period_days)
+            VALUES (%s, %s, %s, %s, %s, %s, %s, %s)
+            ON CONFLICT (arr_ref) DO UPDATE
+               SET description = EXCLUDED.description, service_category_code = EXCLUDED.service_category_code,
+                   start_date = EXCLUDED.start_date, end_date = EXCLUDED.end_date,
+                   auto_renews = EXCLUDED.auto_renews, notice_period_days = EXCLUDED.notice_period_days
+             WHERE (sales.arr_contract.description, sales.arr_contract.service_category_code,
+                    sales.arr_contract.start_date, sales.arr_contract.end_date,
+                    sales.arr_contract.auto_renews, sales.arr_contract.notice_period_days)
+                   IS DISTINCT FROM
+                   (EXCLUDED.description, EXCLUDED.service_category_code, EXCLUDED.start_date,
+                    EXCLUDED.end_date, EXCLUDED.auto_renews, EXCLUDED.notice_period_days)
+            """,
+            (
+                a.arr_ref,
+                customer_id,
+                a.description,
+                a.service_category,
+                a.start_date,
+                a.end_date,
+                a.auto_renews,
+                a.notice_period_days,
+            ),
+        )
+
     for fx in data.fx_rates:
         conn.execute(
             """
@@ -147,20 +249,32 @@ def load_master_data(conn: Connection, data: MasterDataIn) -> None:
 def _load_customer(conn: Connection, c: CustomerIn) -> None:
     row = conn.execute(
         """
-        INSERT INTO sales.customer (legal_name, trading_name, company_number, xero_contact_id, notes)
-        VALUES (%s, %s, %s, %s, %s)
+        INSERT INTO sales.customer (legal_name, trading_name, company_number, xero_contact_id, notes,
+                                    xero_tracking_customer, arr_prefix)
+        VALUES (%s, %s, %s, %s, %s, %s, %s)
         ON CONFLICT ((lower(legal_name))) DO UPDATE
            SET trading_name = EXCLUDED.trading_name,
                company_number = EXCLUDED.company_number,
                xero_contact_id = EXCLUDED.xero_contact_id,
-               notes = EXCLUDED.notes
-         WHERE (sales.customer.trading_name, sales.customer.company_number,
-                sales.customer.xero_contact_id, sales.customer.notes)
+               notes = EXCLUDED.notes,
+               xero_tracking_customer = EXCLUDED.xero_tracking_customer,
+               arr_prefix = EXCLUDED.arr_prefix
+         WHERE (sales.customer.trading_name, sales.customer.company_number, sales.customer.xero_contact_id,
+                sales.customer.notes, sales.customer.xero_tracking_customer, sales.customer.arr_prefix)
                IS DISTINCT FROM
-               (EXCLUDED.trading_name, EXCLUDED.company_number, EXCLUDED.xero_contact_id, EXCLUDED.notes)
+               (EXCLUDED.trading_name, EXCLUDED.company_number, EXCLUDED.xero_contact_id, EXCLUDED.notes,
+                EXCLUDED.xero_tracking_customer, EXCLUDED.arr_prefix)
         RETURNING customer_id
         """,
-        (c.legal_name, c.trading_name, c.company_number, c.xero_contact_id, c.notes),
+        (
+            c.legal_name,
+            c.trading_name,
+            c.company_number,
+            c.xero_contact_id,
+            c.notes,
+            c.xero_tracking_customer,
+            c.arr_prefix,
+        ),
     ).fetchone()
     customer_id = int(row["customer_id"]) if row else _customer_id(conn, c.legal_name)
 
@@ -270,8 +384,10 @@ def create_sales_order(conn: Connection, sub: OrderSubmissionIn) -> OrderResult:
              customer_po_reference, price_list_id, customer_m365_tenant_id, signed_date, received_at,
              source_email_id, source_sequence, submitted_by_employee_id, account_manager_employee_id,
              is_expedited, margin_exception_reason, stated_net_cost, stated_net_sell,
-             stated_gross_margin, notes)
-        VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
+             stated_gross_margin, notes, sn_ref, sn_source, sn_assigned_at, order_document_type_code,
+             reporting_category_code, project, ticket_reference, signed_by_customer, signed_by_managed247)
+        VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s,
+                %s, %s, CASE WHEN %s::text IS NULL THEN NULL ELSE now() END, %s, %s, %s, %s, %s, %s)
         RETURNING sales_order_id, order_number
         """,
         (
@@ -296,6 +412,15 @@ def create_sales_order(conn: Connection, sub: OrderSubmissionIn) -> OrderResult:
             stated.net_sell if stated else None,
             stated.gross_margin if stated else None,
             sub.notes,
+            sub.sn_ref,
+            "Order submission (verified against AW SOs Register)" if sub.sn_ref else None,
+            sub.sn_ref,
+            sub.order_document_type,
+            sub.reporting_category,
+            sub.project,
+            sub.ticket_reference,
+            sub.signed_by_customer,
+            sub.signed_by_managed247,
         ),
     ).fetchone()
     order = _required(order, "new sales_order")
@@ -326,6 +451,9 @@ def create_sales_order(conn: Connection, sub: OrderSubmissionIn) -> OrderResult:
             """,
             (order_id, check_type, notes),
         )
+
+    if sub.sn_ref is None:
+        conn.execute("SELECT sales.assign_sn_from_register(%s)", (order_id,))
 
     return OrderResult(order_id, str(order["order_number"]), created=True)
 
@@ -438,14 +566,24 @@ def _insert_line(
         if line.sku
         else None
     )
+    arr_contract = None
+    if line.arr_ref:
+        arr_contract = _one(
+            conn, "SELECT arr_contract_id FROM sales.arr_contract WHERE arr_ref = %s", (line.arr_ref,)
+        )
+        if arr_contract is None:
+            raise UnknownReferenceError("ARR ref", line.arr_ref)
 
     conn.execute(
         """
         INSERT INTO sales.sales_order_line
             (sales_order_id, line_number, product_id, sku, description, line_category_code, supplier_id,
              supplier_quote_id, quantity, billing_frequency_code, billing_periods, cost_currency_code,
-             unit_cost_in_cost_currency, fx_rate_id, unit_sell, margin_rationale, notes)
-        VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
+             unit_cost_in_cost_currency, fx_rate_id, unit_sell, margin_rationale, notes,
+             service_category_code, revenue_gl_code, cost_gl_code, service_start_date, service_end_date,
+             arr_treatment_code, arr_contract_id, supplier_po_number)
+        VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s,
+                %s, %s, %s, %s, %s, %s, %s, %s)
         """,
         (
             order_id,
@@ -465,6 +603,14 @@ def _insert_line(
             line.unit_sell,
             line.margin_rationale,
             line.notes,
+            line.service_category,
+            line.revenue_gl_code,
+            line.cost_gl_code,
+            line.service_start_date,
+            line.service_end_date,
+            line.arr_treatment,
+            arr_contract["arr_contract_id"] if arr_contract else None,
+            line.supplier_po_number,
         ),
     )
 
@@ -533,7 +679,12 @@ def record_check(
 
 
 def order_summary(conn: Connection, order_number: str) -> dict[str, Any]:
-    row = _one(conn, "SELECT * FROM sales.v_sales_order_summary WHERE order_number = %s", (order_number,))
+    row = _one(
+        conn,
+        """SELECT s.*, o.sn_ref, o.reporting_category_code FROM sales.v_sales_order_summary s
+             JOIN sales.sales_order o USING (sales_order_id) WHERE s.sales_order_id = %s""",
+        (_order_id(conn, order_number),),
+    )
     if row is None:
         raise OrderNotFoundError(order_number)
     return row
@@ -542,15 +693,18 @@ def order_summary(conn: Connection, order_number: str) -> dict[str, Any]:
 def order_lines(conn: Connection, order_number: str) -> list[dict[str, Any]]:
     order_id = _order_id(conn, order_number)
     return conn.execute(
-        "SELECT * FROM sales.v_sales_order_line WHERE sales_order_id = %s ORDER BY line_number", (order_id,)
+        """SELECT l.*, c.arr_ref FROM sales.v_sales_order_line l
+             LEFT JOIN sales.arr_contract c USING (arr_contract_id)
+            WHERE l.sales_order_id = %s ORDER BY l.line_number""",
+        (order_id,),
     ).fetchall()
 
 
 def order_exceptions(conn: Connection, order_number: str) -> list[dict[str, Any]]:
     return conn.execute(
-        """SELECT rule_code, severity, message FROM sales.v_sales_order_exception
-            WHERE order_number = %s ORDER BY severity, rule_code, message""",
-        (order_number,),
+        """SELECT rule_code, severity, message FROM sales.v_sales_order_exception_all
+            WHERE sales_order_id = %s ORDER BY severity, rule_code, message""",
+        (_order_id(conn, order_number),),
     ).fetchall()
 
 
@@ -560,6 +714,114 @@ def order_checks(conn: Connection, order_number: str) -> list[dict[str, Any]]:
         """SELECT check_type_code, check_status_code, notes FROM sales.sales_order_check
             WHERE sales_order_id = %s ORDER BY check_type_code""",
         (order_id,),
+    ).fetchall()
+
+
+# ============================================================================ SN references
+
+
+def assign_sn(conn: Connection, order_number: str, sn_ref: str | None = None) -> str | None:
+    """Give an order its SN from the AW SOs Register.
+
+    With sn_ref: a person has identified the Register row; the database checks it exists for this
+    customer. Without: auto-match, which only assigns when exactly one best candidate exists.
+    Returns the SN, or None if it could not be determined (the order keeps SN_NOT_ASSIGNED).
+    """
+    order_id = _order_id(conn, order_number)
+    if sn_ref is None:
+        row = _required(
+            _one(conn, "SELECT sales.assign_sn_from_register(%s) AS sn", (order_id,)), "assign_sn result"
+        )
+        return None if row["sn"] is None else str(row["sn"])
+    conn.execute(
+        """UPDATE sales.sales_order SET sn_ref = %s, sn_source = 'AW SOs Register (manual)', sn_assigned_at = now()
+            WHERE sales_order_id = %s""",
+        (sn_ref, order_id),
+    )
+    return sn_ref
+
+
+def assign_pending_sns(conn: Connection) -> dict[str, str]:
+    """After each Register sync: try to source an SN for every order still waiting for one."""
+    rows = conn.execute(
+        """SELECT order_number, sales.assign_sn_from_register(sales_order_id) AS sn
+             FROM sales.sales_order WHERE sn_ref IS NULL AND status_code <> 'cancelled'
+            ORDER BY sales_order_id"""
+    ).fetchall()
+    return {str(r["order_number"]): str(r["sn"]) for r in rows if r["sn"] is not None}
+
+
+def sn_candidates(conn: Connection, order_number: str) -> list[dict[str, Any]]:
+    return conn.execute(
+        """SELECT sn_ref, client, project, date_issued, revenue, score FROM sales.v_sn_candidate
+            WHERE sales_order_id = %s ORDER BY score DESC, sn_ref""",
+        (_order_id(conn, order_number),),
+    ).fetchall()
+
+
+def load_register(conn: Connection, parsed: ParsedRegister, source: str) -> int:
+    """Replace the Register mirror with a fresh export, in one transaction. Returns the sync id."""
+    sync = _required(
+        _one(
+            conn,
+            """INSERT INTO sales.register_sync (source, rows_loaded, rows_rejected) VALUES (%s, %s, %s)
+               RETURNING register_sync_id""",
+            (source, len(parsed.rows), len(parsed.rejections)),
+        ),
+        "register_sync",
+    )
+    sync_id = int(sync["register_sync_id"])
+    conn.execute("DELETE FROM sales.register_entry")
+    with conn.cursor() as cur:
+        cur.executemany(
+            """
+            INSERT INTO sales.register_entry
+                (sn_ref, register_sync_id, date_issued, document_type_raw, client, new_logo, project,
+                 customer_po, ticket_ref, document_date, signed_by_managed247, signed_by_customer,
+                 order_category_raw, reporting_category_raw, salesperson, revenue, expected_costs)
+            VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
+            """,
+            [
+                (
+                    r.sn_ref,
+                    sync_id,
+                    r.date_issued,
+                    r.document_type_raw,
+                    r.client,
+                    r.new_logo,
+                    r.project,
+                    r.customer_po,
+                    r.ticket_ref,
+                    r.document_date,
+                    r.signed_by_managed247,
+                    r.signed_by_customer,
+                    r.order_category_raw,
+                    r.reporting_category_raw,
+                    r.salesperson,
+                    r.revenue,
+                    r.expected_costs,
+                )
+                for r in parsed.rows
+            ],
+        )
+        cur.executemany(
+            """INSERT INTO sales.register_sync_rejection (register_sync_id, row_number, raw_sn, reason)
+               VALUES (%s, %s, %s, %s)""",
+            [(sync_id, j.row_number, j.raw_sn, j.reason) for j in parsed.rejections],
+        )
+    return sync_id
+
+
+# ============================================================================ ARR
+
+
+def arr_position(conn: Connection, as_of: date) -> list[dict[str, Any]]:
+    return conn.execute("SELECT * FROM sales.arr_at(%s) ORDER BY arr_ref", (as_of,)).fetchall()
+
+
+def arr_bridge(conn: Connection, date_from: date, date_to: date) -> list[dict[str, Any]]:
+    return conn.execute(
+        "SELECT * FROM sales.arr_bridge(%s, %s) ORDER BY movement_type_code", (date_from, date_to)
     ).fetchall()
 
 

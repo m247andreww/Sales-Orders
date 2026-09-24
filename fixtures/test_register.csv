@@ -1,0 +1,8 @@
+,Date Issued,Type,Client,New Logo,Project,Cust PO Req'd?,Cust PO#,Ticket Ref.,Document Date,Managed,Client,"Document 
+Type",Reporting Category,250532,Salesperson,Revenue,Expected Costs,Deal GM,Deal GM%,"Any
+ARR?",Copy to PMO,Revenue,Costs,ARR,No Queries?,SN to ISAM,Buying,ARR Ref,Sales Invoice,Filed to Portal,Issues at submission,Current Block,CRM ID,Block in Place,Error Count,U,V,W,X,Y,Z,AA,AB,AC,AD,Details AC,Inc on Weekly Report,Week Ending,Month Year
+,9 Sep 26,Quotation,Test Customer,Existing,Office & US Store Fit-out,Yes,TEST-PO-0001,XXX,9 Sep 26,Test Internal Sales,Test Signatory,New Order,Net New,269001,Test Territory Manager," £ 15,612 "," £ 10,771 ",,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,
+,9 Sep 26,Last Order,Test Customer,Existing,SN268999,No,N/A,XXX,9 Sep 26,TO CHECK,TO CHECK,Last Order,Last Order - Renewal,269001LO,Auto Renew," £ (1,200) ", £ (900) ,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,
+,10 Sep 26,Quotation,Other Test Co,Existing,Firewall renewal,No,N/A,XXX,10 Sep 26,Test Internal Sales,Someone,Renewal,Renewal,269002,Test Territory Manager," £ 2,000 "," £ 1,500 ",,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,
+,11 Sep 26,Quotation,Other Test Co,Existing,Duplicate row,No,N/A,XXX,11 Sep 26,x,y,Volume,Expansion E,269002,x, £ 1 , £ 1 ,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,
+,12 Sep 26,Quotation,Other Test Co,Existing,Typo SN,No,N/A,XXX,12 Sep 26,x,y,Volume,Expansion E,69003,x, £ 1 , £ 1 ,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,

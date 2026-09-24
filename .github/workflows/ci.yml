@@ -34,3 +34,13 @@ jobs:
         run: mypy
       - name: Tests (real PostgreSQL; migrations run up, down and up again)
         run: pytest
+
+  infrastructure:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Compile and lint Bicep (Azure CLI is preinstalled on GitHub runners)
+        run: |
+          az bicep install
+          az bicep build --file infra/main.bicep --stdout > /dev/null
+          az bicep lint --file infra/main.bicep

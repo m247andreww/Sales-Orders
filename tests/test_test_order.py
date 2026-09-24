@@ -58,6 +58,36 @@ def test_order_totals(conn: Connection, master_data: MasterDataIn) -> None:
     assert s["status_code"] == "received"
 
 
+def test_sn_sourced_from_register(conn: Connection, master_data: MasterDataIn) -> None:
+    result = _load_reference_order(conn)
+    row = conn.execute(
+        "SELECT sn_ref, sn_source FROM sales.sales_order WHERE order_number = %s", (result.order_number,)
+    ).fetchone()
+    assert row == {"sn_ref": "SN269001", "sn_source": "AW SOs Register (auto-match, score 8)"}
+
+
+def test_order_can_be_referred_to_by_sn(conn: Connection, master_data: MasterDataIn) -> None:
+    result = _load_reference_order(conn)
+    assert service.order_summary(conn, "SN269001")["order_number"] == result.order_number
+    assert service.order_summary(conn, "sn269001")["order_number"] == result.order_number
+
+
+def test_gl_and_category_on_every_line(conn: Connection, master_data: MasterDataIn) -> None:
+    result = _load_reference_order(conn)
+    lines = service.order_lines(conn, result.order_number)
+    assert [
+        (ln["service_category_code"], ln["revenue_gl_code"], ln["cost_gl_code"], ln["arr_treatment_code"])
+        for ln in lines
+    ] == [
+        ("prof_services", "1443", "2400", "none"),  # from product database
+        ("prof_services", "1462", "2400", "none"),  # from product database
+        ("cloud_services", "1233", "2233", "arr"),  # Microsoft CSP rule (CFQ7...)
+        ("hardware", "1301", "2301", "none"),  # from product database
+        ("connectivity", "1201", "2201", "arr"),  # stated on the line
+        ("other_revenue", "1503", "2325", "none"),  # stated on the line
+    ]
+
+
 def test_fx_rate_is_snapshotted_from_rate_table(conn: Connection, master_data: MasterDataIn) -> None:
     result = _load_reference_order(conn)
     usd_lines = [

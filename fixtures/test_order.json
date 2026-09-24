@@ -9,7 +9,7 @@
   },
   "customer_legal_name": "Test Customer Ltd",
   "title": "Office & US Store Fit-out (TEST)",
-  "order_type": "new",
+  "order_type": "NEW_ORDER",
   "quote_reference": "Test Customer - Office & US Store Fit-out Quote (01.09.2026)",
   "customer_po_reference": "TEST-PO-0001",
   "m365_tenant_guid": "00000000-0000-4000-8000-000000000001",
@@ -88,7 +88,10 @@
       "billing_frequency": "monthly",
       "billing_periods": 12,
       "unit_cost": "16.90",
-      "unit_sell": "18.60"
+      "unit_sell": "18.60",
+      "service_start_date": "2026-09-10",
+      "service_end_date": "2027-09-09",
+      "arr_ref": "TST001-26"
     },
     {
       "sku": "GW-MAX",
@@ -122,7 +125,13 @@
         "rate_date": "2026-09-10",
         "source": "XE mid-market"
       },
-      "unit_sell": "140.33"
+      "unit_sell": "140.33",
+      "service_category": "connectivity",
+      "revenue_gl_code": "1201",
+      "cost_gl_code": "2201",
+      "service_start_date": "2026-10-01",
+      "service_end_date": "2029-09-30",
+      "arr_ref": "TST002-26"
     },
     {
       "sku": "TAX-NY",
@@ -139,7 +148,15 @@
         "rate_date": "2026-09-10",
         "source": "XE mid-market"
       },
-      "unit_sell": "36.9526"
+      "unit_sell": "36.9526",
+      "service_category": "other_revenue",
+      "revenue_gl_code": "1503",
+      "cost_gl_code": "2325"
     }
-  ]
+  ],
+  "order_document_type": "QUOTATION",
+  "reporting_category": "NET_NEW",
+  "project": "Office & US Store Fit-out",
+  "signed_by_customer": "Test Signatory",
+  "signed_by_managed247": "Test Internal Sales"
 }

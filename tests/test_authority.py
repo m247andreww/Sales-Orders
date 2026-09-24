@@ -151,17 +151,37 @@ def test_only_cfo_sets_non_standard_terms(conn: Connection, master_data: MasterD
     assert row == {"email": CFO}
 
 
+def test_production_mode_is_off_by_default_even_if_role_exists(
+    conn: Connection, master_data: MasterDataIn, order_json: dict[str, Any]
+) -> None:
+    """The cluster-wide people role must not change behaviour of a database that has not opted in."""
+    number = _validated_order(conn, order_json)
+    conn.execute(
+        "DO $$ BEGIN IF NOT EXISTS (SELECT FROM pg_roles WHERE rolname = 'sales_orders_person') "
+        "THEN CREATE ROLE sales_orders_person NOLOGIN; END IF; END $$"
+    )
+    act_as(conn, CFO)
+    service.change_status(conn, number, "approved", "dev/test database")
+
+
 def test_personal_login_required_in_production_mode(
     conn: Connection, master_data: MasterDataIn, order_json: dict[str, Any]
 ) -> None:
     """With sales_orders_person present (production), the shared login can't claim to be the CFO,
     and the CFO's own login is the actor regardless of app.current_user."""
     number = _validated_order(conn, order_json)
-    conn.execute("CREATE ROLE sales_orders_person NOLOGIN")
+    conn.execute(
+        "DO $$ BEGIN IF NOT EXISTS (SELECT FROM pg_roles WHERE rolname = 'sales_orders_person') "
+        "THEN CREATE ROLE sales_orders_person NOLOGIN; END IF; END $$"
+    )
+    conn.execute(
+        "UPDATE sales.policy_setting SET numeric_value = 1 WHERE setting_key = 'require_personal_login'"
+    )
     act_as(conn, CFO)  # spoofing attempt over the shared connection
     msg = _fails(conn, service.change_status, conn, number, "approved", "spoof")
     assert "must be done from a personal login" in msg
 
+    conn.execute(f'DROP ROLE IF EXISTS "{CFO}"')  # rolled back with the test transaction
     conn.execute(f'CREATE ROLE "{CFO}" LOGIN IN ROLE sales_orders_person')
     conn.execute(f'GRANT USAGE ON SCHEMA sales, audit TO "{CFO}"')
     conn.execute(f'GRANT SELECT, INSERT, UPDATE ON ALL TABLES IN SCHEMA sales TO "{CFO}"')

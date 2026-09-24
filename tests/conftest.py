@@ -27,7 +27,8 @@ from psycopg.rows import dict_row
 
 from sales_orders.db import Connection, set_actor
 from sales_orders.models import MasterDataIn, OrderSubmissionIn
-from sales_orders.service import OrderResult, create_sales_order, load_master_data
+from sales_orders.register import parse_register
+from sales_orders.service import OrderResult, create_sales_order, load_master_data, load_register
 
 ROOT = Path(__file__).resolve().parents[1]
 FIXTURES = ROOT / "fixtures"
@@ -89,8 +90,11 @@ def fixture_json(name: str) -> dict[str, Any]:
 
 @pytest.fixture
 def master_data(conn: Connection) -> MasterDataIn:
+    """Test master data plus the synthetic AW SOs Register (so orders can source their SN)."""
     data = MasterDataIn.model_validate(fixture_json("test_master_data.json"))
     load_master_data(conn, data)
+    with (FIXTURES / "test_register.csv").open(encoding="utf-8", newline="") as fh:
+        load_register(conn, parse_register(fh), "fixtures/test_register.csv")
     return data
 
 

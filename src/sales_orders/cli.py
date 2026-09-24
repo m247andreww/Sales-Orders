@@ -7,6 +7,8 @@ import getpass
 import json
 import os
 import sys
+from datetime import date
+from decimal import Decimal
 from pathlib import Path
 from typing import Any, TypeVar
 
@@ -19,6 +21,7 @@ from sales_orders import service
 from sales_orders.db import unit_of_work
 from sales_orders.errors import SalesOrderError
 from sales_orders.models import MasterDataIn, OrderSubmissionIn
+from sales_orders.register import parse_register
 
 PROJECT_ROOT = Path(__file__).resolve().parents[2]
 M = TypeVar("M", bound=BaseModel)
@@ -69,7 +72,10 @@ def cmd_show(args: argparse.Namespace) -> int:
     ccy = s["currency_code"]
     m = service.money
     print(f"\n{s['order_number']}  {s['title']}")
-    print(f"Customer: {s['customer_name']}   Status: {s['status_code']}   Type: {s['order_type_code']}")
+    print(f"SN: {s['sn_ref'] or 'NOT YET ASSIGNED (see AW SOs Register)'}   Customer: {s['customer_name']}")
+    print(
+        f"Status: {s['status_code']}   Type: {s['order_type_code']}   Reporting: {s['reporting_category_code'] or '-'}"
+    )
     print(
         f"{'#':>2} {'Description':<44} {'Qty':>7} {'Per':>3} {'Cost':>12} {'Sell':>12} {'GM':>11} {'GM%':>6}"
     )
@@ -77,7 +83,8 @@ def cmd_show(args: argparse.Namespace) -> int:
         print(
             f"{ln['line_number']:>2} {ln['description'][:44]:<44} {ln['quantity']:>7.2f} "
             f"{ln['billing_periods']:>3} {m(ln['net_cost'], ccy):>12} {m(ln['net_sell'], ccy):>12} "
-            f"{m(ln['gross_margin'], ccy):>11} {_pct(ln['gross_margin_pct']):>6}"
+            f"{m(ln['gross_margin'], ccy):>11} {_pct(ln['gross_margin_pct']):>6}  "
+            f"{ln['revenue_gl_code'] or '?'}/{ln['cost_gl_code'] or '?'}  {ln['arr_ref'] or ''}"
         )
     print(
         f"{'':>2} {'TOTAL':<44} {'':>7} {'':>3} {m(s['net_cost'], ccy):>12} {m(s['net_sell'], ccy):>12} "
@@ -118,6 +125,46 @@ def cmd_check(args: argparse.Namespace) -> int:
     return 0
 
 
+def cmd_load_register(args: argparse.Namespace) -> int:
+    with Path(args.file).open(encoding="utf-8", newline="") as fh:
+        parsed = parse_register(fh)
+    with unit_of_work(_actor(args)) as conn:
+        sync_id = service.load_register(conn, parsed, args.source)
+        assigned = service.assign_pending_sns(conn)
+    print(f"Register sync {sync_id}: {len(parsed.rows)} rows loaded, {len(parsed.rejections)} rejected")
+    for r in parsed.rejections:
+        print(f"  rejected row {r.row_number} ({r.raw_sn!r}): {r.reason}")
+    for order_number, sn in assigned.items():
+        print(f"  {order_number} -> {sn}")
+    return 0
+
+
+def cmd_assign_sn(args: argparse.Namespace) -> int:
+    with unit_of_work(_actor(args)) as conn:
+        sn = service.assign_sn(conn, args.order_number, args.sn)
+        candidates = [] if sn else service.sn_candidates(conn, args.order_number)
+    if sn:
+        print(f"{args.order_number} -> {sn}")
+        return 0
+    print(f"{args.order_number}: no unique Register match. Candidates:")
+    for c in candidates:
+        print(
+            f"  {c['sn_ref']} score {c['score']}: {c['client']} | {c['project']} | {c['date_issued']} | {c['revenue']}"
+        )
+    return 1
+
+
+def cmd_arr(args: argparse.Namespace) -> int:
+    as_of = date.fromisoformat(args.as_of) if args.as_of else date.today()
+    with unit_of_work(_actor(args)) as conn:
+        rows = service.arr_position(conn, as_of)
+    total = sum((r["arr"] for r in rows), start=Decimal(0))
+    for r in rows:
+        print(f"{r['arr_ref']:<12} MRR {service.money(r['mrr']):>12}  ARR {service.money(r['arr']):>14}")
+    print(f"{'TOTAL':<12} {'':>16}  ARR {service.money(total):>14}  (as of {as_of})")
+    return 0
+
+
 def _pct(value: Any) -> str:
     return "-" if value is None else f"{value:.1f}"
 
@@ -146,6 +193,20 @@ def build_parser() -> argparse.ArgumentParser:
     p.add_argument("to_status")
     p.add_argument("--reason", required=True)
     p.set_defaults(func=cmd_status)
+
+    p = sub.add_parser("load-register", help="load an AW SOs Register CSV export and source pending SNs")
+    p.add_argument("file")
+    p.add_argument("--source", required=True, help="where the export came from, e.g. the Google Sheet id")
+    p.set_defaults(func=cmd_load_register)
+
+    p = sub.add_parser("assign-sn", help="source an order's SN from the Register (auto, or --sn to choose)")
+    p.add_argument("order_number")
+    p.add_argument("--sn", help="SN chosen by a person, e.g. SN260533 (must be on the Register)")
+    p.set_defaults(func=cmd_assign_sn)
+
+    p = sub.add_parser("arr", help="ARR position by contract")
+    p.add_argument("--as-of", help="YYYY-MM-DD (default today)")
+    p.set_defaults(func=cmd_arr)
 
     p = sub.add_parser("check", help="record the outcome of a pre-processing check")
     p.add_argument("order_number")

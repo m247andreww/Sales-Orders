@@ -40,7 +40,18 @@ Customer, employees, suppliers and FX rates must exist. If any is missing, load 
 Check the customer's credit terms in `sales.customer_credit_terms`; if the thread contains
 non-standard terms, record them with reason and approver.
 
-## 5. Load and review
+## 5. SN, GL and ARR
+
+- **SN:** never guess. Sync the Register (Google Drive connector → CSV export of the
+  "Sales Orders Extract for Claude" sheet), then `sales-orders load-register <csv> --source <sheet id>`;
+  pending orders pick up their SN automatically. If ambiguous, `sales-orders assign-sn <order>` lists
+  candidates — ask the CFO, then `--sn SNxxxxxx`.
+- **GL:** every line needs revenue (1xxx) and cost (2xxx) codes; product and category defaults apply.
+  Never invent a GL code; if unknown, leave it and report the NO_GL_CODE exception.
+- **ARR:** every recurring line needs the ARR ref from the ARR file (AAA999-YY). Part-period co-term
+  charges are `arr_treatment: "stub"`.
+
+## 6. Load and review
 
 ```bash
 sales-orders load-order data/<file>.json

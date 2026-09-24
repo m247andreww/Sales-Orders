@@ -16,13 +16,16 @@ Every order becomes one record with its lines, documents and checks. The databas
 2. **Reconciles** the totals typed in the submission email against its own calculation.
 3. **Flags exceptions** — below-cost lines, low margin, sales tax marked up, stale FX rates,
    suppliers without an account, customers with restricted credit terms, missing signed order.
-4. **Raises checks** the order needs — Direct Debit mandate, GDAP, customer PO, supplier account,
+4. **Takes the SN from AW SOs**, never invents one, and codes every line to a Xero GL account.
+5. **Raises checks** the order needs — Direct Debit mandate, GDAP, customer PO, supplier account,
    margin approval — and **blocks approval** until every check is resolved and no errors remain.
-5. **Locks** the commercial content once approved. Changes after that need the order put on hold
+6. **Locks** the commercial content once approved. Changes after that need the order put on hold
    and re-validated.
-6. **Keeps a register of credit terms** per customer over time, including non-standard terms
+7. **Keeps a register of credit terms** per customer over time, including non-standard terms
    with the reason and who approved them.
-7. **Records who did what, when** — every change, permanently.
+8. **Records who did what, when** — every change, permanently.
+9. **Keeps ARR as a ledger** — every new, expansion, churn is a dated movement, so ARR on any date and
+   the bridge between two dates are exact.
 
 ## Try the test order
 
@@ -35,19 +38,22 @@ cp .env.example .env            # then edit the URL; export it, e.g.:
 export SALES_ORDERS_DATABASE_URL=postgresql://user:pass@localhost:5432/sales_orders
 
 sales-orders migrate                                        # build the schema
-sales-orders load-master-data fixtures/test_master_data.json
-sales-orders load-order fixtures/test_order.json            # prints the order, checks, exceptions
-sales-orders status SO-000001 validated --reason "finance review"
-sales-orders check SO-000001 direct_debit_mandate passed --by test.finance@example.com --notes "mandate ref TEST"
+sales-orders load-master-data fixtures/test_master_data.json   # GL, products, ARR contracts, customers...
+sales-orders load-register fixtures/test_register.csv --source fixture   # AW SOs Register -> SN refs
+sales-orders load-order fixtures/test_order.json            # prints the order, SN, GL, checks, exceptions
+SALES_ORDERS_ACTOR=test.finance@example.com sales-orders status SO-000001 validated --reason "finance review"
+SALES_ORDERS_ACTOR=test.finance@example.com sales-orders check SO-000001 direct_debit_mandate passed --notes "mandate ref TEST"
 sales-orders show SO-000001
+sales-orders arr --as-of 2026-10-31                         # ARR by contract (after approval)
 ```
 
 The test order is **synthetic** (no real customer data). It deliberately covers every pattern found in
 real submissions: rate-card PS days, Microsoft CSP annual-commit/monthly-billed licences, USD supplier
 costs with an FX rate, a 36-month connectivity service and a US sales-tax pass-through.
 
-Expected result: cost £10,770.99, sell £15,611.61, GM £4,840.62 (31.01%), MRR £605.33, no exceptions,
-five checks pending.
+Expected result: SN269001 sourced from the Register, cost £10,770.99, sell £15,611.61, GM £4,840.62
+(31.01%), MRR £605.33, every line GL-coded, no exceptions, five checks pending. After CFO approval the
+ARR ledger shows £7,263.96.
 
 ## Development
 
@@ -67,19 +73,32 @@ CI runs all three on every push (`.github/workflows/ci.yml`).
 | `src/sales_orders/checks.py` | Rules deciding which checks an order needs |
 | `db/bootstrap/` | Database roles and least-privilege grants |
 | `docs/data-model.md` | ERD, email-to-database mapping, controls, exception rules |
+| `src/sales_orders/register.py` | AW SOs Register importer (SN source) |
+| `infra/` | Azure infrastructure as code (Bicep) |
+| `docs/deployment.md` | Step-by-step production deployment |
 | `docs/adr/` | Architecture decisions and why |
 
-## Decisions needed (CFO)
+## Decisions
 
-| # | Decision | Current placeholder |
+**Made (CFO, 2026-09-24)**
+
+| # | Decision | Where enforced |
 |---|---|---|
-| 1 | Minimum order gross margin % before approval is needed | 20% |
-| 2 | Maximum FX rate age | 7 days |
-| 3 | Tolerance between emailed and computed totals | £0.05 |
-| 4 | Production hosting | Proposed: Azure Database for PostgreSQL (UK) |
-| 5 | Who may approve orders / waive checks / set non-standard terms | Not yet enforced by role |
+| 1 | No minimum GM. Loss-making lines/orders allowed **with a rationale** and CFO approval | migration 0003, `margin_approval` check |
+| 1 | FX rates up to **28 days** old; emailed-vs-computed totals tolerance **±£0.05** | `sales.policy_setting` |
+| 2 | Host on **Azure PostgreSQL, UK South** | `infra/main.bicep`, `docs/deployment.md` |
+| 3 | **Only the CFO** approves orders, waives checks, approves losses, sets non-standard terms | migration 0003; personal Entra login required in production |
+| 4 | SN refs sourced from **AW SOs**; GL codes, product database, ARR database | migration 0004 |
 
-Policy values live in `sales.policy_setting` and change by migration (audited), not by code.
+**Still needed**
+
+| # | Decision |
+|---|---|
+| A | Is this database the successor to the SQLite build in OneDrive, and on what date does it become the record? (ADR 0003) |
+| B | Move AW SOs from a personal Gmail account to a Managed247 account |
+| C | Definitions of the NN / E reporting categories (Expansion NN vs Expansion E, Churn NN vs Churn E) |
+| D | Should recurring lines without an ARR ref block approval (current: yes, error)? |
+| E | Private networking vs office IP allow-list; where scheduled syncs run |
 
 ## Roadmap
 

@@ -88,9 +88,53 @@ class TenantIn(StrictModel):
     primary_domain: NonEmpty
 
 
+GlCode = Annotated[str, StringConstraints(pattern=r"^[0-9]{4}[A-Z]{0,2}$")]
+SnRef = Annotated[str, StringConstraints(pattern=r"^SN([0-9]{4}|[0-9]{6})(LO|CA)?$")]
+ArrRef = Annotated[str, StringConstraints(pattern=r"^[A-Z]{3}([0-9]{2,3})?(-[0-9]{2})?$")]
+
+
+class GlAccountIn(StrictModel):
+    """One Xero chart-of-accounts row (Xero is the master)."""
+
+    account_code: GlCode
+    name: NonEmpty
+    account_class: Annotated[str, StringConstraints(pattern=r"^(ASSET|LIABILITY|EQUITY|REVENUE|EXPENSE)$")]
+    account_type: NonEmpty
+    tax_type: str | None = None
+    xero_account_id: UUID | None = None
+
+
+class ProductIn(StrictModel):
+    sku: NonEmpty
+    name: NonEmpty
+    line_category: NonEmpty
+    service_category: str | None = None
+    description: str | None = None
+    vendor_part_number: str | None = None
+    default_supplier_name: str | None = None
+    default_billing_frequency: str | None = None
+    default_revenue_gl_code: GlCode | None = None
+    default_cost_gl_code: GlCode | None = None
+    list_price: Money | None = None
+    list_cost: Money | None = None
+
+
+class ArrContractIn(StrictModel):
+    arr_ref: ArrRef
+    customer_legal_name: NonEmpty
+    description: NonEmpty
+    service_category: str | None = None
+    start_date: date
+    end_date: date | None = None
+    auto_renews: bool = True
+    notice_period_days: int | None = Field(default=None, ge=0)
+
+
 class CustomerIn(StrictModel):
     legal_name: NonEmpty
     trading_name: str | None = None
+    xero_tracking_customer: str | None = None
+    arr_prefix: Annotated[str, StringConstraints(pattern=r"^[A-Z]{3}$")] | None = None
     company_number: Annotated[str, StringConstraints(pattern=r"^[A-Z0-9]{8}$")] | None = None
     xero_contact_id: UUID | None = None
     notes: str | None = None
@@ -117,9 +161,12 @@ class FxRateIn(StrictModel):
 
 
 class MasterDataIn(StrictModel):
+    gl_accounts: tuple[GlAccountIn, ...] = ()
     employees: tuple[EmployeeIn, ...] = ()
     suppliers: tuple[SupplierIn, ...] = ()
     customers: tuple[CustomerIn, ...] = ()
+    products: tuple[ProductIn, ...] = ()
+    arr_contracts: tuple[ArrContractIn, ...] = ()
     fx_rates: tuple[FxRateIn, ...] = ()
 
 
@@ -177,6 +224,14 @@ class OrderLineIn(StrictModel):
     fx_rate: FxRateRef | None = None
     unit_sell: Money  # in order currency, per billing period
     margin_rationale: str | None = None  # required (here or at order level) if sold below cost
+    service_category: str | None = None  # defaults from product / CSP rule
+    revenue_gl_code: GlCode | None = None  # defaults from product, then service category
+    cost_gl_code: GlCode | None = None
+    service_start_date: date | None = None
+    service_end_date: date | None = None
+    arr_treatment: str | None = None  # 'arr' (default for recurring), 'stub' or 'none'
+    arr_ref: ArrRef | None = None  # assigned by the ARR file
+    supplier_po_number: str | None = None
     notes: str | None = None
 
     @model_validator(mode="after")
@@ -204,7 +259,14 @@ class OrderSubmissionIn(StrictModel):
     source_sequence: int = Field(default=1, gt=0)
     customer_legal_name: NonEmpty
     title: NonEmpty
-    order_type: NonEmpty
+    order_type: NonEmpty  # Register "Document Type": NEW_ORDER, VOLUME, RENEWAL, LAST_ORDER, CHURN
+    order_document_type: str | None = None  # Register "Type": QUOTATION, PROPOSAL, ...
+    reporting_category: str | None = None  # NET_NEW, EXPANSION_E, ...
+    sn_ref: SnRef | None = None  # only if already confirmed on the AW SOs Register
+    project: str | None = None
+    ticket_reference: str | None = None
+    signed_by_customer: str | None = None
+    signed_by_managed247: str | None = None
     currency: CurrencyCode = "GBP"
     quote_reference: str | None = None
     pandadoc_document_id: str | None = None
