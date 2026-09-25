@@ -149,6 +149,22 @@ class AccountAllocationIn(StrictModel):
         return self
 
 
+class EmployeeAbsenceIn(StrictModel):
+    """A salesperson's absence, so orders led by a covering colleague keep the account with the owner."""
+
+    email: EmailStr
+    absent_from: date
+    absent_to: date
+    reason: NonEmpty = "holiday"
+    source: NonEmpty
+
+    @model_validator(mode="after")
+    def _dates(self) -> EmployeeAbsenceIn:
+        if self.absent_to < self.absent_from:
+            raise ValueError("absent_to is before absent_from")
+        return self
+
+
 class RegisterOwnerAliasIn(StrictModel):
     """Maps a Register "Salesperson" label (e.g. "John Smith") to an employee or a house account."""
 
@@ -202,6 +218,7 @@ class MasterDataIn(StrictModel):
     arr_contracts: tuple[ArrContractIn, ...] = ()
     account_allocations: tuple[AccountAllocationIn, ...] = ()
     register_owner_aliases: tuple[RegisterOwnerAliasIn, ...] = ()
+    employee_absences: tuple[EmployeeAbsenceIn, ...] = ()
     fx_rates: tuple[FxRateIn, ...] = ()
 
 
@@ -311,6 +328,7 @@ class OrderSubmissionIn(StrictModel):
     signed_date: date | None = None
     submitted_by_email: EmailStr
     account_manager_email: EmailStr | None = None
+    covering_for_email: EmailStr | None = None  # temporary cover: the absent salesperson
     is_expedited: bool = False
     margin_exception_reason: str | None = None  # order-level rationale for any loss
     stated_totals: StatedTotalsIn | None = None

@@ -15,11 +15,20 @@ from sales_orders.checks import required_checks
 from sales_orders.db import Connection
 from sales_orders.errors import OrderNotFoundError, SalesOrderError, UnknownReferenceError
 from sales_orders.models import (
+    AccountAllocationIn,
+    ArrContractIn,
     CustomerIn,
     DocumentIn,
+    EmployeeAbsenceIn,
+    EmployeeIn,
+    FxRateIn,
+    GlAccountIn,
     MasterDataIn,
     OrderLineIn,
     OrderSubmissionIn,
+    ProductIn,
+    RegisterOwnerAliasIn,
+    SupplierIn,
 )
 from sales_orders.register import ParsedRegister
 
@@ -83,197 +92,226 @@ def _order_id(conn: Connection, order_ref: str) -> int:
 
 
 def load_master_data(conn: Connection, data: MasterDataIn) -> None:
-    """Idempotently insert or update GL accounts, employees, suppliers, customers, products,
-    ARR contracts and FX rates (in dependency order)."""
+    """Idempotently insert or update master data, in dependency order."""
     for g in data.gl_accounts:
-        conn.execute(
-            """
-            INSERT INTO sales.gl_account (account_code, name, account_class, account_type, tax_type, xero_account_id)
-            VALUES (%s, %s, %s, %s, %s, %s)
-            ON CONFLICT (account_code) DO UPDATE
-               SET name = EXCLUDED.name, account_class = EXCLUDED.account_class,
-                   account_type = EXCLUDED.account_type, tax_type = EXCLUDED.tax_type,
-                   xero_account_id = COALESCE(EXCLUDED.xero_account_id, sales.gl_account.xero_account_id)
-             WHERE (sales.gl_account.name, sales.gl_account.account_class, sales.gl_account.account_type,
-                    sales.gl_account.tax_type)
-                   IS DISTINCT FROM (EXCLUDED.name, EXCLUDED.account_class, EXCLUDED.account_type, EXCLUDED.tax_type)
-                OR (EXCLUDED.xero_account_id IS NOT NULL
-                    AND sales.gl_account.xero_account_id IS DISTINCT FROM EXCLUDED.xero_account_id)
-            """,
-            (g.account_code, g.name, g.account_class, g.account_type, g.tax_type, g.xero_account_id),
-        )
-
+        _load_gl_account(conn, g)
     for e in data.employees:
-        conn.execute(
-            """
-            INSERT INTO sales.employee (email, full_name, job_title) VALUES (%s, %s, %s)
-            ON CONFLICT ((lower(email))) DO UPDATE
-               SET full_name = EXCLUDED.full_name, job_title = EXCLUDED.job_title
-             WHERE (sales.employee.full_name, sales.employee.job_title)
-                   IS DISTINCT FROM (EXCLUDED.full_name, EXCLUDED.job_title)
-            """,
-            (e.email, e.full_name, e.job_title),
-        )
-
+        _load_employee(conn, e)
     for s in data.suppliers:
-        conn.execute(
-            """
-            INSERT INTO sales.supplier (name, is_internal, account_status_code, payment_terms_days,
-                                        default_currency_code, xero_contact_id)
-            VALUES (%s, %s, %s, %s, %s, %s)
-            ON CONFLICT ((lower(name))) DO UPDATE
-               SET is_internal = EXCLUDED.is_internal,
-                   account_status_code = EXCLUDED.account_status_code,
-                   payment_terms_days = EXCLUDED.payment_terms_days,
-                   default_currency_code = EXCLUDED.default_currency_code,
-                   xero_contact_id = EXCLUDED.xero_contact_id
-             WHERE (sales.supplier.is_internal, sales.supplier.account_status_code,
-                    sales.supplier.payment_terms_days, sales.supplier.default_currency_code,
-                    sales.supplier.xero_contact_id)
-                   IS DISTINCT FROM
-                   (EXCLUDED.is_internal, EXCLUDED.account_status_code, EXCLUDED.payment_terms_days,
-                    EXCLUDED.default_currency_code, EXCLUDED.xero_contact_id)
-            """,
-            (
-                s.name,
-                s.is_internal,
-                s.account_status,
-                s.payment_terms_days,
-                s.default_currency,
-                s.xero_contact_id,
-            ),
-        )
-
+        _load_supplier(conn, s)
     for c in data.customers:
         _load_customer(conn, c)
-
     for pr in data.products:
-        default_supplier = _supplier_id(conn, pr.default_supplier_name) if pr.default_supplier_name else None
-        conn.execute(
-            """
-            INSERT INTO sales.product (sku, name, line_category_code, service_category_code, description,
-                                       vendor_part_number, default_supplier_id, default_billing_frequency_code,
-                                       default_revenue_gl_code, default_cost_gl_code, list_price, list_cost)
-            VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
-            ON CONFLICT ((upper(sku))) DO UPDATE
-               SET name = EXCLUDED.name, line_category_code = EXCLUDED.line_category_code,
-                   service_category_code = EXCLUDED.service_category_code,
-                   description = EXCLUDED.description, vendor_part_number = EXCLUDED.vendor_part_number,
-                   default_supplier_id = EXCLUDED.default_supplier_id,
-                   default_billing_frequency_code = EXCLUDED.default_billing_frequency_code,
-                   default_revenue_gl_code = EXCLUDED.default_revenue_gl_code,
-                   default_cost_gl_code = EXCLUDED.default_cost_gl_code,
-                   list_price = EXCLUDED.list_price, list_cost = EXCLUDED.list_cost
-             WHERE (sales.product.name, sales.product.line_category_code, sales.product.service_category_code,
-                    sales.product.description, sales.product.vendor_part_number, sales.product.default_supplier_id,
-                    sales.product.default_billing_frequency_code, sales.product.default_revenue_gl_code,
-                    sales.product.default_cost_gl_code, sales.product.list_price, sales.product.list_cost)
-                   IS DISTINCT FROM
-                   (EXCLUDED.name, EXCLUDED.line_category_code, EXCLUDED.service_category_code,
-                    EXCLUDED.description, EXCLUDED.vendor_part_number, EXCLUDED.default_supplier_id,
-                    EXCLUDED.default_billing_frequency_code, EXCLUDED.default_revenue_gl_code,
-                    EXCLUDED.default_cost_gl_code, EXCLUDED.list_price, EXCLUDED.list_cost)
-            """,
-            (
-                pr.sku,
-                pr.name,
-                pr.line_category,
-                pr.service_category,
-                pr.description,
-                pr.vendor_part_number,
-                default_supplier,
-                pr.default_billing_frequency,
-                pr.default_revenue_gl_code,
-                pr.default_cost_gl_code,
-                pr.list_price,
-                pr.list_cost,
-            ),
-        )
-
+        _load_product(conn, pr)
     for a in data.arr_contracts:
-        customer_id = _customer_id(conn, a.customer_legal_name)
-        existing = _one(conn, "SELECT customer_id FROM sales.arr_contract WHERE arr_ref = %s", (a.arr_ref,))
-        if existing is not None and int(existing["customer_id"]) != customer_id:
-            raise SalesOrderError(f"ARR ref {a.arr_ref} already belongs to another customer")
-        conn.execute(
-            """
-            INSERT INTO sales.arr_contract (arr_ref, customer_id, description, service_category_code,
-                                            start_date, end_date, auto_renews, notice_period_days)
-            VALUES (%s, %s, %s, %s, %s, %s, %s, %s)
-            ON CONFLICT (arr_ref) DO UPDATE
-               SET description = EXCLUDED.description, service_category_code = EXCLUDED.service_category_code,
-                   start_date = EXCLUDED.start_date, end_date = EXCLUDED.end_date,
-                   auto_renews = EXCLUDED.auto_renews, notice_period_days = EXCLUDED.notice_period_days
-             WHERE (sales.arr_contract.description, sales.arr_contract.service_category_code,
-                    sales.arr_contract.start_date, sales.arr_contract.end_date,
-                    sales.arr_contract.auto_renews, sales.arr_contract.notice_period_days)
-                   IS DISTINCT FROM
-                   (EXCLUDED.description, EXCLUDED.service_category_code, EXCLUDED.start_date,
-                    EXCLUDED.end_date, EXCLUDED.auto_renews, EXCLUDED.notice_period_days)
-            """,
-            (
-                a.arr_ref,
-                customer_id,
-                a.description,
-                a.service_category,
-                a.start_date,
-                a.end_date,
-                a.auto_renews,
-                a.notice_period_days,
-            ),
-        )
-
+        _load_arr_contract(conn, a)
     for al in data.account_allocations:
-        customer_id = _customer_id(conn, al.customer_legal_name)
-        owner = _employee_id(conn, al.owner_email) if al.owner_email else None
-        exists = _one(
-            conn,
-            """SELECT 1 FROM sales.customer_account_allocation
-                WHERE customer_id = %s AND allocated_from = %s""",
-            (customer_id, al.allocated_from),
-        )
-        if exists:
-            continue  # history: change it by closing a period and adding a new one
-        conn.execute(
-            """INSERT INTO sales.customer_account_allocation
-                   (customer_id, employee_id, house_account, allocated_from, allocated_to, source)
-               VALUES (%s, %s, %s, %s, %s, %s)""",
-            (customer_id, owner, al.house_account, al.allocated_from, al.allocated_to, al.source),
-        )
-
+        _load_account_allocation(conn, al)
     for ra in data.register_owner_aliases:
-        owner = _employee_id(conn, ra.owner_email) if ra.owner_email else None
-        conn.execute(
-            """INSERT INTO sales.register_owner_alias (register_label, employee_id, house_account)
-               VALUES (lower(btrim(%s)), %s, %s)
-               ON CONFLICT (register_label) DO UPDATE
-                  SET employee_id = EXCLUDED.employee_id, house_account = EXCLUDED.house_account
-                WHERE (sales.register_owner_alias.employee_id, sales.register_owner_alias.house_account)
-                      IS DISTINCT FROM (EXCLUDED.employee_id, EXCLUDED.house_account)""",
-            (ra.register_label, owner, ra.house_account),
-        )
-
+        _load_register_owner_alias(conn, ra)
+    for ab in data.employee_absences:
+        _load_employee_absence(conn, ab)
     for fx in data.fx_rates:
-        conn.execute(
-            """
-            INSERT INTO sales.fx_rate (from_currency_code, to_currency_code, rate_date, rate, source)
-            VALUES (%s, %s, %s, %s, %s)
-            ON CONFLICT (from_currency_code, to_currency_code, rate_date, source) DO NOTHING
-            """,
-            (fx.from_currency, fx.to_currency, fx.rate_date, fx.rate, fx.source),
+        _load_fx_rate(conn, fx)
+
+
+def _load_gl_account(conn: Connection, g: GlAccountIn) -> None:
+    conn.execute(
+        """
+        INSERT INTO sales.gl_account (account_code, name, account_class, account_type, tax_type, xero_account_id)
+        VALUES (%s, %s, %s, %s, %s, %s)
+        ON CONFLICT (account_code) DO UPDATE
+           SET name = EXCLUDED.name, account_class = EXCLUDED.account_class,
+               account_type = EXCLUDED.account_type, tax_type = EXCLUDED.tax_type,
+               xero_account_id = COALESCE(EXCLUDED.xero_account_id, sales.gl_account.xero_account_id)
+         WHERE (sales.gl_account.name, sales.gl_account.account_class, sales.gl_account.account_type,
+                sales.gl_account.tax_type)
+               IS DISTINCT FROM (EXCLUDED.name, EXCLUDED.account_class, EXCLUDED.account_type, EXCLUDED.tax_type)
+            OR (EXCLUDED.xero_account_id IS NOT NULL
+                AND sales.gl_account.xero_account_id IS DISTINCT FROM EXCLUDED.xero_account_id)
+        """,
+        (g.account_code, g.name, g.account_class, g.account_type, g.tax_type, g.xero_account_id),
+    )
+
+
+def _load_employee(conn: Connection, e: EmployeeIn) -> None:
+    conn.execute(
+        """
+        INSERT INTO sales.employee (email, full_name, job_title) VALUES (%s, %s, %s)
+        ON CONFLICT ((lower(email))) DO UPDATE
+           SET full_name = EXCLUDED.full_name, job_title = EXCLUDED.job_title
+         WHERE (sales.employee.full_name, sales.employee.job_title)
+               IS DISTINCT FROM (EXCLUDED.full_name, EXCLUDED.job_title)
+        """,
+        (e.email, e.full_name, e.job_title),
+    )
+
+
+def _load_supplier(conn: Connection, s: SupplierIn) -> None:
+    conn.execute(
+        """
+        INSERT INTO sales.supplier (name, is_internal, account_status_code, payment_terms_days,
+                                    default_currency_code, xero_contact_id)
+        VALUES (%s, %s, %s, %s, %s, %s)
+        ON CONFLICT ((lower(name))) DO UPDATE
+           SET is_internal = EXCLUDED.is_internal,
+               account_status_code = EXCLUDED.account_status_code,
+               payment_terms_days = EXCLUDED.payment_terms_days,
+               default_currency_code = EXCLUDED.default_currency_code,
+               xero_contact_id = EXCLUDED.xero_contact_id
+         WHERE (sales.supplier.is_internal, sales.supplier.account_status_code,
+                sales.supplier.payment_terms_days, sales.supplier.default_currency_code,
+                sales.supplier.xero_contact_id)
+               IS DISTINCT FROM
+               (EXCLUDED.is_internal, EXCLUDED.account_status_code, EXCLUDED.payment_terms_days,
+                EXCLUDED.default_currency_code, EXCLUDED.xero_contact_id)
+        """,
+        (
+            s.name,
+            s.is_internal,
+            s.account_status,
+            s.payment_terms_days,
+            s.default_currency,
+            s.xero_contact_id,
+        ),
+    )
+
+
+def _load_product(conn: Connection, pr: ProductIn) -> None:
+    default_supplier = _supplier_id(conn, pr.default_supplier_name) if pr.default_supplier_name else None
+    conn.execute(
+        """
+        INSERT INTO sales.product (sku, name, line_category_code, service_category_code, description,
+                                   vendor_part_number, default_supplier_id, default_billing_frequency_code,
+                                   default_revenue_gl_code, default_cost_gl_code, list_price, list_cost)
+        VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
+        ON CONFLICT ((upper(sku))) DO UPDATE
+           SET name = EXCLUDED.name, line_category_code = EXCLUDED.line_category_code,
+               service_category_code = EXCLUDED.service_category_code,
+               description = EXCLUDED.description, vendor_part_number = EXCLUDED.vendor_part_number,
+               default_supplier_id = EXCLUDED.default_supplier_id,
+               default_billing_frequency_code = EXCLUDED.default_billing_frequency_code,
+               default_revenue_gl_code = EXCLUDED.default_revenue_gl_code,
+               default_cost_gl_code = EXCLUDED.default_cost_gl_code,
+               list_price = EXCLUDED.list_price, list_cost = EXCLUDED.list_cost
+         WHERE (sales.product.name, sales.product.line_category_code, sales.product.service_category_code,
+                sales.product.description, sales.product.vendor_part_number, sales.product.default_supplier_id,
+                sales.product.default_billing_frequency_code, sales.product.default_revenue_gl_code,
+                sales.product.default_cost_gl_code, sales.product.list_price, sales.product.list_cost)
+               IS DISTINCT FROM
+               (EXCLUDED.name, EXCLUDED.line_category_code, EXCLUDED.service_category_code,
+                EXCLUDED.description, EXCLUDED.vendor_part_number, EXCLUDED.default_supplier_id,
+                EXCLUDED.default_billing_frequency_code, EXCLUDED.default_revenue_gl_code,
+                EXCLUDED.default_cost_gl_code, EXCLUDED.list_price, EXCLUDED.list_cost)
+        """,
+        (
+            pr.sku,
+            pr.name,
+            pr.line_category,
+            pr.service_category,
+            pr.description,
+            pr.vendor_part_number,
+            default_supplier,
+            pr.default_billing_frequency,
+            pr.default_revenue_gl_code,
+            pr.default_cost_gl_code,
+            pr.list_price,
+            pr.list_cost,
+        ),
+    )
+
+
+def _load_arr_contract(conn: Connection, a: ArrContractIn) -> None:
+    customer_id = _customer_id(conn, a.customer_legal_name)
+    existing = _one(conn, "SELECT customer_id FROM sales.arr_contract WHERE arr_ref = %s", (a.arr_ref,))
+    if existing is not None and int(existing["customer_id"]) != customer_id:
+        raise SalesOrderError(f"ARR ref {a.arr_ref} already belongs to another customer")
+    conn.execute(
+        """
+        INSERT INTO sales.arr_contract (arr_ref, customer_id, description, service_category_code,
+                                        start_date, end_date, auto_renews, notice_period_days)
+        VALUES (%s, %s, %s, %s, %s, %s, %s, %s)
+        ON CONFLICT (arr_ref) DO UPDATE
+           SET description = EXCLUDED.description, service_category_code = EXCLUDED.service_category_code,
+               start_date = EXCLUDED.start_date, end_date = EXCLUDED.end_date,
+               auto_renews = EXCLUDED.auto_renews, notice_period_days = EXCLUDED.notice_period_days
+         WHERE (sales.arr_contract.description, sales.arr_contract.service_category_code,
+                sales.arr_contract.start_date, sales.arr_contract.end_date,
+                sales.arr_contract.auto_renews, sales.arr_contract.notice_period_days)
+               IS DISTINCT FROM
+               (EXCLUDED.description, EXCLUDED.service_category_code, EXCLUDED.start_date,
+                EXCLUDED.end_date, EXCLUDED.auto_renews, EXCLUDED.notice_period_days)
+        """,
+        (
+            a.arr_ref,
+            customer_id,
+            a.description,
+            a.service_category,
+            a.start_date,
+            a.end_date,
+            a.auto_renews,
+            a.notice_period_days,
+        ),
+    )
+
+
+def _load_account_allocation(conn: Connection, al: AccountAllocationIn) -> None:
+    customer_id = _customer_id(conn, al.customer_legal_name)
+    owner = _employee_id(conn, al.owner_email) if al.owner_email else None
+    exists = _one(
+        conn,
+        """SELECT 1 FROM sales.customer_account_allocation
+            WHERE customer_id = %s AND allocated_from = %s""",
+        (customer_id, al.allocated_from),
+    )
+    if exists:
+        return  # history: change it by closing a period and adding a new one
+    conn.execute(
+        """INSERT INTO sales.customer_account_allocation
+               (customer_id, employee_id, house_account, allocated_from, allocated_to, source)
+           VALUES (%s, %s, %s, %s, %s, %s)""",
+        (customer_id, owner, al.house_account, al.allocated_from, al.allocated_to, al.source),
+    )
+
+
+def _load_register_owner_alias(conn: Connection, ra: RegisterOwnerAliasIn) -> None:
+    owner = _employee_id(conn, ra.owner_email) if ra.owner_email else None
+    conn.execute(
+        """INSERT INTO sales.register_owner_alias (register_label, employee_id, house_account)
+           VALUES (lower(btrim(%s)), %s, %s)
+           ON CONFLICT (register_label) DO UPDATE
+              SET employee_id = EXCLUDED.employee_id, house_account = EXCLUDED.house_account
+            WHERE (sales.register_owner_alias.employee_id, sales.register_owner_alias.house_account)
+                  IS DISTINCT FROM (EXCLUDED.employee_id, EXCLUDED.house_account)""",
+        (ra.register_label, owner, ra.house_account),
+    )
+
+
+def _load_employee_absence(conn: Connection, ab: EmployeeAbsenceIn) -> None:
+    record_absence(conn, ab)
+
+
+def _load_fx_rate(conn: Connection, fx: FxRateIn) -> None:
+    conn.execute(
+        """
+        INSERT INTO sales.fx_rate (from_currency_code, to_currency_code, rate_date, rate, source)
+        VALUES (%s, %s, %s, %s, %s)
+        ON CONFLICT (from_currency_code, to_currency_code, rate_date, source) DO NOTHING
+        """,
+        (fx.from_currency, fx.to_currency, fx.rate_date, fx.rate, fx.source),
+    )
+    existing = _one(
+        conn,
+        """SELECT rate FROM sales.fx_rate WHERE from_currency_code = %s AND to_currency_code = %s
+           AND rate_date = %s AND source = %s""",
+        (fx.from_currency, fx.to_currency, fx.rate_date, fx.source),
+    )
+    if existing is not None and existing["rate"] != fx.rate:
+        # A published rate for a date/source never changes; a different value is an input error.
+        raise SalesOrderError(
+            f"FX rate {fx.from_currency}->{fx.to_currency} {fx.rate_date} ({fx.source}) is already "
+            f"recorded as {existing['rate']}, not {fx.rate}"
         )
-        existing = _one(
-            conn,
-            """SELECT rate FROM sales.fx_rate WHERE from_currency_code = %s AND to_currency_code = %s
-               AND rate_date = %s AND source = %s""",
-            (fx.from_currency, fx.to_currency, fx.rate_date, fx.source),
-        )
-        if existing is not None and existing["rate"] != fx.rate:
-            # A published rate for a date/source never changes; a different value is an input error.
-            raise SalesOrderError(
-                f"FX rate {fx.from_currency}->{fx.to_currency} {fx.rate_date} ({fx.source}) is already "
-                f"recorded as {existing['rate']}, not {fx.rate}"
-            )
 
 
 def _load_customer(conn: Connection, c: CustomerIn) -> None:
@@ -400,6 +438,7 @@ def create_sales_order(conn: Connection, sub: OrderSubmissionIn) -> OrderResult:
     customer_id = _customer_id(conn, sub.customer_legal_name)
     submitted_by = _employee_id(conn, sub.submitted_by_email)
     account_manager = _employee_id(conn, sub.account_manager_email) if sub.account_manager_email else None
+    covering_for = _employee_id(conn, sub.covering_for_email) if sub.covering_for_email else None
     price_list_id = _price_list_id(conn, sub.price_list_name) if sub.price_list_name else None
     tenant_id = _tenant_id(conn, customer_id, str(sub.m365_tenant_guid)) if sub.m365_tenant_guid else None
 
@@ -415,9 +454,10 @@ def create_sales_order(conn: Connection, sub: OrderSubmissionIn) -> OrderResult:
              source_email_id, source_sequence, submitted_by_employee_id, account_manager_employee_id,
              is_expedited, margin_exception_reason, stated_net_cost, stated_net_sell,
              stated_gross_margin, notes, sn_ref, sn_source, sn_assigned_at, order_document_type_code,
-             reporting_category_code, project, ticket_reference, signed_by_customer, signed_by_managed247)
+             reporting_category_code, project, ticket_reference, signed_by_customer, signed_by_managed247,
+             covering_for_employee_id)
         VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s,
-                %s, %s, CASE WHEN %s::text IS NULL THEN NULL ELSE now() END, %s, %s, %s, %s, %s, %s)
+                %s, %s, CASE WHEN %s::text IS NULL THEN NULL ELSE now() END, %s, %s, %s, %s, %s, %s, %s)
         RETURNING sales_order_id, order_number
         """,
         (
@@ -451,6 +491,7 @@ def create_sales_order(conn: Connection, sub: OrderSubmissionIn) -> OrderResult:
             sub.ticket_reference,
             sub.signed_by_customer,
             sub.signed_by_managed247,
+            covering_for,
         ),
     ).fetchone()
     order = _required(order, "new sales_order")
@@ -916,6 +957,23 @@ def build_account_history(conn: Connection, source: str) -> dict[str, Any]:
                  JOIN sales.customer c USING (customer_id) ORDER BY c.legal_name, r.on_date"""
         ).fetchall(),
     }
+
+
+def record_absence(conn: Connection, absence: EmployeeAbsenceIn) -> None:
+    """Record a salesperson's absence (idempotent for an identical period)."""
+    employee_id = _employee_id(conn, absence.email)
+    if _one(
+        conn,
+        """SELECT 1 FROM sales.employee_absence
+            WHERE employee_id = %s AND absent_from = %s AND absent_to = %s""",
+        (employee_id, absence.absent_from, absence.absent_to),
+    ):
+        return
+    conn.execute(
+        """INSERT INTO sales.employee_absence (employee_id, absent_from, absent_to, reason, source)
+           VALUES (%s, %s, %s, %s, %s)""",
+        (employee_id, absence.absent_from, absence.absent_to, absence.reason, absence.source),
+    )
 
 
 def register_salesperson_history(conn: Connection, client: str | None = None) -> list[dict[str, Any]]:

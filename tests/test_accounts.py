@@ -11,7 +11,7 @@ from conftest import CFO, FINANCE, act_as, load, savepoint_rejects
 
 from sales_orders import service
 from sales_orders.db import Connection
-from sales_orders.models import MasterDataIn
+from sales_orders.models import EmployeeAbsenceIn, MasterDataIn
 
 
 def _rules(conn: Connection, order_json: dict[str, Any]) -> list[tuple[str, str]]:
@@ -218,3 +218,115 @@ def test_backdated_order_does_not_rewrite_later_history(
     assert notes == [
         "SN269001 led by Test Territory Manager is dated before a later ownership change: ownership not changed"
     ]
+
+
+def test_absence_makes_colleague_order_cover(
+    conn: Connection, master_data: MasterDataIn, order_json: dict[str, Any]
+) -> None:
+    """CFO 2026-09-25: a colleague stepping in during the owner's holiday does not take the account."""
+    service.record_absence(
+        conn,
+        EmployeeAbsenceIn(
+            email="test.territory@example.com",
+            absent_from=date(2026, 9, 1),
+            absent_to=date(2026, 9, 14),
+            reason="holiday",
+            source="test",
+        ),
+    )
+    order_json["account_manager_email"] = "test.isam@example.com"
+    number = load(conn, order_json).order_number
+    rules = {e["rule_code"]: e["message"] for e in service.order_exceptions(conn, number)}
+    assert set(rules) == {"COVER_ORDER"}
+    assert "Test Internal Sales led this order covering for Test Territory Manager" in rules["COVER_ORDER"]
+    before = _owners(conn)
+    _approve(conn, number)
+    assert _owners(conn) == before  # account stays with the absent owner
+
+
+def test_explicit_cover_without_recorded_absence(
+    conn: Connection, master_data: MasterDataIn, order_json: dict[str, Any]
+) -> None:
+    order_json["account_manager_email"] = "test.isam@example.com"
+    order_json["covering_for_email"] = "test.territory@example.com"
+    number = load(conn, order_json).order_number
+    assert {e["rule_code"] for e in service.order_exceptions(conn, number)} == {"COVER_ORDER"}
+    before = _owners(conn)
+    _approve(conn, number)
+    assert _owners(conn) == before
+
+
+def test_cover_order_nn_e_judged_for_absent_owner(
+    conn: Connection, master_data: MasterDataIn, order_json: dict[str, Any]
+) -> None:
+    """Owner won the customer (NN); the covering colleague's order is still NN."""
+    conn.execute(
+        """INSERT INTO sales.register_entry (sn_ref, register_sync_id, date_issued, client, project, revenue)
+           SELECT 'SN248001', register_sync_id, DATE '2026-03-01', 'Test Customer', 'Earlier', 100
+             FROM sales.register_sync LIMIT 1"""
+    )
+    service.record_absence(
+        conn,
+        EmployeeAbsenceIn(
+            email="test.territory@example.com",
+            absent_from=date(2026, 9, 1),
+            absent_to=date(2026, 9, 14),
+            reason="holiday",
+            source="test",
+        ),
+    )
+    order_json.update(
+        account_manager_email="test.isam@example.com", order_type="VOLUME", reporting_category="EXPANSION_NN"
+    )
+    number = load(conn, order_json).order_number
+    assert {e["rule_code"] for e in service.order_exceptions(conn, number)} == {"COVER_ORDER"}
+
+
+def test_after_absence_ends_colleague_takes_the_account(
+    conn: Connection, master_data: MasterDataIn, order_json: dict[str, Any]
+) -> None:
+    service.record_absence(
+        conn,
+        EmployeeAbsenceIn(
+            email="test.territory@example.com",
+            absent_from=date(2026, 8, 1),
+            absent_to=date(2026, 8, 14),
+            reason="holiday",
+            source="test",
+        ),
+    )
+    order_json["account_manager_email"] = "test.isam@example.com"  # order dated 9 Sep: not during absence
+    _approve(conn, load(conn, order_json).order_number)
+    assert _owners(conn)[-1] == ("test.isam@example.com", date(2026, 9, 9), None)
+
+
+def test_cannot_cover_for_yourself(
+    conn: Connection, master_data: MasterDataIn, order_json: dict[str, Any]
+) -> None:
+    order_json["covering_for_email"] = "test.territory@example.com"  # same as the order salesperson
+    with pytest.raises(psycopg.Error, match="sales_order_cover_not_self"), conn.transaction():
+        load(conn, order_json)
+
+
+def test_absences_cannot_overlap(conn: Connection, master_data: MasterDataIn) -> None:
+    service.record_absence(
+        conn,
+        EmployeeAbsenceIn(
+            email="test.territory@example.com",
+            absent_from=date(2026, 9, 1),
+            absent_to=date(2026, 9, 14),
+            reason="holiday",
+            source="test",
+        ),
+    )
+    with pytest.raises(psycopg.Error, match="employee_absence_no_overlap"), conn.transaction():
+        service.record_absence(
+            conn,
+            EmployeeAbsenceIn(
+                email="test.territory@example.com",
+                absent_from=date(2026, 9, 10),
+                absent_to=date(2026, 9, 20),
+                reason="holiday",
+                source="test",
+            ),
+        )

@@ -20,7 +20,7 @@ from pydantic import BaseModel, ValidationError
 from sales_orders import service
 from sales_orders.db import unit_of_work
 from sales_orders.errors import SalesOrderError
-from sales_orders.models import MasterDataIn, OrderSubmissionIn
+from sales_orders.models import EmployeeAbsenceIn, MasterDataIn, OrderSubmissionIn
 from sales_orders.register import parse_register
 
 PROJECT_ROOT = Path(__file__).resolve().parents[2]
@@ -241,6 +241,25 @@ def cmd_build_account_history(args: argparse.Namespace) -> int:
     return 0
 
 
+def cmd_record_absence(args: argparse.Namespace) -> int:
+    with unit_of_work(_actor(args)) as conn:
+        service.record_absence(
+            conn,
+            EmployeeAbsenceIn(
+                email=args.email,
+                absent_from=date.fromisoformat(args.absent_from),
+                absent_to=date.fromisoformat(args.absent_to),
+                reason=args.reason,
+                source=args.source,
+            ),
+        )
+    print(
+        f"{args.email} absent {args.absent_from} to {args.absent_to} ({args.reason}): orders led by a colleague "
+        "for their accounts in that period are treated as cover"
+    )
+    return 0
+
+
 def _pct(value: Any) -> str:
     return "-" if value is None else f"{value:.1f}"
 
@@ -304,6 +323,14 @@ def _add_master_data_commands(sub: Any) -> None:
     )
     p.add_argument("--source", default="AW SOs Register (built at CFO instruction 2026-09-24)")
     p.set_defaults(func=cmd_build_account_history)
+
+    p = sub.add_parser("record-absence", help="record a salesperson's absence (colleague orders = cover)")
+    p.add_argument("email")
+    p.add_argument("absent_from", help="YYYY-MM-DD")
+    p.add_argument("absent_to", help="YYYY-MM-DD")
+    p.add_argument("--reason", default="holiday")
+    p.add_argument("--source", default="CFO", help="where the absence is recorded (HR, Outlook calendar...)")
+    p.set_defaults(func=cmd_record_absence)
 
     p = sub.add_parser("employee-leaves", help="leaver routine: move their accounts to House, deactivate")
     p.add_argument("email")

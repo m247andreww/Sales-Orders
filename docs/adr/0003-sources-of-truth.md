@@ -88,6 +88,13 @@ opportunity." Consequences (migration 0010):
   current. A back-dated order never rewrites a later change, and a leaver never takes an account; both
   are logged to `account_history_review` instead.
 
+## Temporary cover (CFO, 2026-09-25)
+
+Ownership follows the salesperson on each approved order **except** when a colleague steps in temporarily
+(e.g. the owner is on holiday). Cover is recognised from a recorded absence (`sales.employee_absence`,
+`sales-orders record-absence`) or an explicit `covering_for` on the order. A cover order leaves the account
+with its owner and NN/E is judged for the owner (migration 0011, rule `COVER_ORDER`).
+
 ## ARR ref follows processing (CFO, 2026-09-24)
 
 A missing ARR ref never blocks approval. It is a warning before processing and an **error** after,
