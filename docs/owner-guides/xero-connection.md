@@ -43,14 +43,12 @@ nobody downloading anything. It is a paid Xero add-on ("Custom connection").
     (or the option to create a new secret) and confirm. *The old secret stops working at once.*
 16. Replace the saved secret in your password manager with the new one.
 
-## Part 4 — Let Claude run the check without seeing the codes
+## Part 4 — Where the codes live
 
-17. In the Claude Code session, open the **environment menu** in the title bar, then click **Edit**.
-18. Under **Network access**, add these two allowed domains: `identity.xero.com` and `api.xero.com`.
-19. Under **API credentials** (or **Environment variables** if that section is not offered), add two entries:
-    - Name `SALES_ORDERS_XERO_CLIENT_ID` — value: the Client ID.
-    - Name `SALES_ORDERS_XERO_CLIENT_SECRET` — value: the Client secret.
-20. Click **Save**, then start a **new** session (settings apply to new sessions only).
+Do **not** put the secret in the Claude Code environment settings: that screen warns its values are
+visible to anyone using the environment. The secret goes into the production server's secure store
+(Azure Key Vault, or the equivalent for the hosting chosen) when the database is deployed, and the
+daily check runs there. Until then, the codes stay only in your password manager.
 
 **If anything doesn't look like the above:** stop and send a screenshot of the screen you are on.
 
