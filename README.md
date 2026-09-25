@@ -108,14 +108,14 @@ CI runs all three on every push (`.github/workflows/ci.yml`).
 | H | The salesperson named on the order led it: NN/E judged for them; account passes to them on approval | migration 0010 |
 | I | Temporary cover (holiday): the colleague stepping in does not take the account | migration 0011 |
 | J | The current account owner is recorded in Xero contact groups; the database reconciles to it | migration 0012, `sync-xero-groups` |
+| K | Xero custom connection approved and created (2026-09-25); codes held by the CFO until hosting exists | `docs/owner-guides/xero-connection.md` |
 
 **Still needed**
 
 | # | Decision |
 |---|---|
 | 1 | Hosting provider (ADR 0004) |
-| 2 | Last working days of salespeople who have left (to date the move of their accounts) |
-| 3 | Xero custom connection (paid Xero add-on) so the owner-group sync runs unattended |
+| 2 | Leaver dating rule (last working day vs gardening leave) and dates for leavers' accounts |
 
 ## Roadmap
 
