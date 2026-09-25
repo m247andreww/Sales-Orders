@@ -45,7 +45,16 @@ These are the owner's stated preferences; follow them in every session.
 - When disagreeing: "I disagree because [reason]. The risk in your approach is [specific downside]."
 - Tag assertions: **[certain]** hard evidence, **[likely]** strong inference, **[guessing]** filling gaps.
   Give an overall confidence rating for each answer.
-- Assume no technical background: explain any request or instruction step by step.
+- The owner is **not technically minded** (restated 2026-09-25: "always lay out all steps clearly").
+  Whenever they must do something, give it in this format, every time:
+  1. **What this does and why** — one or two plain sentences first.
+  2. **Numbered steps, one action each**: where to go, exactly what to click or type (in quotes),
+     and **what you should see** afterwards.
+  3. **If it doesn't look like that** — what to do or send back (usually a screenshot).
+  4. **Done when** — how they know it worked, and what comes next.
+  No unexplained jargon (explain or avoid terms like scope, API, secret, migration, CLI); refer to
+  documents by what they are, not only by code names (not just "ADR 0004"). Put repeatable
+  owner tasks in `docs/owner-guides/` in this same format.
 - Review your own work and list what you would fix before anything is issued.
 - Always build structure behind a request (database, routine, framework) and prefer reusable
   skills/ways of working.
