@@ -29,8 +29,8 @@ new_password() { openssl rand -hex 24; }  # 48 hex characters: strong, and safe 
 
 cleanup() {
     if [[ -n "$SERVER" ]]; then
-        az postgres flexible-server firewall-rule delete -g "$RESOURCE_GROUP" -n "$SERVER" \
-            --rule-name "$FIREWALL_RULE" --yes -o none 2> /dev/null || true
+        az postgres flexible-server firewall-rule delete -g "$RESOURCE_GROUP" --server-name "$SERVER" \
+            --name "$FIREWALL_RULE" --yes -o none 2> /dev/null || true
     fi
 }
 trap cleanup EXIT
@@ -84,7 +84,7 @@ echo "Server: $SERVER_FQDN   Key Vault: $VAULT"
 
 step "4/8 Opening the firewall to this Cloud Shell only (closed again at the end)"
 MY_IP="$(curl -fsS https://api.ipify.org)"
-az postgres flexible-server firewall-rule create -g "$RESOURCE_GROUP" -n "$SERVER" --rule-name "$FIREWALL_RULE" \
+az postgres flexible-server firewall-rule create -g "$RESOURCE_GROUP" --server-name "$SERVER" --name "$FIREWALL_RULE" \
     --start-ip-address "$MY_IP" --end-ip-address "$MY_IP" -o none
 
 owner_psql() {  # psql as the owner login; the password comes from the environment, never the command line
