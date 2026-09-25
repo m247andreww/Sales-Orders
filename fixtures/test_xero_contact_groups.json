@@ -1,0 +1,44 @@
+{
+  "ContactGroups": [
+    {
+      "ContactGroupID": "00000000-0000-4000-8000-0000000a0001",
+      "Name": "a. Test Territory",
+      "Status": "ACTIVE",
+      "Contacts": [
+        {
+          "ContactID": "00000000-0000-4000-8000-00000000c001",
+          "Name": "Test Customer Ltd"
+        }
+      ]
+    },
+    {
+      "ContactGroupID": "00000000-0000-4000-8000-0000000a0002",
+      "Name": "b. Test ISAM",
+      "Status": "ACTIVE",
+      "Contacts": []
+    },
+    {
+      "ContactGroupID": "00000000-0000-4000-8000-0000000a0003",
+      "Name": "z. House",
+      "Status": "ACTIVE",
+      "Contacts": []
+    },
+    {
+      "ContactGroupID": "00000000-0000-4000-8000-0000000a0009",
+      "Name": "Direct Debit customers",
+      "Status": "ACTIVE",
+      "Contacts": [
+        {
+          "ContactID": "00000000-0000-4000-8000-00000000c001",
+          "Name": "Test Customer Ltd"
+        }
+      ]
+    },
+    {
+      "ContactGroupID": "00000000-0000-4000-8000-0000000a0010",
+      "Name": "old group",
+      "Status": "DELETED",
+      "Contacts": []
+    }
+  ]
+}

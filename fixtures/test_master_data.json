@@ -1,0 +1,239 @@
+{
+  "gl_accounts": [
+    {
+      "account_code": "1443",
+      "name": "Senior Consultant IH",
+      "account_class": "REVENUE",
+      "account_type": "REVENUE",
+      "tax_type": "OUTPUT2"
+    },
+    {
+      "account_code": "1462",
+      "name": "PM",
+      "account_class": "REVENUE",
+      "account_type": "REVENUE",
+      "tax_type": "OUTPUT2"
+    },
+    {
+      "account_code": "1301",
+      "name": "Hardware",
+      "account_class": "REVENUE",
+      "account_type": "REVENUE",
+      "tax_type": "OUTPUT2"
+    },
+    {
+      "account_code": "1201",
+      "name": "Leased Lines",
+      "account_class": "REVENUE",
+      "account_type": "REVENUE",
+      "tax_type": "OUTPUT2"
+    },
+    {
+      "account_code": "1503",
+      "name": "Additional Charges",
+      "account_class": "REVENUE",
+      "account_type": "REVENUE",
+      "tax_type": "OUTPUT2"
+    },
+    {
+      "account_code": "2400",
+      "name": "Prof Services",
+      "account_class": "EXPENSE",
+      "account_type": "DIRECTCOSTS",
+      "tax_type": "NONE"
+    },
+    {
+      "account_code": "2301",
+      "name": "Hardware (COS)",
+      "account_class": "EXPENSE",
+      "account_type": "DIRECTCOSTS",
+      "tax_type": "INPUT2"
+    },
+    {
+      "account_code": "2201",
+      "name": "Leased Lines (COS)",
+      "account_class": "EXPENSE",
+      "account_type": "DIRECTCOSTS",
+      "tax_type": "INPUT2"
+    },
+    {
+      "account_code": "2325",
+      "name": "Other COS",
+      "account_class": "EXPENSE",
+      "account_type": "DIRECTCOSTS",
+      "tax_type": "INPUT2"
+    },
+    {
+      "account_code": "7217",
+      "name": "Deferred Revenue - Cloud Services",
+      "account_class": "LIABILITY",
+      "account_type": "CURRLIAB",
+      "tax_type": "NONE"
+    }
+  ],
+  "employees": [
+    {
+      "email": "test.isam@example.com",
+      "full_name": "Test Internal Sales",
+      "job_title": "Internal Sales Account Manager"
+    },
+    {
+      "email": "test.territory@example.com",
+      "full_name": "Test Territory Manager",
+      "job_title": "Territory Manager"
+    },
+    {
+      "email": "test.finance@example.com",
+      "full_name": "Test Financial Controller",
+      "job_title": "Financial Controller"
+    },
+    {
+      "email": "test.cfo@example.com",
+      "full_name": "Test CFO",
+      "job_title": "Chief Financial Officer"
+    }
+  ],
+  "suppliers": [
+    {
+      "name": "Managed247 (internal delivery)",
+      "is_internal": true,
+      "account_status": "approved"
+    },
+    {
+      "name": "Test CSP Distributor Ltd",
+      "account_status": "approved",
+      "payment_terms_days": 30
+    },
+    {
+      "name": "Test US Hardware Inc",
+      "account_status": "approved",
+      "payment_terms_days": 30,
+      "default_currency": "USD"
+    }
+  ],
+  "customers": [
+    {
+      "legal_name": "Test Customer Ltd",
+      "trading_name": "Test Customer",
+      "company_number": "00000000",
+      "notes": "SYNTHETIC TEST CUSTOMER - never invoice",
+      "credit_terms": [
+        {
+          "effective_from": "2026-01-01",
+          "recurring_terms_days": 30,
+          "recurring_payment_method": "direct_debit",
+          "one_off_terms_days": 30,
+          "risk_rating": "standard"
+        }
+      ],
+      "contacts": [
+        {
+          "email": "it.admin@test-customer.example",
+          "full_name": "Test Admin",
+          "role_description": "M365 admin"
+        },
+        {
+          "email": "procurement@test-customer.example",
+          "role_description": "Procurement"
+        }
+      ],
+      "m365_tenants": [
+        {
+          "tenant_guid": "00000000-0000-4000-8000-000000000001",
+          "primary_domain": "testcustomer.onmicrosoft.com"
+        }
+      ],
+      "xero_tracking_customer": "Test Customer",
+      "arr_prefix": "TST",
+      "xero_contact_id": "00000000-0000-4000-8000-00000000c001"
+    }
+  ],
+  "products": [
+    {
+      "sku": "PS-L3-SSC-DAY",
+      "name": "Senior Solutions Consultant (day)",
+      "line_category": "professional_services",
+      "service_category": "prof_services",
+      "default_supplier_name": "Managed247 (internal delivery)",
+      "default_billing_frequency": "one_off",
+      "default_revenue_gl_code": "1443",
+      "default_cost_gl_code": "2400",
+      "list_price": "1195.00",
+      "list_cost": "700.00"
+    },
+    {
+      "sku": "PS-PMO-DAY",
+      "name": "Project Manager (day)",
+      "line_category": "professional_services",
+      "service_category": "prof_services",
+      "default_supplier_name": "Managed247 (internal delivery)",
+      "default_billing_frequency": "one_off",
+      "default_revenue_gl_code": "1462",
+      "default_cost_gl_code": "2400",
+      "list_price": "850.00",
+      "list_cost": "630.00"
+    },
+    {
+      "sku": "GW-MAX",
+      "name": "Cloud gateway",
+      "line_category": "hardware",
+      "service_category": "hardware",
+      "default_supplier_name": "Test US Hardware Inc",
+      "default_billing_frequency": "one_off",
+      "default_revenue_gl_code": "1301",
+      "default_cost_gl_code": "2301"
+    }
+  ],
+  "arr_contracts": [
+    {
+      "arr_ref": "TST001-26",
+      "customer_legal_name": "Test Customer Ltd",
+      "description": "Microsoft 365 Business Premium",
+      "service_category": "cloud_services",
+      "start_date": "2026-09-10",
+      "end_date": "2027-09-09",
+      "notice_period_days": 30
+    },
+    {
+      "arr_ref": "TST002-26",
+      "customer_legal_name": "Test Customer Ltd",
+      "description": "US store internet 500/20",
+      "service_category": "connectivity",
+      "start_date": "2026-10-01",
+      "end_date": "2029-09-30",
+      "auto_renews": false,
+      "notice_period_days": 90
+    }
+  ],
+  "account_allocations": [
+    {
+      "customer_legal_name": "Test Customer Ltd",
+      "owner_email": "test.territory@example.com",
+      "allocated_from": "2026-01-01",
+      "source": "test fixture"
+    }
+  ],
+  "fx_rates": [
+    {
+      "from_currency": "USD",
+      "to_currency": "GBP",
+      "rate_date": "2026-09-10",
+      "rate": "0.73905160",
+      "source": "XE mid-market"
+    }
+  ],
+  "xero_owner_groups": [
+    {
+      "group_name": "a. Test Territory",
+      "owner_email": "test.territory@example.com"
+    },
+    {
+      "group_name": "b. Test ISAM",
+      "owner_email": "test.isam@example.com"
+    },
+    {
+      "group_name": "z. House",
+      "house_account": "House"
+    }
+  ]
+}

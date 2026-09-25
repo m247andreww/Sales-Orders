@@ -1,0 +1,50 @@
+name: CI
+
+on:
+  push:
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_PASSWORD: postgres
+        ports: ["5432:5432"]
+        options: >-
+          --health-cmd "pg_isready -U postgres"
+          --health-interval 5s --health-timeout 5s --health-retries 10
+    env:
+      SALES_ORDERS_TEST_ADMIN_URL: postgresql://postgres:postgres@localhost:5432/postgres
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+          cache: pip
+      - run: pip install -e ".[dev]"
+      - name: Lint
+        run: ruff check . && ruff format --check .
+      - name: Type check
+        run: mypy
+      - name: Tests (real PostgreSQL; migrations run up, down and up again)
+        run: pytest
+
+  infrastructure:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Compile and lint Bicep (Azure CLI is preinstalled on GitHub runners)
+        run: |
+          az bicep install
+          az bicep build --file infra/main.bicep --stdout > /dev/null
+          az bicep lint --file infra/main.bicep
+          SALES_ORDERS_ENTRA_OBJECT_ID=00000000-0000-0000-0000-000000000000 SALES_ORDERS_OWNER_PASSWORD=ci \
+            az bicep build-params --file infra/main.prod.bicepparam --stdout > /dev/null
+      - name: Lint the deployment script (shellcheck is preinstalled on GitHub runners)
+        run: bash -n infra/deploy.sh && shellcheck infra/deploy.sh

@@ -1,0 +1,13 @@
+DELETE FROM sales.policy_setting;
+DELETE FROM sales.supplier_account_status;
+DELETE FROM sales.check_status;
+DELETE FROM sales.check_type;
+DELETE FROM sales.document_type;
+DELETE FROM sales.risk_rating;
+DELETE FROM sales.payment_method;
+DELETE FROM sales.billing_frequency;
+DELETE FROM sales.line_category;
+DELETE FROM sales.order_type;
+DELETE FROM sales.order_status_transition;
+DELETE FROM sales.order_status;
+DELETE FROM sales.currency;
