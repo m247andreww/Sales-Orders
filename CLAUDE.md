@@ -55,6 +55,9 @@ These are the owner's stated preferences; follow them in every session.
   No unexplained jargon (explain or avoid terms like scope, API, secret, migration, CLI); refer to
   documents by what they are, not only by code names (not just "ADR 0004"). Put repeatable
   owner tasks in `docs/owner-guides/` in this same format.
+- Minimise the owner's hands-on time (2026-09-25: "too painful... a whole day wasted"). Design so the owner
+  never runs commands: automate deployment (CI) rather than Cloud Shell steps; batch any unavoidable
+  owner actions into ONE short list, done once; never drip-feed one step per message.
 - Review your own work and list what you would fix before anything is issued.
 - Always build structure behind a request (database, routine, framework) and prefer reusable
   skills/ways of working.
