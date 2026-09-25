@@ -30,12 +30,14 @@ confirmed in Azure Cost Management after the first month).
 
 ## Part 3 — Run the build
 
-8. Type `bash infra/deploy.sh` and press **Enter**.
-9. It shows who you are signed in as and which subscription will be billed. If both are right, type
+8. Type `az account set --subscription "Azure subscription 1"` and press **Enter** (this picks the
+   active subscription; the other one, MCPP, is disabled). *Nothing is shown if it worked.*
+9. Type `bash infra/deploy.sh` and press **Enter**.
+10. It shows who you are signed in as and which subscription will be billed. If both are right, type
    `yes` and press **Enter**. If not, type anything else to stop.
-10. Leave the window open. Each stage prints `==> 1/8`, `==> 2/8` … Stage 3 takes 10–15 minutes.
+11. Leave the window open. Each stage prints `==> 1/8`, `==> 2/8` … Stage 3 takes 10–15 minutes.
     *At the end you should see* **DONE.** *and three lines (Server, Key Vault, Protection).*
-11. Copy those three lines back to Claude.
+12. Copy those three lines back to Claude.
 
 **If it doesn't look like that:** the script stops at the first problem with **STOPPED:** and a reason,
 and nothing after that point is changed. Send a screenshot of the Cloud Shell panel. Running

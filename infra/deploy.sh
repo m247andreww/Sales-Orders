@@ -46,6 +46,7 @@ SIGNED_IN="$(az ad signed-in-user show --query userPrincipalName -o tsv)"
 export SALES_ORDERS_ENTRA_OBJECT_ID
 SALES_ORDERS_ENTRA_OBJECT_ID="$(az ad signed-in-user show --query id -o tsv)"
 SUBSCRIPTION="$(az account show --query name -o tsv)"
+[[ "$(az account show --query state -o tsv)" == "Enabled" ]] || fail "subscription '$SUBSCRIPTION' is disabled: choose an active one with  az account set --subscription \"<name>\""
 TENANT="$(az account show --query tenantDisplayName -o tsv 2> /dev/null || echo unknown)"
 echo "Signed in as:  $SIGNED_IN"
 echo "Organisation:  $TENANT"
