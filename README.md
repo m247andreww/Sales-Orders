@@ -3,8 +3,8 @@
 Managed247's system of record for sales orders — replacing "signed PDF + email into
 `neworders@managed.co.uk`" with a database that checks every order before it is processed.
 
-**Stage: foundation.** The database, rules and a test order are built and tested.
-Nothing is connected to the live mailbox, Xero or SharePoint yet (see [Roadmap](#roadmap)).
+**Stage: deployed, empty.** The production database is built on Azure (UK South) with the schema, rules and
+permissions. No real data is loaded yet, and nothing is connected to the live mailbox, Xero or SharePoint (see [Roadmap](#roadmap)).
 
 ---
 
@@ -109,13 +109,13 @@ CI runs all three on every push (`.github/workflows/ci.yml`).
 | I | Temporary cover (holiday): the colleague stepping in does not take the account | migration 0011 |
 | J | The current account owner is recorded in Xero contact groups; the database reconciles to it | migration 0012, `sync-xero-groups` |
 | L | A salesperson leaves on their last working day (gardening leave = left); later credit never passes an account to them | migration 0013, `employee-leaves` |
+| M | Production database built on Azure, UK South (2026-09-25): `psql-salesorders-prod-v7qbwnxbjgf66`, Key Vault `kv-so-prod-v7qbwnxbjgf66`; delete lock on, firewall closed | `infra/deploy.sh` |
 | K | Xero custom connection approved and created (2026-09-25); codes held by the CFO until hosting exists | `docs/owner-guides/xero-connection.md` |
 
 **Still needed**
 
 | # | Decision |
 |---|---|
-| 1 | Hosting provider (ADR 0004) |
 
 ## Roadmap
 
