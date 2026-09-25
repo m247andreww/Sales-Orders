@@ -2,16 +2,17 @@
 // Sales Orders: production database on Azure Database for PostgreSQL – Flexible Server.
 //
 // Deploy with (see docs/deployment.md for the full runbook):
-//   az deployment group create -g rg-salesorders-prod -f infra/main.bicep -p infra/main.prod.bicepparam
+//   bash infra/deploy.sh      (Azure Cloud Shell; builds the server, roles, schema and permissions)
 //
 // Design (ADR 0002):
 //   * UK South primary; geo-redundant backups (UK West pair), so all data stays in the UK.
-//   * Microsoft Entra ID sign-in for people (the CFO logs in as himself; the database then
-//     records him as the actor and allows approvals, see migration 0003).
+//   * Microsoft Entra ID sign-in for people (the CFO signs in personally; the database then
+//     records that login as the actor and allows approvals, see migration 0003).
 //   * One password login for the application/migrations, its secret held in Key Vault.
 //   * TLS 1.2+ enforced; public access restricted to named IP ranges only.
 //   * btree_gist extension allow-listed (required by the credit-terms constraint).
 //   * CanNotDelete lock: the server cannot be deleted without first removing the lock.
+//   * The Entra administrator may read and set Key Vault secrets (the stored passwords).
 // =============================================================================
 
 targetScope = 'resourceGroup'
@@ -55,6 +56,9 @@ param administratorPassword string
 
 @description('Object ID of the Entra ID user or group that administers the server.')
 param entraAdminObjectId string
+
+@description('Apply the CanNotDelete lock. deploy.sh turns it off only while it sets the server up.')
+param applyDeleteLock bool = true
 
 @description('Display name / UPN of the Entra ID administrator, e.g. andrew.whitford@managed.co.uk.')
 param entraAdminPrincipalName string
@@ -165,7 +169,7 @@ resource database 'Microsoft.DBforPostgreSQL/flexibleServers/databases@2024-08-0
   name: databaseName
   properties: {
     charset: 'UTF8'
-    collation: 'en_GB.utf8'
+    collation: 'en_US.utf8' // the documented Azure default; sorts English text as en_GB does
   }
   dependsOn: [minTls]
 }
@@ -230,7 +234,21 @@ resource ownerSecret 'Microsoft.KeyVault/vaults/secrets@2023-07-01' = {
   }
 }
 
-resource deleteLock 'Microsoft.Authorization/locks@2020-05-01' = {
+// Key Vault Secrets Officer for the Entra administrator: read the stored passwords, set new ones.
+resource vaultSecretsOfficer 'Microsoft.Authorization/roleAssignments@2022-04-01' = {
+  scope: vault
+  name: guid(vault.id, entraAdminObjectId, 'b86a8fe4-44ce-4948-aee5-eccb2c155cd7')
+  properties: {
+    roleDefinitionId: subscriptionResourceId(
+      'Microsoft.Authorization/roleDefinitions',
+      'b86a8fe4-44ce-4948-aee5-eccb2c155cd7'
+    )
+    principalId: entraAdminObjectId
+    principalType: entraAdminPrincipalType
+  }
+}
+
+resource deleteLock 'Microsoft.Authorization/locks@2020-05-01' = if (applyDeleteLock) {
   scope: server
   name: 'protect-sales-orders-database'
   properties: {

@@ -1,12 +1,14 @@
 using './main.bicep'
 
-// Production parameters. The password is NOT stored here: pass it at deploy time, e.g.
-//   az deployment group create ... -p infra/main.prod.bicepparam -p administratorPassword="$(openssl rand -base64 32)"
+// Production parameters, used by infra/deploy.sh. Nothing secret or personal is stored here: the
+// script supplies the Entra object id and a freshly generated password through the environment.
 param environmentName = 'prod'
 param location = 'uksouth'
-param entraAdminPrincipalName = 'andrew.whitford@managed.co.uk'
-param entraAdminObjectId = '<Entra object id of Andrew Whitford: az ad user show --id andrew.whitford@managed.co.uk --query id -o tsv>'
+param entraAdminPrincipalName = readEnvironmentVariable('SALES_ORDERS_ENTRA_ADMIN', 'andrew.whitford@managed.co.uk')
+param entraAdminObjectId = readEnvironmentVariable('SALES_ORDERS_ENTRA_OBJECT_ID')
 param administratorPassword = readEnvironmentVariable('SALES_ORDERS_OWNER_PASSWORD')
+param applyDeleteLock = bool(readEnvironmentVariable('SALES_ORDERS_APPLY_LOCK', 'true'))
 param allowedIpRanges = [
-  // { name: 'mk-office', start: '<office public IP>', end: '<office public IP>' }
+  // Standing access (e.g. the office) goes here; deploy.sh opens a temporary rule for itself.
+  // { name: 'office', start: '<office public IP>', end: '<office public IP>' }
 ]

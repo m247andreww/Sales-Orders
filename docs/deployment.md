@@ -19,40 +19,25 @@ geo-backup is typically in the low tens of pounds a month. High availability wou
 
 ## Steps
 
-1. **Sign in and create the resource group** (once)
-   ```bash
-   az login
-   az group create -n rg-salesorders-prod -l uksouth --tags application=sales-orders owner=finance
-   ```
-2. **Fill in `infra/main.prod.bicepparam`**: your Entra object id
-   (`az ad user show --id andrew.whitford@managed.co.uk --query id -o tsv`) and the office IP range(s).
-3. **Deploy** (the password is generated and never displayed or saved locally)
-   ```bash
-   export SALES_ORDERS_OWNER_PASSWORD="$(openssl rand -base64 32)"
-   az deployment group create -g rg-salesorders-prod -f infra/main.bicep -p infra/main.prod.bicepparam
-   unset SALES_ORDERS_OWNER_PASSWORD
-   ```
-4. **Create roles** (as the Entra administrator, connected to database `postgres`)
-   ```bash
-   psql "host=<serverFqdn> dbname=postgres user=andrew.whitford@managed.co.uk sslmode=require" \
-        -v db=sales_orders -f db/bootstrap/roles.sql
-   ```
-   Then create your personal database login and put it in the people group:
-   ```sql
-   SELECT * FROM pgaadauth_create_principal('andrew.whitford@managed.co.uk', false, false);
-   GRANT sales_orders_person TO "andrew.whitford@managed.co.uk";
-   ```
-   Set passwords for `sales_orders_app` / `sales_orders_readonly` into Key Vault, never into files.
-5. **Build the schema** (as `sales_orders_owner`, password from Key Vault)
-   ```bash
-   export SALES_ORDERS_DATABASE_URL="postgresql://sales_orders_owner:<from Key Vault>@<serverFqdn>:5432/sales_orders?sslmode=require"
-   sales-orders migrate
-   psql "$SALES_ORDERS_DATABASE_URL" -f db/bootstrap/grants.sql
-   ```
-   Switch on production identity mode (from now on only your personal login can approve):
-   ```bash
-   psql "$SALES_ORDERS_DATABASE_URL" -c "UPDATE sales.policy_setting SET numeric_value = 1 WHERE setting_key = 'require_personal_login'"
-   ```
+The CFO's step-by-step version is `docs/owner-guides/azure-setup.md`. In short, from Azure Cloud Shell:
+
+```bash
+gh auth login
+gh repo clone m247andreww/Sales-Orders && cd Sales-Orders
+bash infra/deploy.sh
+```
+
+`infra/deploy.sh` (safe to re-run) does steps 1–5 below:
+
+1. Checks the signed-in user is the Entra administrator and confirms the subscription.
+2. Registers the resource providers and creates `rg-salesorders-prod` in UK South.
+3. Deploys `infra/main.bicep` with a newly generated owner password (never shown or saved to disk;
+   stored in Key Vault). The delete lock is lifted for the run and put back at the end.
+4. Opens the firewall to the Cloud Shell's IP only, runs `db/bootstrap/roles.sql`, sets the app and
+   read-only passwords straight into Key Vault, and adds the CFO's Entra login to `sales_orders_person`.
+5. Runs the migrations and `grants.sql`, switches on `require_personal_login`, closes the firewall and
+   re-applies the lock.
+
 6. **Load master data**: GL chart from Xero, customers, suppliers, products, ARR contracts, then
    the AW SOs Register (`sales-orders load-register <export.csv> --source <sheet id>`).
 7. **Connect Xero for account owners** (read-only, no browser login each time):
