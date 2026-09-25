@@ -37,6 +37,21 @@ nobody downloading anything. It is a paid Xero add-on ("Custom connection").
 14. Save both in your password manager as "Xero – Sales Orders sync".
     **Never** paste them into email, Teams or a chat (including Claude).
 
+## If a secret is ever exposed (pasted into chat, email, Teams…)
+
+15. In developer.xero.com → **My Apps** → the app → **Configuration**, click **Generate a secret**
+    (or the option to create a new secret) and confirm. *The old secret stops working at once.*
+16. Replace the saved secret in your password manager with the new one.
+
+## Part 4 — Let Claude run the check without seeing the codes
+
+17. In the Claude Code session, open the **environment menu** in the title bar, then click **Edit**.
+18. Under **Network access**, add these two allowed domains: `identity.xero.com` and `api.xero.com`.
+19. Under **API credentials** (or **Environment variables** if that section is not offered), add two entries:
+    - Name `SALES_ORDERS_XERO_CLIENT_ID` — value: the Client ID.
+    - Name `SALES_ORDERS_XERO_CLIENT_SECRET` — value: the Client secret.
+20. Click **Save**, then start a **new** session (settings apply to new sessions only).
+
 **If anything doesn't look like the above:** stop and send a screenshot of the screen you are on.
 
 **Done when:** the app shows as connected to Managed247 and both codes are in your password
