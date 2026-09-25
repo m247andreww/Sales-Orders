@@ -20,10 +20,14 @@ from pydantic import BaseModel, ValidationError
 from sales_orders import service
 from sales_orders.db import unit_of_work
 from sales_orders.errors import SalesOrderError
+from sales_orders.google_sheets import GoogleSheetsError, ServiceAccount, SheetsClient
+from sales_orders.jobs import FAILED_MARKER, OK_MARKER, NightlyConfig, nightly_steps, run_job
 from sales_orders.models import EmployeeAbsenceIn, MasterDataIn, OrderSubmissionIn
+from sales_orders.reference import ReferenceFormatError
 from sales_orders.register import parse_register
 from sales_orders.xero import (
     DEFAULT_SCOPE,
+    XeroClient,
     XeroCredentials,
     XeroFormatError,
     fetch_contact_groups,
@@ -438,6 +442,63 @@ def _add_arr_commands(sub: Any) -> None:
     p.set_defaults(func=cmd_arr_outstanding)
 
 
+def _env(name: str) -> str:
+    value = os.environ.get(name, "").strip()
+    if not value:
+        raise GoogleSheetsError(f"{name} is not set")
+    return value
+
+
+def cmd_nightly_sync(args: argparse.Namespace) -> int:
+    """Every source into the database, one logged step at a time (run nightly by the Azure job)."""
+    cfg = NightlyConfig(
+        register_sheet_id=_env("SALES_ORDERS_REGISTER_SHEET_ID"),
+        register_range=os.environ.get("SALES_ORDERS_REGISTER_RANGE", "Register"),
+        reference_sheet_id=_env("SALES_ORDERS_REFERENCE_SHEET_ID"),
+    )
+    sheets = SheetsClient(ServiceAccount.from_json(_env("SALES_ORDERS_GOOGLE_KEY")))
+    xero = (
+        XeroClient(_xero_credentials())
+        if os.environ.get("SALES_ORDERS_XERO_CLIENT_ID") and os.environ.get("SALES_ORDERS_XERO_CLIENT_SECRET")
+        else None
+    )
+    actor = _actor(args)
+    report = run_job("nightly-sync", list(nightly_steps(cfg, sheets, xero)), lambda: unit_of_work(actor))
+    for step in report.steps:
+        print(f"[{step.status}] {step.name}: {step.detail}")
+    print(f"{OK_MARKER if report.ok else FAILED_MARKER} (run {report.run_id})")
+    return 0 if report.ok else 1
+
+
+def cmd_job_status(args: argparse.Namespace) -> int:
+    with unit_of_work(_actor(args)) as conn:
+        rows = conn.execute(
+            """SELECT job_run_id, started_at, status, summary, step_no, step_name, step_status, detail
+                 FROM sales.v_job_run_latest WHERE job_name = %s ORDER BY step_no""",
+            (args.job,),
+        ).fetchall()
+    if not rows:
+        print(f"{args.job} has never run")
+        return 0
+    first = rows[0]
+    print(
+        f"{args.job} run {first['job_run_id']} started {first['started_at']:%d/%m/%Y %H:%M}: {first['status']} ({first['summary']})"
+    )
+    for r in rows:
+        if r["step_no"] is not None:
+            print(f"  {r['step_no']}. [{r['step_status']}] {r['step_name']}: {r['detail']}")
+    return 0
+
+
+def _add_job_commands(sub: Any) -> None:
+    """Scheduled jobs."""
+    p = sub.add_parser("nightly-sync", help="load the Reference sheet, Xero and the Register (Azure job)")
+    p.set_defaults(func=cmd_nightly_sync)
+    p = sub.add_parser("job-status", help="the latest run of a scheduled job, step by step")
+    p.add_argument("--job", default="nightly-sync")
+    p.set_defaults(func=cmd_job_status)
+
+
 def build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(prog="sales-orders", description=__doc__)
     parser.add_argument("--actor", help="who is acting (audit trail); default $SALES_ORDERS_ACTOR or OS user")
@@ -446,6 +507,7 @@ def build_parser() -> argparse.ArgumentParser:
     _add_order_commands(sub)
     _add_master_data_commands(sub)
     _add_arr_commands(sub)
+    _add_job_commands(sub)
     return parser
 
 
@@ -459,6 +521,8 @@ def main(argv: list[str] | None = None) -> int:
         print(f"rejected: {exc}", file=sys.stderr)
     except XeroFormatError as exc:
         print(f"Xero: {exc}", file=sys.stderr)
+    except (GoogleSheetsError, ReferenceFormatError) as exc:
+        print(f"{FAILED_MARKER}: {exc}", file=sys.stderr)
     except OSError as exc:  # Xero unreachable or refused the request: nothing was loaded
         print(f"Xero request failed: {exc}", file=sys.stderr)
     except psycopg.Error as exc:  # constraint / trigger violations: nothing was committed

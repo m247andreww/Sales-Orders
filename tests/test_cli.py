@@ -32,4 +32,6 @@ def test_help_lists_all_commands() -> None:
         "arr-outstanding",
         "sync-xero-groups",
         "xero-owners",
+        "nightly-sync",
+        "job-status",
     }
