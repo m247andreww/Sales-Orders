@@ -13,6 +13,7 @@ unless stated. Nothing here is manual clicking in the portal.
 | Key Vault | Holds the one service password (never in git or email) |
 | Log Analytics | Server logs and metrics, 90 days |
 | Delete lock | The server cannot be deleted without removing the lock first |
+| Budget alert | Emails the CFO at 80% of £50 a month (actual) and 100% (forecast) |
 
 Indicative cost [estimate, to confirm in the Azure pricing calculator]: B1ms compute + 32 GB storage +
 geo-backup is typically in the low tens of pounds a month. High availability would roughly double compute.

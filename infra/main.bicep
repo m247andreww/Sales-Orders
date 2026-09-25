@@ -13,6 +13,7 @@
 //   * btree_gist extension allow-listed (required by the credit-terms constraint).
 //   * CanNotDelete lock: the server cannot be deleted without first removing the lock.
 //   * The Entra administrator may read and set Key Vault secrets (the stored passwords).
+//   * Monthly spending alert (budget) emailed to the Entra administrator.
 // =============================================================================
 
 targetScope = 'resourceGroup'
@@ -68,6 +69,16 @@ param entraAdminPrincipalType string = 'User'
 
 @description('Public IP ranges allowed to connect, e.g. [{ name: \'office\', start: \'203.0.113.10\', end: \'203.0.113.10\' }].')
 param allowedIpRanges array = []
+
+@description('Monthly spending alert for this resource group, in the billing currency (GBP).')
+@minValue(1)
+param monthlyBudget int = 50
+
+@description('Who is emailed at 80% and 100% of the monthly budget.')
+param budgetContactEmails array = [entraAdminPrincipalName]
+
+@description('First day of the month the budget starts (defaults to this month).')
+param budgetStartDate string = utcNow('yyyy-MM-01')
 
 @description('Tags applied to every resource.')
 param tags object = {
@@ -245,6 +256,33 @@ resource vaultSecretsOfficer 'Microsoft.Authorization/roleAssignments@2022-04-01
     )
     principalId: entraAdminObjectId
     principalType: entraAdminPrincipalType
+  }
+}
+
+// Spending alert: emails at 80% (actual) and 100% (forecast) of the monthly budget.
+resource budget 'Microsoft.Consumption/budgets@2023-05-01' = {
+  name: 'sales-orders-monthly'
+  properties: {
+    category: 'Cost'
+    amount: monthlyBudget
+    timeGrain: 'Monthly'
+    timePeriod: { startDate: budgetStartDate }
+    notifications: {
+      actual80: {
+        enabled: true
+        operator: 'GreaterThanOrEqualTo'
+        threshold: 80
+        thresholdType: 'Actual'
+        contactEmails: budgetContactEmails
+      }
+      forecast100: {
+        enabled: true
+        operator: 'GreaterThanOrEqualTo'
+        threshold: 100
+        thresholdType: 'Forecasted'
+        contactEmails: budgetContactEmails
+      }
+    }
   }
 }
 

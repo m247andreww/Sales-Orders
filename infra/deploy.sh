@@ -46,6 +46,11 @@ SIGNED_IN="$(az ad signed-in-user show --query userPrincipalName -o tsv)"
 export SALES_ORDERS_ENTRA_OBJECT_ID
 SALES_ORDERS_ENTRA_OBJECT_ID="$(az ad signed-in-user show --query id -o tsv)"
 SUBSCRIPTION="$(az account show --query name -o tsv)"
+QUOTA="$(az rest --method get --url "https://management.azure.com/subscriptions/$(az account show --query id -o tsv)?api-version=2022-12-01" --query subscriptionPolicies.quotaId -o tsv)"
+case "$QUOTA" in
+    FreeTrial* | MSDN* | VisualStudio* | Sponsored* | AzurePass* | Students*)
+        fail "subscription '$SUBSCRIPTION' is a trial or credit subscription ($QUOTA) and would switch off: upgrade it to Pay-As-You-Go first" ;;
+esac
 [[ "$(az account show --query state -o tsv)" == "Enabled" ]] || fail "subscription '$SUBSCRIPTION' is disabled: choose an active one with  az account set --subscription \"<name>\""
 TENANT="$(az account show --query tenantDisplayName -o tsv 2> /dev/null || echo unknown)"
 echo "Signed in as:  $SIGNED_IN"
