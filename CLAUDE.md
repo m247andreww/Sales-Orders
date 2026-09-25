@@ -88,6 +88,9 @@ These are the owner's stated preferences; follow them in every session.
   or `covering_for_email` on the order).
 - House = finance-controlled account. When a salesperson leaves, ALL their accounts go to House until a new
   salesperson is allocated (`employee-leaves`, `allocate-account`). House/Legacy orders are E, never NN.
+- Leaving date for accounts = LAST WORKING DAY; gardening leave counts as left, the contractual leave
+  date does not (CFO, 2026-09-25). Orders credited to a leaver afterwards keep the credit (never edit
+  the Register) but never give them an account (`employee.left_on`, migration 0013).
 - Legacy = historic Register label only. Auto Renew / Cust Success = House (CFO).
 - Ownership history: changes only when a different NAMED salesperson appears; House-labelled orders never
   end a salesperson's ownership. Build with `build-account-history`; it never overwrites existing history.

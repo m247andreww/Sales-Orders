@@ -142,6 +142,18 @@ Errors block approval unless the rule's `blocks_approval` is false in `sales.exc
 
 Exception `XERO_OWNER_MISMATCH` (warning, open orders only): Xero and the database disagree on the owner.
 
+## Leavers (migration 0013)
+
+`employee.left_on` = last working day (gardening leave counts as left). `sales.apply_leaver()` closes the
+leaver's accounts on that day (House from the next day, until the period would have ended) and hands any
+period that began after it (an order credited to them later) back to the previous owner, or House.
+`build-account-history` applies every recorded leaving date; `v_register_credit_after_leaving` lists the
+Register credit dated after a leaving date for CFO review. The Register itself is never changed.
+
+**Go-live order:** load master data → load Register → `employee-leaves` for each leaver →
+`build-account-history` → `allocate-account` for each reallocation (e.g. from House to the successor on
+the date given) → `sync-xero-groups`, then `--adopt-xero` after CFO review.
+
 ## GL, products, ARR and SN (migration 0004)
 
 | Table | Purpose |

@@ -297,6 +297,14 @@ def cmd_build_account_history(args: argparse.Namespace) -> int:
         print("For CFO review: decisions the build had to make:")
         for d in r["decisions"]:
             print(f"  {d['customer']}: {d['note']}")
+    if r["credit_after_leaving"]:
+        print(
+            "For CFO review: Register orders credited to a salesperson after their last day (credit kept, no ownership):"
+        )
+        for x in r["credit_after_leaving"]:
+            print(
+                f"  {x['sn_ref']} {x['date_issued']} {x['client']}: {x['salesperson']} (last day {x['left_on']})"
+            )
     if r["conflicts"]:
         print("For CFO review: accounts where named salespeople alternate:")
         for c in r["conflicts"]:

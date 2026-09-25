@@ -1035,6 +1035,10 @@ def build_account_history(conn: Connection, source: str) -> dict[str, Any]:
         "conflicts": conn.execute(
             "SELECT * FROM sales.v_account_history_conflict ORDER BY customer, allocated_from"
         ).fetchall(),
+        "credit_after_leaving": conn.execute(
+            """SELECT sn_ref, date_issued, client, salesperson, left_on
+                 FROM sales.v_register_credit_after_leaving ORDER BY date_issued, sn_ref"""
+        ).fetchall(),
         "decisions": conn.execute(
             """SELECT c.legal_name AS customer, r.on_date, r.note FROM sales.account_history_review r
                  JOIN sales.customer c USING (customer_id) ORDER BY c.legal_name, r.on_date"""
