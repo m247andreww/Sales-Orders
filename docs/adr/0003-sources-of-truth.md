@@ -13,6 +13,7 @@ accounts), **ARR Live.xlsx** (1,241 rows), and a SQLite prototype in OneDrive
 | SN reference | AW SOs Register | Mirrors it; **never generates an SN**; approval blocked until sourced |
 | ARR reference (e.g. TIL030, NAP008-26) | ARR file | Stores it on contracts; ARR *values* are a ledger here |
 | GL codes | Xero chart of accounts | Mirrors it; validates account class/type on every line |
+| Current account owner | Xero contact groups (one group per salesperson, e.g. "a. <first name>") | Keeps the dated ownership history; reconciles to Xero on every sync (migration 0012) |
 | Order content, checks, approvals, credit terms | **This database** | Master |
 | Products | AW SOs Product catalogue (PandaDoc catalogue is effectively unused: 2 items) | Product database, loaded from the catalogue |
 
@@ -32,6 +33,22 @@ AW SOs (the SN master) is owned by a personal Gmail account. The CFO has decided
 (2026-09-24). Mitigation: every Register sync stores a complete, Managed247-owned copy in
 `sales.register_entry` with a sync log (`sales.register_sync`), so the database always holds the
 Register as at its last sync. Sync regularly; the copy is only as current as the last sync.
+
+## Account owner: Xero contact groups (CFO, 2026-09-25)
+
+"The a/c owner is defined in Xero under groups." Xero holds only the owner *now*, with no history,
+so the two systems each keep what they are good at: Xero the current owner, this database the dated
+history that NN/E needs. `sales-orders sync-xero-groups` reads the groups (Xero API, custom connection)
+and, per customer:
+
+| Situation | Outcome |
+|---|---|
+| Xero changed after the database last did | Database adopts Xero, dated the day the sync saw it |
+| Database changed after Xero (an approved order passed the account on) | Finance told to move the Xero contact to the new owner's group |
+| First sync, owners differ, nothing shows which is newer | Reported; adopted only with `--adopt-xero` (CFO instruction) |
+| Contact in no owner group, in two, or in a leaver's group | Reported; never applied |
+
+Consequence: a change in Xero is only as accurately dated as the sync is frequent. Sync daily.
 
 ## Reporting categories NN / E (CFO, 2026-09-24, refined)
 

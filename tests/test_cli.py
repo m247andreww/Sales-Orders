@@ -30,4 +30,6 @@ def test_help_lists_all_commands() -> None:
         "employee-leaves",
         "link-arr",
         "arr-outstanding",
+        "sync-xero-groups",
+        "xero-owners",
     }

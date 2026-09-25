@@ -58,6 +58,9 @@ These are the owner's stated preferences; follow them in every session.
 - SN refs: **AW SOs Register** (Google Sheet). Never generate or guess an SN; source it with
   `load-register` / `assign-sn`. The database never writes to AW SOs.
 - ARR refs (TIL030, NAP008-26): the **ARR file**. GL codes: **Xero** chart of accounts.
+- Current account owner: **Xero contact groups** (CFO, 2026-09-25). The DB keeps the dated history and
+  reconciles (`sync-xero-groups`); the newer side wins, first-sync differences need `--adopt-xero`.
+  The Xero MCP connector does not expose groups: use the Xero API (custom connection).
 - Order content, checks, approvals, credit terms: **this database**.
 - **This database is the system of record (from 24 Sep 2026).** The earlier SQLite build in OneDrive
   `3 AW Filing/10. Claude/Sales Orders` is DEFUNCT: never read from, write to or sync it. Its rules

@@ -50,6 +50,8 @@ sales-orders link-arr SN269001 3 TST001-26                  # attach ARR ref aft
 sales-orders build-account-history                          # ownership history from the Register
 sales-orders employee-leaves person@managed.co.uk 2026-10-31   # leaver: accounts -> House
 sales-orders allocate-account "Customer Ltd" person@managed.co.uk 2027-01-01   # House -> salesperson
+sales-orders sync-xero-groups --file fixtures/test_xero_contact_groups.json   # account owner from Xero groups
+sales-orders xero-owners                                    # database vs Xero owner, with actions
 ```
 
 The test order is **synthetic** (no real customer data). It deliberately covers every pattern found in
@@ -79,6 +81,7 @@ CI runs all three on every push (`.github/workflows/ci.yml`).
 | `db/bootstrap/` | Database roles and least-privilege grants |
 | `docs/data-model.md` | ERD, email-to-database mapping, controls, exception rules |
 | `src/sales_orders/register.py` | AW SOs Register importer (SN source) |
+| `src/sales_orders/xero.py` | Xero contact groups reader (account owner source) |
 | `infra/` | Azure infrastructure as code (Bicep) |
 | `docs/deployment.md` | Step-by-step production deployment |
 | `docs/adr/` | Architecture decisions and why |
@@ -103,13 +106,16 @@ CI runs all three on every push (`.github/workflows/ci.yml`).
 | F | Azure on hold; alternatives compared | ADR 0004 |
 | G | Auto Renew / Cust Success = House; ownership history built from the Register | migration 0009, `build-account-history` |
 | H | The salesperson named on the order led it: NN/E judged for them; account passes to them on approval | migration 0010 |
+| I | Temporary cover (holiday): the colleague stepping in does not take the account | migration 0011 |
+| J | The current account owner is recorded in Xero contact groups; the database reconciles to it | migration 0012, `sync-xero-groups` |
 
 **Still needed**
 
 | # | Decision |
 |---|---|
 | 1 | Hosting provider (ADR 0004) |
-| 2 | Are all salespeople on the Register still employed? (leavers' accounts go to House) |
+| 2 | Last working days of salespeople who have left (to date the move of their accounts) |
+| 3 | Xero custom connection (paid Xero add-on) so the owner-group sync runs unattended |
 
 ## Roadmap
 

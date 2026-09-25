@@ -55,6 +55,16 @@ geo-backup is typically in the low tens of pounds a month. High availability wou
    ```
 6. **Load master data**: GL chart from Xero, customers, suppliers, products, ARR contracts, then
    the AW SOs Register (`sales-orders load-register <export.csv> --source <sheet id>`).
+7. **Connect Xero for account owners** (read-only, no browser login each time):
+   1. At developer.xero.com, sign in as a Xero admin, *New app* → *Custom connection*.
+   2. Give it the read scope for contacts only (`accounting.contacts.read`) and authorise it for
+      Managed247's organisation (Xero emails the authorising admin to confirm; custom connections are
+      a paid Xero add-on).
+   3. Put the client id and secret in Key Vault as `xero-client-id` / `xero-client-secret`; the job
+      exports them as `SALES_ORDERS_XERO_CLIENT_ID` / `SALES_ORDERS_XERO_CLIENT_SECRET`.
+   4. Map each owner group in master data (`xero_owner_groups`: group name → salesperson email or House).
+   5. First run: `sales-orders sync-xero-groups`, review the differences, then
+      `sales-orders sync-xero-groups --adopt-xero` once the CFO confirms Xero is right. Then daily.
 
 ## Signing in as yourself (approvals)
 

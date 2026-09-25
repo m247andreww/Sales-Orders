@@ -130,6 +130,18 @@ Every transition is recorded in `sales_order_status_history` with who and why.
 
 Errors block approval unless the rule's `blocks_approval` is false in `sales.exception_rule` (the catalogue of every rule); warnings inform. `ARR_LINE_NO_ARR_REF` is a warning before processing and an error after, and never blocks (CFO decision). `REPORTING_CATEGORY_MISMATCH`, `NO_ACCOUNT_ALLOCATION`, `SALESPERSON_NOT_ACCOUNT_OWNER` (warnings): NN/E is checked against `customer_account_allocation`: NN when the customer had no order before the account was allocated to its owner; House/Legacy accounts (not allocated to a salesperson) are always E. `OWNER_HAS_LEFT` (warning): an inactive employee still owns accounts. Routines: `sales.employee_leaves()` (accounts to House), `sales.allocate_account()`. NN/E is judged for the order's salesperson (migration 0010); on approval `sales.take_account_for_order()` passes the account to them, logging back-dated or leaver cases to `account_history_review`. Add a rule = add one `UNION ALL` branch in a new migration.
 
+## Account owner from Xero contact groups (migration 0012)
+
+| Object | Purpose |
+|---|---|
+| `xero_owner_group` | Which Xero groups record the owner, mapped to a salesperson or House. Other groups are ignored |
+| `xero_group_sync`, `xero_group_membership` | Every sync, and every membership it saw (append-only evidence) |
+| `customer_xero_owner` | Xero's owner per customer at the latest sync, and since when (`observed_since`; NULL = since the first sync) |
+| `v_account_owner_reconciliation` | Database owner today vs Xero owner: `MATCH`, `XERO_CHANGED`, `DB_CHANGED`, `DIFFERS`, `NOT_IN_XERO_OWNER_GROUP`, `MULTIPLE_XERO_OWNER_GROUPS`, `XERO_OWNER_HAS_LEFT`, `NO_XERO_CONTACT`, `NOT_SYNCED`, with the action |
+| `apply_xero_owners(adopt_all)` / `set_account_owner(...)` | Adopt Xero where it is newer; never overwrite a later allocation (logged to `account_history_review`) |
+
+Exception `XERO_OWNER_MISMATCH` (warning, open orders only): Xero and the database disagree on the owner.
+
 ## GL, products, ARR and SN (migration 0004)
 
 | Table | Purpose |

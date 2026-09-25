@@ -7,7 +7,7 @@ failure part-way through (e.g. an unknown supplier on line 7) writes nothing at 
 from __future__ import annotations
 
 from dataclasses import dataclass
-from datetime import date
+from datetime import date, datetime
 from decimal import Decimal
 from typing import Any
 
@@ -29,8 +29,10 @@ from sales_orders.models import (
     ProductIn,
     RegisterOwnerAliasIn,
     SupplierIn,
+    XeroOwnerGroupIn,
 )
 from sales_orders.register import ParsedRegister
+from sales_orders.xero import XeroContactGroup
 
 # ============================================================================ lookups
 
@@ -111,6 +113,8 @@ def load_master_data(conn: Connection, data: MasterDataIn) -> None:
         _load_register_owner_alias(conn, ra)
     for ab in data.employee_absences:
         _load_employee_absence(conn, ab)
+    for xg in data.xero_owner_groups:
+        _load_xero_owner_group(conn, xg)
     for fx in data.fx_rates:
         _load_fx_rate(conn, fx)
 
@@ -284,6 +288,18 @@ def _load_register_owner_alias(conn: Connection, ra: RegisterOwnerAliasIn) -> No
             WHERE (sales.register_owner_alias.employee_id, sales.register_owner_alias.house_account)
                   IS DISTINCT FROM (EXCLUDED.employee_id, EXCLUDED.house_account)""",
         (ra.register_label, owner, ra.house_account),
+    )
+
+
+def _load_xero_owner_group(conn: Connection, xg: XeroOwnerGroupIn) -> None:
+    owner = _employee_id(conn, xg.owner_email) if xg.owner_email else None
+    conn.execute(
+        """INSERT INTO sales.xero_owner_group (group_name, employee_id, house_account) VALUES (btrim(%s), %s, %s)
+           ON CONFLICT ((lower(btrim(group_name)))) DO UPDATE
+              SET employee_id = EXCLUDED.employee_id, house_account = EXCLUDED.house_account
+            WHERE (sales.xero_owner_group.employee_id, sales.xero_owner_group.house_account)
+                  IS DISTINCT FROM (EXCLUDED.employee_id, EXCLUDED.house_account)""",
+        (xg.group_name, owner, xg.house_account),
     )
 
 
@@ -881,6 +897,73 @@ def load_register(conn: Connection, parsed: ParsedRegister, source: str) -> int:
             [(sync_id, j.row_number, j.raw_sn, j.reason) for j in parsed.rejections],
         )
     return sync_id
+
+
+# ============================================================================ Xero owner groups
+
+
+def sync_xero_groups(
+    conn: Connection,
+    groups: list[XeroContactGroup],
+    source: str,
+    adopt_xero: bool = False,
+    observed_at: datetime | None = None,
+) -> dict[str, Any]:
+    """Record what the Xero contact groups say, then bring the database in line where Xero is newer.
+
+    Where an approved order moved an account more recently than Xero, nothing changes here: the
+    reconciliation tells finance to update the Xero group. adopt_xero (CFO instruction) also takes
+    Xero's owner where nothing shows which side is newer, e.g. at the first sync. observed_at is when
+    Xero was read (default now); Xero keeps no membership history, so changes are dated from it.
+    """
+    memberships = [(g, c) for g in groups for c in g.contacts]
+    sync = _required(
+        _one(
+            conn,
+            """INSERT INTO sales.xero_group_sync (source, groups_seen, memberships, synced_at)
+               VALUES (%s, %s, %s, COALESCE(%s, now())) RETURNING xero_group_sync_id""",
+            (source, len(groups), len(memberships), observed_at),
+        ),
+        "xero_group_sync",
+    )
+    sync_id = int(sync["xero_group_sync_id"])
+    with conn.cursor() as cur:
+        cur.executemany(
+            """INSERT INTO sales.xero_group_membership
+                   (xero_group_sync_id, xero_contact_group_id, group_name, xero_contact_id, contact_name)
+               VALUES (%s, %s, %s, %s, %s)""",
+            [(sync_id, g.group_id, g.name, c.contact_id, c.name) for g, c in memberships],
+        )
+    mapped_rows = conn.execute(
+        "SELECT lower(btrim(group_name)) AS name, xero_contact_group_id AS id FROM sales.xero_owner_group"
+    ).fetchall()
+    mapped = {r["name"] for r in mapped_rows} | {r["id"] for r in mapped_rows if r["id"] is not None}
+    changed = _required(
+        _one(conn, "SELECT sales.refresh_customer_xero_owner(%s) AS changed", (sync_id,)), "refresh"
+    )
+    applied = conn.execute("SELECT * FROM sales.apply_xero_owners(%s)", (adopt_xero,)).fetchall()
+    return {
+        "sync_id": sync_id,
+        "xero_owner_changes": int(changed["changed"]),
+        "applied": applied,
+        "unmapped_groups": sorted(
+            g.name for g in groups if g.name.strip().lower() not in mapped and g.group_id not in mapped
+        ),
+        "unmatched_contacts": conn.execute(
+            "SELECT * FROM sales.v_xero_owner_unmatched_contact ORDER BY group_name, contact_name"
+        ).fetchall(),
+        "differences": account_owner_reconciliation(conn),
+    }
+
+
+def account_owner_reconciliation(conn: Connection, include_matches: bool = False) -> list[dict[str, Any]]:
+    """Database owner versus Xero owner group, per customer, with the action each difference needs."""
+    return conn.execute(
+        """SELECT legal_name, db_owner, db_owner_from, xero_owner, xero_groups, status, action
+             FROM sales.v_account_owner_reconciliation
+            WHERE %s OR status <> 'MATCH' ORDER BY status, legal_name""",
+        (include_matches,),
+    ).fetchall()
 
 
 # ============================================================================ ARR

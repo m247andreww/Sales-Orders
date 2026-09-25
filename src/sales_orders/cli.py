@@ -22,6 +22,13 @@ from sales_orders.db import unit_of_work
 from sales_orders.errors import SalesOrderError
 from sales_orders.models import EmployeeAbsenceIn, MasterDataIn, OrderSubmissionIn
 from sales_orders.register import parse_register
+from sales_orders.xero import (
+    DEFAULT_SCOPE,
+    XeroCredentials,
+    XeroFormatError,
+    fetch_contact_groups,
+    parse_contact_groups,
+)
 
 PROJECT_ROOT = Path(__file__).resolve().parents[2]
 M = TypeVar("M", bound=BaseModel)
@@ -218,6 +225,62 @@ def cmd_allocate_account(args: argparse.Namespace) -> int:
     return 0
 
 
+def _xero_credentials() -> XeroCredentials:
+    client_id = os.environ.get("SALES_ORDERS_XERO_CLIENT_ID")
+    secret = os.environ.get("SALES_ORDERS_XERO_CLIENT_SECRET")
+    if not client_id or not secret:
+        raise XeroFormatError(
+            "set SALES_ORDERS_XERO_CLIENT_ID and SALES_ORDERS_XERO_CLIENT_SECRET (Xero custom connection), "
+            "or pass --file with a saved ContactGroups response"
+        )
+    return XeroCredentials(
+        client_id=client_id,
+        client_secret=secret,
+        scope=os.environ.get("SALES_ORDERS_XERO_SCOPE", DEFAULT_SCOPE),
+        tenant_id=os.environ.get("SALES_ORDERS_XERO_TENANT_ID") or None,
+    )
+
+
+def _print_owner_differences(rows: list[dict[str, Any]]) -> None:
+    if not rows:
+        print("Xero owner groups and the database agree for every customer.")
+        return
+    print("Account owners (database vs Xero):")
+    for r in rows:
+        print(
+            f"  [{r['status']}] {r['legal_name']}: database {r['db_owner'] or 'none'}, "
+            f"Xero {r['xero_owner'] or r['xero_groups'] or 'none'} -> {r['action'] or 'no action'}"
+        )
+
+
+def cmd_sync_xero_groups(args: argparse.Namespace) -> int:
+    if args.file:
+        groups = parse_contact_groups(json.loads(Path(args.file).read_text(encoding="utf-8")))
+        source = f"file {Path(args.file).name}"
+    else:
+        groups, _raw = fetch_contact_groups(_xero_credentials())
+        source = "Xero API"
+    with unit_of_work(_actor(args)) as conn:
+        r = service.sync_xero_groups(conn, groups, source, adopt_xero=args.adopt_xero)
+    print(
+        f"Xero sync {r['sync_id']}: {len(groups)} group(s), {r['xero_owner_changes']} Xero owner change(s) seen."
+    )
+    for a in r["applied"]:
+        print(f"  {a['customer']}: owner set to {a['xero_owner']} ({a['result']})")
+    if r["unmapped_groups"]:
+        print("Xero groups not mapped as owner groups (ignored): " + ", ".join(r["unmapped_groups"]))
+    for u in r["unmatched_contacts"]:
+        print(f"  Xero contact '{u['contact_name']}' ({u['group_name']}) is not a customer in this database")
+    _print_owner_differences(r["differences"])
+    return 0
+
+
+def cmd_xero_owners(args: argparse.Namespace) -> int:
+    with unit_of_work(_actor(args)) as conn:
+        _print_owner_differences(service.account_owner_reconciliation(conn, include_matches=args.all))
+    return 0
+
+
 def cmd_build_account_history(args: argparse.Namespace) -> int:
     with unit_of_work(_actor(args)) as conn:
         r = service.build_account_history(conn, args.source)
@@ -332,6 +395,19 @@ def _add_master_data_commands(sub: Any) -> None:
     p.add_argument("--source", default="CFO", help="where the absence is recorded (HR, Outlook calendar...)")
     p.set_defaults(func=cmd_record_absence)
 
+    p = sub.add_parser("sync-xero-groups", help="read account owners from Xero contact groups and reconcile")
+    p.add_argument("--file", help="a saved Xero ContactGroups response instead of the live API")
+    p.add_argument(
+        "--adopt-xero",
+        action="store_true",
+        help="CFO instruction: take Xero's owner where nothing shows which side is newer (first sync)",
+    )
+    p.set_defaults(func=cmd_sync_xero_groups)
+
+    p = sub.add_parser("xero-owners", help="account owner: database vs Xero groups, with actions")
+    p.add_argument("--all", action="store_true", help="include customers that match")
+    p.set_defaults(func=cmd_xero_owners)
+
     p = sub.add_parser("employee-leaves", help="leaver routine: move their accounts to House, deactivate")
     p.add_argument("email")
     p.add_argument("last_day", help="YYYY-MM-DD, last working day")
@@ -373,6 +449,10 @@ def main(argv: list[str] | None = None) -> int:
         print(f"input rejected:\n{exc}", file=sys.stderr)
     except SalesOrderError as exc:
         print(f"rejected: {exc}", file=sys.stderr)
+    except XeroFormatError as exc:
+        print(f"Xero: {exc}", file=sys.stderr)
+    except OSError as exc:  # Xero unreachable or refused the request: nothing was loaded
+        print(f"Xero request failed: {exc}", file=sys.stderr)
     except psycopg.Error as exc:  # constraint / trigger violations: nothing was committed
         detail = exc.diag.message_primary or str(exc)
         print(f"rejected by database: {detail}", file=sys.stderr)

@@ -179,6 +179,20 @@ class RegisterOwnerAliasIn(StrictModel):
         return self
 
 
+class XeroOwnerGroupIn(StrictModel):
+    """Maps a Xero contact group that records the account owner (e.g. "c. <first name>") to its owner."""
+
+    group_name: NonEmpty
+    owner_email: EmailStr | None = None
+    house_account: str | None = None
+
+    @model_validator(mode="after")
+    def _one_owner(self) -> XeroOwnerGroupIn:
+        if (self.owner_email is None) == (self.house_account is None):
+            raise ValueError("give exactly one of owner_email or house_account")
+        return self
+
+
 class CustomerIn(StrictModel):
     legal_name: NonEmpty
     trading_name: str | None = None
@@ -219,6 +233,7 @@ class MasterDataIn(StrictModel):
     account_allocations: tuple[AccountAllocationIn, ...] = ()
     register_owner_aliases: tuple[RegisterOwnerAliasIn, ...] = ()
     employee_absences: tuple[EmployeeAbsenceIn, ...] = ()
+    xero_owner_groups: tuple[XeroOwnerGroupIn, ...] = ()
     fx_rates: tuple[FxRateIn, ...] = ()
 
 

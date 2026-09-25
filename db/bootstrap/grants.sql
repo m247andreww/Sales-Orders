@@ -23,6 +23,8 @@ REVOKE INSERT, UPDATE ON sales.currency, sales.order_status, sales.order_status_
 -- Policy values (margin, FX age, tolerance, require_personal_login) change by migration or owner only.
 -- The one DELETE the application needs: replacing the read-only AW SOs Register mirror on each sync.
 GRANT DELETE ON sales.register_entry TO sales_orders_app;
+-- Sync logs are evidence of what the Register / Xero said: insert-only.
+REVOKE UPDATE ON sales.register_sync, sales.xero_group_sync, sales.xero_group_membership FROM sales_orders_app;
 -- Privileges are granted by migration only: the application cannot grant itself rights.
 
 GRANT SELECT ON ALL TABLES IN SCHEMA sales, audit TO sales_orders_readonly;

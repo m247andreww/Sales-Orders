@@ -144,7 +144,8 @@
         }
       ],
       "xero_tracking_customer": "Test Customer",
-      "arr_prefix": "TST"
+      "arr_prefix": "TST",
+      "xero_contact_id": "00000000-0000-4000-8000-00000000c001"
     }
   ],
   "products": [
@@ -219,6 +220,20 @@
       "rate_date": "2026-09-10",
       "rate": "0.73905160",
       "source": "XE mid-market"
+    }
+  ],
+  "xero_owner_groups": [
+    {
+      "group_name": "a. Test Territory",
+      "owner_email": "test.territory@example.com"
+    },
+    {
+      "group_name": "b. Test ISAM",
+      "owner_email": "test.isam@example.com"
+    },
+    {
+      "group_name": "z. House",
+      "house_account": "House"
     }
   ]
 }
