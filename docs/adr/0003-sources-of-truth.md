@@ -75,6 +75,19 @@ Register, 2 same-day clashes decided (later SN wins) and 8 alternations between 
 customers, all listed by `sales-orders build-account-history` for CFO review. Real names and results are
 not stored in the repository.
 
+## The order's salesperson leads it (CFO, 2026-09-25)
+
+"It will be whichever salesperson is named on the Sales Order email, as they will have led the
+opportunity." Consequences (migration 0010):
+- The history build's same-day decisions (later order's salesperson) are confirmed, and accounts that
+  alternate between named salespeople are genuine: each order belongs to whoever led it.
+- NN/E is judged for **the order's salesperson**: NN if the customer did not pre-exist that salesperson
+  first taking the account. A returning salesperson keeps their original start. No salesperson on the
+  order: the account owner on the order date is used (House → E).
+- On approval, ownership passes to the order's salesperson from the order date, so history keeps itself
+  current. A back-dated order never rewrites a later change, and a leaver never takes an account; both
+  are logged to `account_history_review` instead.
+
 ## ARR ref follows processing (CFO, 2026-09-24)
 
 A missing ARR ref never blocks approval. It is a warning before processing and an **error** after,

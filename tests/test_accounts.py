@@ -7,7 +7,7 @@ from typing import Any
 
 import psycopg
 import pytest
-from conftest import load, savepoint_rejects
+from conftest import CFO, FINANCE, act_as, load, savepoint_rejects
 
 from sales_orders import service
 from sales_orders.db import Connection
@@ -53,7 +53,7 @@ def test_salesperson_on_house_account_is_flagged(
     assert rules == [
         (
             "SALESPERSON_NOT_ACCOUNT_OWNER",
-            "Order salesperson Test Territory Manager is not the account owner on 2026-09-09 (House)",
+            "Account owner on 2026-09-09 is House; on approval the account passes to Test Territory Manager, who led this order",
         )
     ]
 
@@ -157,3 +157,64 @@ def test_cannot_allocate_to_a_leaver(conn: Connection, master_data: MasterDataIn
         service.allocate_account(
             conn, "Test Customer Ltd", "test.territory@example.com", date(2027, 1, 1), "CFO"
         )
+
+
+def _approve(conn: Connection, number: str) -> None:
+    service.change_status(conn, number, "validated", "reviewed")
+    act_as(conn, FINANCE)
+    for c in service.order_checks(conn, number):
+        service.record_check(conn, number, check_type=c["check_type_code"], status="passed", notes="seen")
+    act_as(conn, CFO)
+    service.change_status(conn, number, "approved", "approved")
+
+
+def _owners(conn: Connection) -> list[tuple[str, date, date | None]]:
+    rows = conn.execute(
+        """SELECT COALESCE(e.email, a.house_account) AS owner, a.allocated_from, a.allocated_to
+             FROM sales.customer_account_allocation a LEFT JOIN sales.employee e USING (employee_id)
+            ORDER BY a.allocated_from"""
+    ).fetchall()
+    return [(r["owner"], r["allocated_from"], r["allocated_to"]) for r in rows]
+
+
+def test_approval_passes_account_to_order_salesperson(
+    conn: Connection, master_data: MasterDataIn, order_json: dict[str, Any]
+) -> None:
+    order_json["account_manager_email"] = "test.isam@example.com"
+    _approve(conn, load(conn, order_json).order_number)
+    assert _owners(conn) == [
+        ("test.territory@example.com", date(2026, 1, 1), date(2026, 9, 8)),
+        ("test.isam@example.com", date(2026, 9, 9), None),
+    ]
+
+
+def test_approval_by_existing_owner_changes_nothing(
+    conn: Connection, master_data: MasterDataIn, order_json: dict[str, Any]
+) -> None:
+    before = _owners(conn)
+    _approve(conn, load(conn, order_json).order_number)
+    assert _owners(conn) == before
+
+
+def test_house_account_taken_by_salesperson_on_approval(
+    conn: Connection, master_data: MasterDataIn, order_json: dict[str, Any]
+) -> None:
+    _make_house(conn, "House")
+    _approve(conn, load(conn, order_json).order_number)
+    assert _owners(conn) == [
+        ("House", date(2026, 1, 1), date(2026, 9, 8)),
+        ("test.territory@example.com", date(2026, 9, 9), None),
+    ]
+
+
+def test_backdated_order_does_not_rewrite_later_history(
+    conn: Connection, master_data: MasterDataIn, order_json: dict[str, Any]
+) -> None:
+    service.allocate_account(conn, "Test Customer Ltd", "test.isam@example.com", date(2026, 10, 1), "CFO")
+    before = _owners(conn)
+    _approve(conn, load(conn, order_json).order_number)  # dated 9 Sep, before the 1 Oct change
+    assert _owners(conn) == before
+    notes = [r["note"] for r in conn.execute("SELECT note FROM sales.account_history_review").fetchall()]
+    assert notes == [
+        "SN269001 led by Test Territory Manager is dated before a later ownership change: ownership not changed"
+    ]

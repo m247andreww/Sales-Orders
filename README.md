@@ -102,13 +102,14 @@ CI runs all three on every push (`.github/workflows/ci.yml`).
 | E | House = finance-controlled; leavers' accounts go to House until reallocated; House/Legacy orders are E | migration 0008, `employee-leaves`, `allocate-account` |
 | F | Azure on hold; alternatives compared | ADR 0004 |
 | G | Auto Renew / Cust Success = House; ownership history built from the Register | migration 0009, `build-account-history` |
+| H | The salesperson named on the order led it: NN/E judged for them; account passes to them on approval | migration 0010 |
 
 **Still needed**
 
 | # | Decision |
 |---|---|
-| 1 | Review the account-history exceptions listed by `build-account-history` (same-day clashes, alternating salespeople) |
-| 2 | Hosting provider (ADR 0004) |
+| 1 | Hosting provider (ADR 0004) |
+| 2 | Are all salespeople on the Register still employed? (leavers' accounts go to House) |
 
 ## Roadmap
 

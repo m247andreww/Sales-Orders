@@ -70,7 +70,8 @@ These are the owner's stated preferences; follow them in every session.
 - Term rule: if an order email states a clearly wrong term, the term starts on the email date and
   months are counted inclusively to the co-term date (Sep→May = 9).
 - Microsoft CSP SKUs (CFQ7…) → GL 1233 Cloud Services: Office 365 / COS 2233.
-- Salesperson = the account manager cc'd on the order email, not the ISAM who prepares it.
+- Salesperson = the account manager named/cc'd on the order email (not the ISAM who prepares it). They led
+  the opportunity (CFO): NN/E is judged for them, and on approval the account passes to them.
 - House = finance-controlled account. When a salesperson leaves, ALL their accounts go to House until a new
   salesperson is allocated (`employee-leaves`, `allocate-account`). House/Legacy orders are E, never NN.
 - Legacy = historic Register label only. Auto Renew / Cust Success = House (CFO).

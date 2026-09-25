@@ -179,7 +179,7 @@ def test_nn_on_customer_pre_existing_at_allocation(
         ("REPORTING_CATEGORY_MISMATCH", "warning")
     ]
     assert (
-        "was pre-existing when the account was allocated on 2026-01-01: expected EXPANSION_E"
+        "was pre-existing when Test Territory Manager took the account on 2026-01-01: expected EXPANSION_E"
         in exceptions[0]["message"]
     )
 
@@ -212,12 +212,47 @@ def test_age_of_customer_is_irrelevant(
     assert _rules(conn, order_json) == set()
 
 
-def test_no_account_owner_means_nn_e_unverifiable(
+def test_no_salesperson_and_no_owner_means_nn_e_unverifiable(
     conn: Connection, master_data: MasterDataIn, order_json: dict[str, Any]
 ) -> None:
     conn.execute("DELETE FROM sales.customer_account_allocation")
-    order_json.update(order_type="VOLUME", reporting_category="EXPANSION_E")
+    order_json.update(order_type="VOLUME", reporting_category="EXPANSION_E", account_manager_email=None)
     assert _rules(conn, order_json) == {"NO_ACCOUNT_ALLOCATION"}
+
+
+def test_nn_e_judged_for_the_order_salesperson_without_history(
+    conn: Connection, master_data: MasterDataIn, order_json: dict[str, Any]
+) -> None:
+    """CFO 2026-09-25: the salesperson named on the order led it, so NN/E is judged for them."""
+    conn.execute("DELETE FROM sales.customer_account_allocation")
+    _register_history(conn, "2025-01-01")  # customer existed before this salesperson's first order
+    order_json.update(order_type="VOLUME", reporting_category="EXPANSION_NN")
+    exceptions = service.order_exceptions(conn, load(conn, order_json).order_number)
+    assert [e["rule_code"] for e in exceptions] == ["REPORTING_CATEGORY_MISMATCH"]
+    assert (
+        "Test Territory Manager took the account on 2026-09-09: expected EXPANSION_E"
+        in exceptions[0]["message"]
+    )
+
+
+def test_returning_salesperson_keeps_their_original_start(
+    conn: Connection, master_data: MasterDataIn, order_json: dict[str, Any]
+) -> None:
+    """A -> B -> A: A's orders are judged from when A FIRST took the account."""
+    conn.execute(
+        "UPDATE sales.customer_account_allocation SET allocated_from = DATE '2025-01-01', allocated_to = DATE '2025-06-30'"
+    )
+    conn.execute(
+        """INSERT INTO sales.customer_account_allocation (customer_id, employee_id, allocated_from, allocated_to, source)
+           SELECT customer_id, (SELECT employee_id FROM sales.employee WHERE email = 'test.isam@example.com'),
+                  DATE '2025-07-01', DATE '2025-12-31', 'test' FROM sales.customer;
+           INSERT INTO sales.customer_account_allocation (customer_id, employee_id, allocated_from, source)
+           SELECT customer_id, (SELECT employee_id FROM sales.employee WHERE email = 'test.territory@example.com'),
+                  DATE '2026-01-01', 'test' FROM sales.customer"""
+    )
+    _register_history(conn, "2025-02-01")  # first order after A's original start: A won the customer
+    order_json.update(order_type="VOLUME", reporting_category="EXPANSION_NN")
+    assert _rules(conn, order_json) == set()
 
 
 def test_salesperson_must_be_account_owner(

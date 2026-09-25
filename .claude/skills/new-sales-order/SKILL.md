@@ -51,6 +51,8 @@ non-standard terms, record them with reason and approver.
 - **ARR:** the ARR ref follows processing and never blocks approval. When the ARR file assigns it,
   `sales-orders link-arr <SN> <line> <ARR ref>`. Run `sales-orders arr-outstanding` daily and report every
   line it lists as an error. Part-period co-term charges are `arr_treatment: "stub"`.
+- **Salesperson:** the one named on the order email led the opportunity; record them as the account
+  manager. On approval the account passes to them automatically.
 - **Reporting category:** NN = customer not pre-existing when the salesperson was allocated the account;
   E = pre-existing. Report REPORTING_CATEGORY_MISMATCH / NO_ACCOUNT_ALLOCATION /
   SALESPERSON_NOT_ACCOUNT_OWNER warnings; never silently recode. House/Legacy accounts are always E.
