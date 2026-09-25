@@ -85,6 +85,8 @@ CI runs all three on every push (`.github/workflows/ci.yml`).
 | `infra/` | Azure infrastructure as code (Bicep) |
 | `docs/deployment.md` | Step-by-step production deployment |
 | `docs/adr/` | Architecture decisions and why |
+| `src/sales_orders/jobs.py` | The nightly sync job (steps, run log) |
+| `docs/owner-guides/` | Step-by-step guides for the CFO |
 
 ## Decisions
 
@@ -110,6 +112,8 @@ CI runs all three on every push (`.github/workflows/ci.yml`).
 | J | The current account owner is recorded in Xero contact groups; the database reconciles to it | migration 0012, `sync-xero-groups` |
 | L | A salesperson leaves on their last working day (gardening leave = left); later credit never passes an account to them | migration 0013, `employee-leaves` |
 | M | Production database built on Azure, UK South (2026-09-25): `psql-salesorders-prod-v7qbwnxbjgf66`, Key Vault `kv-so-prod-v7qbwnxbjgf66`; delete lock on, firewall closed | `infra/deploy.sh` |
+| N | Nightly Azure job loads the Reference sheet, Xero and the Register (option A) | ADR 0005, `nightly-sync` |
+| O | Staff list kept in the Sales Orders - Reference Google Sheet (no Microsoft 365 admin access) | ADR 0005 |
 | K | Xero custom connection approved and created (2026-09-25); codes held by the CFO until hosting exists | `docs/owner-guides/xero-connection.md` |
 
 **Still needed**

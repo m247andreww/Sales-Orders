@@ -14,6 +14,7 @@
 //   * CanNotDelete lock: the server cannot be deleted without first removing the lock.
 //   * The Entra administrator may read and set Key Vault secrets (the stored passwords).
 //   * Monthly spending alert (budget) emailed to the Entra administrator.
+//   * The nightly sync job, on a private network link to the database (runner.bicep, ADR 0005).
 // =============================================================================
 
 targetScope = 'resourceGroup'
@@ -79,6 +80,17 @@ param budgetContactEmails array = [entraAdminPrincipalName]
 
 @description('First day of the month the budget starts (defaults to this month).')
 param budgetStartDate string = utcNow('yyyy-MM-01')
+
+@description('Nightly sync job image; empty until deploy.sh has built it (ADR 0005).')
+param jobImage string = ''
+
+@description('AW SOs Register: Google Sheet id and the tab (range) holding the Register.')
+param registerSheetId string
+
+param registerRange string = 'Register'
+
+@description('Sales Orders - Reference sheet (staff, account moves): Google Sheet id.')
+param referenceSheetId string
 
 @description('Tags applied to every resource.')
 param tags object = {
@@ -296,7 +308,27 @@ resource deleteLock 'Microsoft.Authorization/locks@2020-05-01' = if (applyDelete
   dependsOn: [firewall, serverLogs]
 }
 
+module runner 'runner.bicep' = {
+  name: 'nightly-sync-runner'
+  params: {
+    location: location
+    environmentName: environmentName
+    tags: tags
+    logsWorkspaceName: logs.name
+    serverName: server.name
+    keyVaultName: vault.name
+    alertEmail: entraAdminPrincipalName
+    jobImage: jobImage
+    registerSheetId: registerSheetId
+    registerRange: registerRange
+    referenceSheetId: referenceSheetId
+  }
+  dependsOn: [database]
+}
+
 output serverFqdn string = server.properties.fullyQualifiedDomainName
 output databaseName string = databaseName
 output keyVaultName string = vault.name
 output ownerSecretName string = ownerSecret.name
+output registryName string = runner.outputs.registryName
+output registryLoginServer string = runner.outputs.registryLoginServer

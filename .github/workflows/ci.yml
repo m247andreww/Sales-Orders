@@ -48,3 +48,8 @@ jobs:
             az bicep build-params --file infra/main.prod.bicepparam --stdout > /dev/null
       - name: Lint the deployment script (shellcheck is preinstalled on GitHub runners)
         run: bash -n infra/deploy.sh && shellcheck infra/deploy.sh
+      - name: Build the nightly job image and check it starts (as a non-root user)
+        run: |
+          docker build -t sales-orders:ci .
+          docker run --rm sales-orders:ci --help > /dev/null
+          test "$(docker run --rm --entrypoint id sales-orders:ci -u)" = "10001"

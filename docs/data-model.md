@@ -154,6 +154,14 @@ Register credit dated after a leaving date for CFO review. The Register itself i
 `build-account-history` → `allocate-account` for each reallocation (e.g. from House to the successor on
 the date given) → `sync-xero-groups`, then `--adopt-xero` after CFO review.
 
+## Nightly sync (migration 0014, ADR 0005)
+
+| Object | Purpose |
+|---|---|
+| `job_run`, `job_run_step` | Every run of the nightly job and each step's outcome (`v_job_run_latest`; `sales-orders job-status`) |
+| `customer.xero_archived` | Xero contact archived: followed nightly, never deleted |
+| `move_accounts(from, to, date, reason)` | The Reference sheet's Account moves: accounts held by that person, or by House because they left, pass to the new owner (idempotent; later changes never overwritten) |
+
 ## GL, products, ARR and SN (migration 0004)
 
 | Table | Purpose |

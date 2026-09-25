@@ -43,5 +43,14 @@ confirmed in Azure Cost Management after the first month).
 and nothing after that point is changed. Send a screenshot of the Cloud Shell panel. Running
 `bash infra/deploy.sh` again afterwards is safe.
 
+## Updating later (whenever Claude asks you to re-run)
+
+1. Open Cloud Shell (the **>_** icon at the top of portal.azure.com) and click **Bash**.
+2. Type `cd ~/Sales-Orders && git pull` and press **Enter**. If it says "No such file or directory",
+   repeat Part 2 first (the Cloud Shell copy is cleared after a while).
+3. Type `az account set --subscription "Azure subscription 1"` and press **Enter**.
+4. Type `bash infra/deploy.sh`, press **Enter**, check the subscription and type `yes`.
+   *It ends with **DONE.** and four lines, including "Nightly: ... first run: Succeeded".*
+
 **Done when:** you see **DONE.** Next, Claude loads the real master data, the Register and Greg's
 leaver steps, then runs the first Xero check for your review.

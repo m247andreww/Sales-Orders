@@ -75,6 +75,9 @@ These are the owner's stated preferences; follow them in every session.
   `3 AW Filing/10. Claude/Sales Orders` is DEFUNCT: never read from, write to or sync it. Its rules
   are carried over below.
 - AW SOs stays on a personal Google account (CFO decision; accepted risk). Keep the Register mirror current.
+- Staff, Register labels, Xero owner groups, last working days, account moves: the **Sales Orders -
+  Reference** Google Sheet (CFO-maintained), loaded nightly (ADR 0005). Never edit these in the DB.
+- Everything reaches production through the nightly job (`nightly-sync`, ADR 0005), not by hand.
 - No Microsoft 365 / Entra ID admin permissions for this system (CFO, 2026-09-25: "do not do this"):
   no Graph application permissions or tenant-wide consent. The staff list is CFO-maintained master data.
 
