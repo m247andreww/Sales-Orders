@@ -82,7 +82,7 @@ protected settings area so they never appear in a chat.
 1. In this Claude session, click the **environment name** in the title bar, then **Edit**.
 2. Under **Network access**, add these allowed domains: `api.xero.com`, `identity.xero.com`, and the
    website name from Part 2b step 4 (ending `.blob.core.windows.net`).
-3. Under **API credentials** (or **Environment variables**), add:
+3. In the **Environment variables** box (there is no separate credentials section), add one line each, written `NAME=value` with no spaces:
    - `SALES_ORDERS_STATE_URL` = the code on line 2 from Part 2b;
    - `SALES_ORDERS_XERO_CLIENT_ID` = the Xero Client ID from your password manager;
    - `SALES_ORDERS_XERO_CLIENT_SECRET` = the Xero Client secret.

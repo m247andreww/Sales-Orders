@@ -76,6 +76,8 @@ These are the owner's stated preferences; follow them in every session.
   the words").** End EVERY reply with two short lists, even if unchanged: **Your actions** (what the owner
   must do now, numbered, each with where/how) and **Still open** (decisions and requirements outstanding,
   with who owns each). Keep the live list in `docs/owner-guides/open-actions.md` and update it each turn.
+- The CFO's Claude environment settings have NO "API credentials" section: codes go in **Environment variables**
+  as NAME=value lines (visible to anyone using the environment; acceptable only while the CFO is the sole user).
 - **Anything the owner must copy gets a Copy button (CFO, 2026-10-02: "GIVE ME A COPY BUTTON").** Never
   ask them to select text from a box. Put owner steps on a published page with one Copy button per item.
 - **Microsoft 365 admin will NOT grant further permissions (CFO, 2026-10-02). Never ask again** — no app
