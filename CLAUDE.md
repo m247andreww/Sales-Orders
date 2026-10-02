@@ -63,6 +63,11 @@ These are the owner's stated preferences; follow them in every session.
 - Learn from the owner's language and preferences and record new ones here.
 - Automation target (2026-10-02): routines should need "virtually no input"; the owner's part is a
   decision by reply to one daily summary email. Never design a step that needs a download or a login.
+- **Owner steps must be trivially easy (CFO, 2026-10-02, repeated: "I keep telling you I am not technical").**
+  Never require GitHub, git, cloning, files to fetch, installs or extra sign-ins. A command step is ONE
+  self-contained copy-paste block (wrap shell scripts in `bash <<'EOF' ... EOF` so an error cannot close
+  their shell). Before giving any step, check it works from the owner's side (e.g. files only on a
+  branch do not exist for them). Prefer clicks over commands; prefer doing it yourself over either.
 - **Microsoft 365 admin will NOT grant further permissions (CFO, 2026-10-02). Never ask again** — no app
   registrations, Graph application permissions, access policies or admin consent. Microsoft 365 access is
   only through the CFO's own login: the Claude Microsoft 365 connector (or Outlook.com). Design within it.

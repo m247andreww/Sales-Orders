@@ -38,15 +38,30 @@ account (UK), keeping every day's version.
 1. Go to **portal.azure.com** and sign in as yourself.
 2. Click the **Cloud Shell** icon (`>_`) at the top. Choose **Bash** if asked.
    *You should see a black command window at the bottom.*
-3. Type `cd Sales-Orders && git pull && bash infra/credit-state.sh` and press Enter.
-   *If you see "No such file or directory", type `gh repo clone m247andreww/sales-orders Sales-Orders`
-   first, press Enter, then repeat this step.*
-4. When it says **DONE**, it shows one long line starting `https://stsocredit…` and a website name
-   ending `.blob.core.windows.net`. Leave the window open for Part 2c.
+3. Copy the whole grey box below (from `bash <<'EOF'` to the last `EOF`), paste it into the black
+   window and press Enter. *After about a minute you should see **DONE** and two numbered lines.*
 
-**If it doesn't look like that:** send a screenshot of the window. Do not paste the long line anywhere.
+```
+bash <<'EOF'
+set -euo pipefail
+RG=rg-salesorders-prod
+ACC=$(az storage account list -g $RG --query "[?tags.purpose=='credit-state'].name | [0]" -o tsv)
+if [ -z "$ACC" ]; then ACC=stsocredit$(openssl rand -hex 4); az storage account create -g $RG -n $ACC -l uksouth --sku Standard_GRS --kind StorageV2 --https-only true --min-tls-version TLS1_2 --allow-blob-public-access false --tags purpose=credit-state -o none; fi
+az storage account blob-service-properties update -g $RG -n $ACC --enable-versioning true --enable-delete-retention true --delete-retention-days 30 -o none
+KEY=$(az storage account keys list -g $RG -n $ACC --query "[0].value" -o tsv)
+az storage container create --account-name $ACC --account-key "$KEY" -n credit-state -o none
+SAS=$(az storage container generate-sas --account-name $ACC --account-key "$KEY" -n credit-state --permissions rcw --expiry $(date -u -d '+12 months' +%Y-%m-%dT%H:%MZ) --https-only -o tsv)
+echo; echo "DONE"
+echo "1) Website for Claude network settings:  $ACC.blob.core.windows.net"
+echo "2) Code for SALES_ORDERS_STATE_URL:  https://$ACC.blob.core.windows.net/credit-state?$SAS"
+EOF
+```
 
-**Done when:** you see **DONE** and the long line.
+4. Leave the window open: line 1 and line 2 are needed in Part 2c.
+
+**If it doesn't look like that:** send a screenshot of the window (it is safe to paste the box again). Never paste line 2 into a chat or email.
+
+**Done when:** you see **DONE** and the two lines.
 
 ---
 
@@ -59,7 +74,7 @@ protected settings area so they never appear in a chat.
 2. Under **Network access**, add these allowed domains: `api.xero.com`, `identity.xero.com`, and the
    website name from Part 2b step 4 (ending `.blob.core.windows.net`).
 3. Under **API credentials** (or **Environment variables**), add:
-   - `SALES_ORDERS_STATE_URL` = the long line from Part 2b step 4;
+   - `SALES_ORDERS_STATE_URL` = the code on line 2 from Part 2b;
    - `SALES_ORDERS_XERO_CLIENT_ID` = the Xero Client ID from your password manager;
    - `SALES_ORDERS_XERO_CLIENT_SECRET` = the Xero Client secret.
 4. Click **Save**.
