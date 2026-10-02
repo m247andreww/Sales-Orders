@@ -40,6 +40,16 @@ environment credentials. The database is restored from, and saved back to, Azure
 6. **No email filing or tagging by the job**: the Microsoft 365 connector is read-only (its granted permissions are
    all *.Read, checked 2026-10-02), so it cannot move, tag or create rules. The CFO's own Outlook rule moves alerts
    to Inbox/"Credit alerts"; each alert is kept as evidence in the database.
+6b. **Exposure (migration 0021)**: (i) Xero connector `get_aged_receivables` (organisation
+   df0116fa-f62a-4dd0-b2aa-6534fa26ffbe), following next_cursor to the end; write
+   `data/credit/ar_<date>.json` in the layout of `credit_exposure.load_receivables` (one row per contact:
+   current, overdue, overdue_over_60, oldest_due_date, invoice_count; amounts as strings) BUILT BY A SCRIPT
+   from the saved tool results, and check it equals the report's totals; `sales-orders credit-load-receivables
+   <file>`. (ii) PandaDoc connector: documents with status Sent, Viewed, Waiting for Approval, Approved,
+   External Review, Waiting for Payment and not expired; `documents_details_get` each for grand_total,
+   the Client.Company token and recipient domains; skip zero-value NDAs/brochures/application forms; write
+   `data/credit/pipeline_<date>.json` (layout of `credit_exposure.load_pipeline`); `sales-orders
+   credit-load-pipeline <file>`. A failure here never stops the run: say so in --run-note.
 7. **Save**: `sales-orders state-save`. If it refuses (another run saved first), restore and redo once; then report.
 8. **Publish the Credit Desk**: `sales-orders credit-desk-export --out /tmp/desk.json [--run-note "<problem, plain
    English>"]`; ArtifactData `get` desk/latest (for its version), then `set` desk/latest with `file_path`
