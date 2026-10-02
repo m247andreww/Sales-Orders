@@ -626,3 +626,21 @@ def test_summary_reports_today(conn: Connection, worked_example: dict[str, Any])
     assert [a["credit_assessment_id"] for a in report.assessments] == [worked_example["credit_assessment_id"]]
     assert credit_run.summary_subject(report) == "Credit run: 1 limit(s) updated, 0 decision(s) needed"
     assert "Test Customer: applied - requirement £18,400" in credit_run.summary_html(report)
+
+
+def test_workbook_figures_round_trip_through_json() -> None:
+    sheets = [
+        credit.WorkbookSheet(
+            "TST",
+            (Decimal("57000.00"), date(2026, 8, 18)),
+            (None, date(2026, 8, 18)),
+            Decimal("10000.00"),
+            None,
+        ),
+        credit.WorkbookSheet("XXX", None, None, None, Decimal("100000.00")),
+    ]
+    assert credit.workbook_from_json(credit.workbook_to_json(sheets)) == sheets
+    with pytest.raises(ValueError, match="amounts must be strings"):
+        credit.workbook_from_json(
+            '[{"sheet": "A", "experian": null, "creditsafe": null, "one_off": 5.5, "workbook_limit": null}]'
+        )

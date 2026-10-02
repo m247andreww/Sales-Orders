@@ -524,7 +524,15 @@ def cmd_state_save(_args: argparse.Namespace) -> int:
 
 
 def cmd_credit_import_workbook(args: argparse.Namespace) -> int:
-    sheets = credit.parse_workbook(Path(args.file).read_bytes())
+    path = Path(args.file)
+    if path.suffix.lower() == ".json":
+        sheets = credit.workbook_from_json(path.read_text(encoding="utf-8"))
+    else:
+        sheets = credit.parse_workbook(path.read_bytes())
+    if args.export_json:
+        Path(args.export_json).write_text(credit.workbook_to_json(sheets), encoding="utf-8")
+        print(f"wrote {len(sheets)} sheet(s) to {args.export_json}; nothing imported")
+        return 0
     with unit_of_work(_actor(args)) as conn:
         r = credit.import_workbook(conn, sheets)
     print(f"Imported {len(r['loaded'])} sheet(s).")
@@ -689,7 +697,10 @@ def _add_credit_commands(sub: Any) -> None:
     p = sub.add_parser(
         "credit-import-workbook", help="go-live: seed bureau limits and allowances from the workbook"
     )
-    p.add_argument("file")
+    p.add_argument("file", help="the workbook (.xlsx) or its figures exported as .json")
+    p.add_argument(
+        "--export-json", help="write the workbook's figures to this .json file instead of importing"
+    )
     p.set_defaults(func=cmd_credit_import_workbook)
 
     p = sub.add_parser("credit-assess", help="assess companies whose inputs changed (or one, now)")

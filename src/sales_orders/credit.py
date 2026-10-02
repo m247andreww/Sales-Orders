@@ -264,6 +264,52 @@ def parse_workbook(content: bytes) -> list[WorkbookSheet]:
     return sheets
 
 
+def _reading_json(r: tuple[Decimal | None, date | None] | None) -> list[str | None] | None:
+    return (
+        None if r is None else [str(r[0]) if r[0] is not None else None, r[1].isoformat() if r[1] else None]
+    )
+
+
+def _reading_from_json(v: Any) -> tuple[Decimal | None, date | None] | None:
+    if v is None:
+        return None
+    limit, when = v
+    return (Decimal(limit) if limit is not None else None, date.fromisoformat(when) if when else None)
+
+
+def workbook_to_json(sheets: list[WorkbookSheet]) -> str:
+    """The workbook figures as JSON (amounts as strings), so they can be carried without the file."""
+    return json.dumps(
+        [
+            {
+                "sheet": s.sheet,
+                "experian": _reading_json(s.experian),
+                "creditsafe": _reading_json(s.creditsafe),
+                "one_off": str(s.one_off) if s.one_off is not None else None,
+                "workbook_limit": str(s.workbook_limit) if s.workbook_limit is not None else None,
+            }
+            for s in sheets
+        ],
+        indent=1,
+    )
+
+
+def workbook_from_json(text: str) -> list[WorkbookSheet]:
+    rows = json.loads(
+        text, parse_float=lambda x: (_ for _ in ()).throw(ValueError("amounts must be strings"))
+    )
+    return [
+        WorkbookSheet(
+            sheet=str(r["sheet"]),
+            experian=_reading_from_json(r["experian"]),
+            creditsafe=_reading_from_json(r["creditsafe"]),
+            one_off=Decimal(r["one_off"]) if r["one_off"] is not None else None,
+            workbook_limit=Decimal(r["workbook_limit"]) if r["workbook_limit"] is not None else None,
+        )
+        for r in rows
+    ]
+
+
 def import_workbook(conn: Connection, sheets: list[WorkbookSheet]) -> dict[str, Any]:
     """Seed bureau readings and one-off allowances from the workbook (subjects matched by sheet code).
 
