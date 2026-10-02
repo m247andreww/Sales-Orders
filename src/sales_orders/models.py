@@ -69,7 +69,7 @@ class CreditTermsIn(StrictModel):
     recurring_payment_method: NonEmpty
     one_off_terms_days: int = Field(ge=0, le=180)
     one_off_prepayment_required: bool = False
-    credit_limit: Money | None = None
+    # Credit limits are not terms: they live in sales.customer_credit_limit (migration 0014).
     risk_rating: NonEmpty = "standard"
     is_non_standard: bool = False
     reason: str | None = None
@@ -223,6 +223,37 @@ class FxRateIn(StrictModel):
     source: NonEmpty
 
 
+CompanyNumber = Annotated[str, StringConstraints(pattern=r"^[A-Z0-9]{8}$")]
+
+
+class CreditSubjectIn(StrictModel):
+    """A company monitored with Experian / Creditsafe (migration 0014).
+
+    relationship: customer (needs customer_legal_name), prospect, supplier (needs supplier_name) or
+    information. one_off_allowance defaults to the policy value when omitted.
+    """
+
+    display_name: NonEmpty
+    relationship: Annotated[str, StringConstraints(pattern=r"^(customer|prospect|supplier|information)$")]
+    company_number: CompanyNumber | None = None
+    creditsafe_ref: Annotated[str, StringConstraints(pattern=r"^[A-Z]{2}[A-Z0-9]+$")] | None = None
+    customer_legal_name: str | None = None
+    supplier_name: str | None = None
+    one_off_allowance: Money | None = None
+    workbook_sheet: str | None = None
+    notes: str | None = None
+
+    @model_validator(mode="after")
+    def _links(self) -> CreditSubjectIn:
+        if (self.relationship == "customer") != (self.customer_legal_name is not None):
+            raise ValueError("customer_legal_name is required for a customer, and only for a customer")
+        if self.relationship == "supplier" and self.supplier_name is None:
+            raise ValueError("supplier_name is required for a supplier")
+        if not (self.company_number or self.creditsafe_ref or self.workbook_sheet):
+            raise ValueError("give a company_number, creditsafe_ref or workbook_sheet")
+        return self
+
+
 class MasterDataIn(StrictModel):
     gl_accounts: tuple[GlAccountIn, ...] = ()
     employees: tuple[EmployeeIn, ...] = ()
@@ -235,6 +266,7 @@ class MasterDataIn(StrictModel):
     employee_absences: tuple[EmployeeAbsenceIn, ...] = ()
     xero_owner_groups: tuple[XeroOwnerGroupIn, ...] = ()
     fx_rates: tuple[FxRateIn, ...] = ()
+    credit_subjects: tuple[CreditSubjectIn, ...] = ()
 
 
 # --------------------------------------------------------------------------- order submission

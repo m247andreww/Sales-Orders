@@ -7,7 +7,7 @@ import getpass
 import json
 import os
 import sys
-from datetime import date
+from datetime import date, datetime
 from decimal import Decimal
 from pathlib import Path
 from typing import Any, TypeVar
@@ -17,13 +17,17 @@ from alembic import command
 from alembic.config import Config
 from pydantic import BaseModel, ValidationError
 
-from sales_orders import service
+from sales_orders import credit, credit_run, service
+from sales_orders.credit_arr import ArrFileError, parse_arr_file
 from sales_orders.db import unit_of_work
 from sales_orders.errors import SalesOrderError
+from sales_orders.graph import GraphClient, GraphCredentials, GraphError
 from sales_orders.models import EmployeeAbsenceIn, MasterDataIn, OrderSubmissionIn
 from sales_orders.register import parse_register
 from sales_orders.xero import (
+    CREDIT_SCOPE,
     DEFAULT_SCOPE,
+    XeroClient,
     XeroCredentials,
     XeroFormatError,
     fetch_contact_groups,
@@ -331,6 +335,253 @@ def cmd_record_absence(args: argparse.Namespace) -> int:
     return 0
 
 
+# ============================================================================ credit & risk
+
+
+def _env(name: str) -> str:
+    value = os.environ.get(name, "").strip()
+    if not value:
+        raise SalesOrderError(f"{name} is not set (see docs/owner-guides/credit-automation.md)")
+    return value
+
+
+def _graph() -> GraphClient:
+    return GraphClient(
+        GraphCredentials(
+            tenant_id=_env("SALES_ORDERS_GRAPH_TENANT_ID"),
+            client_id=_env("SALES_ORDERS_GRAPH_CLIENT_ID"),
+            client_secret=_env("SALES_ORDERS_GRAPH_CLIENT_SECRET"),
+        )
+    )
+
+
+def _xero_credit_client() -> XeroClient | None:
+    client_id = os.environ.get("SALES_ORDERS_XERO_CLIENT_ID")
+    secret = os.environ.get("SALES_ORDERS_XERO_CLIENT_SECRET")
+    if not client_id or not secret:
+        return None  # filing to Xero is retried once the connection is configured
+    return XeroClient(
+        XeroCredentials(
+            client_id=client_id,
+            client_secret=secret,
+            scope=os.environ.get("SALES_ORDERS_XERO_CREDIT_SCOPE", CREDIT_SCOPE),
+            tenant_id=os.environ.get("SALES_ORDERS_XERO_TENANT_ID") or None,
+        )
+    )
+
+
+def _gbp(value: Any) -> str:
+    return f"£{value:,.0f}" if value is not None else "-"
+
+
+def cmd_credit_run(args: argparse.Namespace) -> int:
+    settings = credit_run.RunSettings(
+        mailbox=_env("SALES_ORDERS_CREDIT_MAILBOX"),
+        arr_file_url=os.environ.get("SALES_ORDERS_ARR_FILE_URL") or None,
+        summary_to=None if args.no_email else (os.environ.get("SALES_ORDERS_CREDIT_SUMMARY_TO") or None),
+    )
+    actor = _actor(args)
+    report = credit_run.run(lambda: unit_of_work(actor), settings, _graph(), _xero_credit_client())
+    print(f"ARR file: {report.arr}")
+    print(f"Bureau alerts read: {report.alerts_read} ({report.alerts_unreadable} unreadable)")
+    for a in report.assessments:
+        print(
+            f"  {a['display_name']}: {a['outcome_code']} - requirement {_gbp(a['trading_requirement'])}"
+            + (f" - {a['review_reason']}" if a["review_reason"] else "")
+        )
+    for f in report.filed:
+        print(f"  filed: {f}")
+    for e in report.errors + report.filing_errors:
+        print(f"  PROBLEM: {e}")
+    _print_credit_exceptions(report.exceptions)
+    return 1 if report.errors else 0
+
+
+def cmd_credit_load_arr(args: argparse.Namespace) -> int:
+    if args.file:
+        content, modified, name = Path(args.file).read_bytes(), None, Path(args.file).name
+    else:
+        content, modified, name = _graph().download_shared_file(_env("SALES_ORDERS_ARR_FILE_URL"))
+    parsed = parse_arr_file(content, name)
+    with unit_of_work(_actor(args)) as conn:
+        snapshot_id, created = credit.load_arr_snapshot(conn, parsed, modified)
+    print(
+        f"ARR snapshot {snapshot_id}: {'loaded' if created else 'already loaded (same file)'}, {len(parsed.lines)} lines"
+    )
+    for row, reason in parsed.skipped:
+        print(f"  row {row} not loaded: {reason}")
+    return 0
+
+
+def cmd_credit_read_alert(args: argparse.Namespace) -> int:
+    with unit_of_work(_actor(args)) as conn:
+        r = credit.store_alert(
+            conn,
+            bureau=args.bureau,
+            internet_message_id=args.message_id,
+            received_at=datetime.fromisoformat(args.received),
+            subject=args.subject,
+            html=Path(args.file).read_text(encoding="utf-8"),
+        )
+    state = "loaded" if r.created else "already loaded"
+    print(
+        f"alert {r.credit_alert_email_id} {state}: {r.companies} compan(ies)"
+        + (f"; NOT READ: {r.parse_error}" if r.parse_error else "")
+    )
+    return 0 if r.parse_error is None else 1
+
+
+def cmd_credit_import_workbook(args: argparse.Namespace) -> int:
+    sheets = credit.parse_workbook(Path(args.file).read_bytes())
+    with unit_of_work(_actor(args)) as conn:
+        r = credit.import_workbook(conn, sheets)
+    print(f"Imported {len(r['loaded'])} sheet(s).")
+    if r["unmatched_sheets"]:
+        print(
+            "Sheets with no monitored company (add workbook_sheet to its credit subject): "
+            + ", ".join(r["unmatched_sheets"])
+        )
+    return 0
+
+
+def cmd_credit_assess(args: argparse.Namespace) -> int:
+    with unit_of_work(_actor(args)) as conn:
+        done = [credit.assess(conn, args.subject)] if args.subject else credit.assess_due(conn)
+        credit.queue_filing(conn)
+    for a in done:
+        print(
+            f"{a['display_name']}: assessment {a['credit_assessment_id']} {a['outcome_code']}; "
+            f"requirement {_gbp(a['trading_requirement'])}, baseline {_gbp(a['baseline'])}"
+            + (f"; needs CFO: {a['review_reason']}" if a["review_reason"] else "")
+        )
+    if not done:
+        print("Nothing to assess: no inputs have changed.")
+    return 0
+
+
+def cmd_credit_decide(args: argparse.Namespace) -> int:
+    with unit_of_work(_actor(args)) as conn:
+        credit.decide(
+            conn,
+            args.subject,
+            Decimal(args.limit),
+            args.reason,
+            date.fromisoformat(args.review_by) if args.review_by else None,
+        )
+        credit.queue_filing(conn)
+    print(
+        f"{args.subject}: credit limit set to £{Decimal(args.limit):,.0f}; snapshot filed to Xero on the next run"
+    )
+    return 0
+
+
+def _print_credit_exceptions(rows: list[dict[str, Any]]) -> None:
+    print("\nCredit exceptions:" + ("  none" if not rows else ""))
+    for e in rows:
+        print(f"  {e['severity'].upper():<7} {e['rule_code']}: {e['display_name']} - {e['message']}")
+        print(f"          -> {e['action']}")
+
+
+def cmd_credit_status(args: argparse.Namespace) -> int:
+    with unit_of_work(_actor(args)) as conn:
+        position = credit.credit_position(conn)
+        exceptions = credit.credit_exceptions(conn)
+    print(
+        f"{'Company':<34} {'Type':<11} {'Experian':>11} {'Creditsafe':>11} {'Requirement':>12} {'Limit':>11}  Outcome"
+    )
+    for p in position:
+        print(
+            f"{p['display_name'][:34]:<34} {p['relationship_code']:<11} {_gbp(p['experian_limit']):>11} "
+            f"{_gbp(p['creditsafe_limit']):>11} {_gbp(p['trading_requirement']):>12} {_gbp(p['credit_limit']):>11}  "
+            f"{p['outcome_code'] or 'not assessed'}"
+            + (" (limit is a CFO decision)" if p["limit_source"] == "cfo_decision" else "")
+        )
+    _print_credit_exceptions(exceptions)
+    return 0
+
+
+def cmd_credit_snapshot(args: argparse.Namespace) -> int:
+    with unit_of_work(_actor(args)) as conn:
+        name, pdf = credit.ensure_snapshot(conn, args.assessment_id)
+    out = Path(args.out) if args.out else Path(name)
+    out.write_bytes(pdf)
+    print(f"written {out}")
+    return 0
+
+
+def cmd_credit_map_folders(args: argparse.Namespace) -> int:
+    mailbox = _env("SALES_ORDERS_CREDIT_MAILBOX")
+    folders = [(f.folder_id, f.path) for f in _graph().folders(mailbox)]
+    with unit_of_work(_actor(args)) as conn:
+        r = credit.map_folders(conn, folders)
+    for m in r["mapped"]:
+        print(f"  mapped {m['subject']} -> {m['folder']}")
+    for a in r["ambiguous"]:
+        print(f"  AMBIGUOUS {a['subject']}: {', '.join(a['folders'])}")
+    for name in r["missing"]:
+        print(f"  no Debt & Credit folder found for {name}")
+    return 0
+
+
+def cmd_credit_retry_filing(args: argparse.Namespace) -> int:
+    with unit_of_work(_actor(args)) as conn:
+        n = credit.retry_failed_filing(conn)
+    print(f"{n} failed filing task(s) will be retried on the next credit-run")
+    return 0
+
+
+def _add_credit_commands(sub: Any) -> None:
+    """Credit & risk management (migration 0014)."""
+    p = sub.add_parser(
+        "credit-run", help="daily routine: ARR file, bureau alerts, assessments, Xero and folder filing"
+    )
+    p.add_argument("--no-email", action="store_true", help="print the summary only")
+    p.set_defaults(func=cmd_credit_run)
+
+    p = sub.add_parser("credit-load-arr", help="load the ARR file (SharePoint, or --file)")
+    p.add_argument("--file", help="a local copy instead of SharePoint")
+    p.set_defaults(func=cmd_credit_load_arr)
+
+    p = sub.add_parser("credit-read-alert", help="load one saved bureau alert email body (HTML)")
+    p.add_argument("bureau", choices=["experian", "creditsafe"])
+    p.add_argument("file")
+    p.add_argument("--message-id", required=True, help="the email's Message-ID (idempotency key)")
+    p.add_argument("--received", required=True, help="ISO time with offset, e.g. 2026-10-01T08:03:20+00:00")
+    p.add_argument("--subject", default="bureau alert")
+    p.set_defaults(func=cmd_credit_read_alert)
+
+    p = sub.add_parser(
+        "credit-import-workbook", help="go-live: seed bureau limits and allowances from the workbook"
+    )
+    p.add_argument("file")
+    p.set_defaults(func=cmd_credit_import_workbook)
+
+    p = sub.add_parser("credit-assess", help="assess companies whose inputs changed (or one, now)")
+    p.add_argument("subject", nargs="?", help="company name or number; omit for every company due")
+    p.set_defaults(func=cmd_credit_assess)
+
+    p = sub.add_parser("credit-decide", help="CFO: set a customer's credit limit (with reason)")
+    p.add_argument("subject", help="company name or number")
+    p.add_argument("limit", help="e.g. 100000")
+    p.add_argument("--reason", required=True)
+    p.add_argument("--review-by", help="YYYY-MM-DD; reported when passed")
+    p.set_defaults(func=cmd_credit_decide)
+
+    p = sub.add_parser("credit-status", help="every monitored company, its limits, and credit exceptions")
+    p.set_defaults(func=cmd_credit_status)
+
+    p = sub.add_parser("credit-snapshot", help="write an assessment's summary PDF")
+    p.add_argument("assessment_id", type=int)
+    p.add_argument("--out")
+    p.set_defaults(func=cmd_credit_snapshot)
+
+    p = sub.add_parser("credit-map-folders", help="find each client's Debt & Credit mail folder")
+    p.set_defaults(func=cmd_credit_map_folders)
+
+    p = sub.add_parser("credit-retry-filing", help="retry Xero / folder filing that failed")
+    p.set_defaults(func=cmd_credit_retry_filing)
+
+
 def _pct(value: Any) -> str:
     return "-" if value is None else f"{value:.1f}"
 
@@ -446,6 +697,7 @@ def build_parser() -> argparse.ArgumentParser:
     _add_order_commands(sub)
     _add_master_data_commands(sub)
     _add_arr_commands(sub)
+    _add_credit_commands(sub)
     return parser
 
 
@@ -459,6 +711,8 @@ def main(argv: list[str] | None = None) -> int:
         print(f"rejected: {exc}", file=sys.stderr)
     except XeroFormatError as exc:
         print(f"Xero: {exc}", file=sys.stderr)
+    except (ArrFileError, GraphError) as exc:
+        print(f"rejected: {exc}", file=sys.stderr)
     except OSError as exc:  # Xero unreachable or refused the request: nothing was loaded
         print(f"Xero request failed: {exc}", file=sys.stderr)
     except psycopg.Error as exc:  # constraint / trigger violations: nothing was committed

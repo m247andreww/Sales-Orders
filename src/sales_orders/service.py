@@ -17,6 +17,7 @@ from sales_orders.errors import OrderNotFoundError, SalesOrderError, UnknownRefe
 from sales_orders.models import (
     AccountAllocationIn,
     ArrContractIn,
+    CreditSubjectIn,
     CustomerIn,
     DocumentIn,
     EmployeeAbsenceIn,
@@ -117,6 +118,8 @@ def load_master_data(conn: Connection, data: MasterDataIn) -> None:
         _load_xero_owner_group(conn, xg)
     for fx in data.fx_rates:
         _load_fx_rate(conn, fx)
+    for cs in data.credit_subjects:
+        _load_credit_subject(conn, cs)
 
 
 def _load_gl_account(conn: Connection, g: GlAccountIn) -> None:
@@ -307,6 +310,47 @@ def _load_employee_absence(conn: Connection, ab: EmployeeAbsenceIn) -> None:
     record_absence(conn, ab)
 
 
+def _load_credit_subject(conn: Connection, cs: CreditSubjectIn) -> None:
+    """Insert or update a monitored company. Its customer/supplier must already exist."""
+    customer_id = _customer_id(conn, cs.customer_legal_name) if cs.customer_legal_name else None
+    supplier_id = _supplier_id(conn, cs.supplier_name) if cs.supplier_name else None
+    conn.execute(
+        """
+        INSERT INTO sales.credit_subject (display_name, company_number, creditsafe_ref, relationship_code,
+                                          customer_id, supplier_id, one_off_allowance, workbook_sheet, notes)
+        VALUES (%(name)s, %(num)s, %(ref)s, %(rel)s, %(cust)s, %(supp)s,
+                COALESCE(%(allow)s, (SELECT numeric_value FROM sales.policy_setting
+                                      WHERE setting_key = 'credit_default_one_off')),
+                %(sheet)s, %(notes)s)
+        ON CONFLICT ((lower(btrim(display_name)))) DO UPDATE
+           SET company_number = EXCLUDED.company_number, creditsafe_ref = EXCLUDED.creditsafe_ref,
+               relationship_code = EXCLUDED.relationship_code, customer_id = EXCLUDED.customer_id,
+               supplier_id = EXCLUDED.supplier_id,
+               one_off_allowance = COALESCE(%(allow)s, sales.credit_subject.one_off_allowance),
+               workbook_sheet = EXCLUDED.workbook_sheet, notes = EXCLUDED.notes
+         WHERE (sales.credit_subject.company_number, sales.credit_subject.creditsafe_ref,
+                sales.credit_subject.relationship_code, sales.credit_subject.customer_id,
+                sales.credit_subject.supplier_id, sales.credit_subject.workbook_sheet, sales.credit_subject.notes,
+                sales.credit_subject.one_off_allowance)
+               IS DISTINCT FROM
+               (EXCLUDED.company_number, EXCLUDED.creditsafe_ref, EXCLUDED.relationship_code,
+                EXCLUDED.customer_id, EXCLUDED.supplier_id, EXCLUDED.workbook_sheet, EXCLUDED.notes,
+                COALESCE(%(allow)s, sales.credit_subject.one_off_allowance))
+        """,
+        {
+            "name": cs.display_name,
+            "num": cs.company_number,
+            "ref": cs.creditsafe_ref,
+            "rel": cs.relationship,
+            "cust": customer_id,
+            "supp": supplier_id,
+            "allow": cs.one_off_allowance,
+            "sheet": cs.workbook_sheet,
+            "notes": cs.notes,
+        },
+    )
+
+
 def _load_fx_rate(conn: Connection, fx: FxRateIn) -> None:
     conn.execute(
         """
@@ -376,9 +420,9 @@ def _load_customer(conn: Connection, c: CustomerIn) -> None:
             INSERT INTO sales.customer_credit_terms
                 (customer_id, effective_from, effective_to, recurring_terms_days,
                  recurring_payment_method_code, one_off_terms_days, one_off_prepayment_required,
-                 credit_limit, risk_rating_code, is_non_standard, reason,
+                 risk_rating_code, is_non_standard, reason,
                  approved_by_employee_id, approved_at)
-            VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
+            VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
             """,
             (
                 customer_id,
@@ -388,7 +432,6 @@ def _load_customer(conn: Connection, c: CustomerIn) -> None:
                 t.recurring_payment_method,
                 t.one_off_terms_days,
                 t.one_off_prepayment_required,
-                t.credit_limit,
                 t.risk_rating,
                 t.is_non_standard,
                 t.reason,

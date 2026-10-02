@@ -22,13 +22,28 @@ def _emitted_rule_codes() -> set[str]:
 
 
 def test_catalogue_matches_rules_in_views(conn: Connection) -> None:
+    # Order rules are catalogued in sales.exception_rule; credit rules (0014) in sales.credit_exception_rule.
     catalogued = {
-        r["rule_code"] for r in conn.execute("SELECT rule_code FROM sales.exception_rule").fetchall()
+        r["rule_code"]
+        for r in conn.execute(
+            "SELECT rule_code FROM sales.exception_rule UNION ALL SELECT rule_code FROM sales.credit_exception_rule"
+        ).fetchall()
     }
     emitted = _emitted_rule_codes()
     assert len(emitted) >= 18  # guard against the pattern silently matching nothing
     # NEGATIVE_LINE_MARGIN / LOW_ORDER_MARGIN existed only in 0001's view and were replaced in 0003.
     assert emitted - {"NEGATIVE_LINE_MARGIN", "LOW_ORDER_MARGIN"} == catalogued
+
+
+def test_credit_rule_severity_matches_the_view(conn: Connection) -> None:
+    sql = (ROOT / "migrations" / "sql" / "0014_credit_risk.up.sql").read_text(encoding="utf-8")
+    view = sql[sql.index("CREATE VIEW sales.v_credit_exception") :]
+    emitted = dict(re.findall(r"SELECT '([A-Z_]+)'(?: AS rule_code)?, '(error|warning)'", view))
+    catalogued = {
+        r["rule_code"]: r["severity"]
+        for r in conn.execute("SELECT rule_code, severity FROM sales.credit_exception_rule").fetchall()
+    }
+    assert emitted == catalogued
 
 
 def test_warnings_never_block(conn: Connection) -> None:

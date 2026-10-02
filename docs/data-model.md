@@ -188,3 +188,25 @@ Additional exception rules (`v_sales_order_exception_all`): `SN_NOT_ASSIGNED`, `
 - Master data (customers, suppliers, employees, FX rates) is never created implicitly by an order.
   An unknown name fails the whole load — a typo must not create a duplicate customer.
 - Once a migration has run in production it is immutable; changes go in a new migration.
+
+## Credit & risk management (migration 0014, ADR 0005)
+
+```
+credit_subject ──< credit_report (append-only bureau readings, by company number)
+      │                 └── credit_alert_email (one per Message-ID)
+      ├──< credit_assessment ──< credit_assessment_line (exposure per ARR frequency)
+      │          │     └── credit_assessment_snapshot (the filed PDF, SHA-256)
+      │          └── credit_arr_snapshot ──< credit_arr_line (ARR file version)
+      ├──< credit_filing_task (outbox: Xero snapshot, Debt & Credit copy)
+      └── customer ──< customer_credit_limit (effective-dated; automatic or CFO decision)
+```
+
+| Object | Rule |
+|---|---|
+| `credit_exposure_rule` | exposure = annual value ÷ divisor × invoices exposed (monthly ÷12×2, quarterly ÷4, annual and multi-year ÷1) |
+| `credit_arr_status` | which ARR statuses are commitments (Live, Order, Renewal - New) |
+| `v_credit_assessment` | requirement = ROUNDUP((Σ exposure + one-off) × 1.2, -2); baseline = lower bureau limit |
+| `create_credit_assessment()` | applies the limit only inside appetite (≤ 50% of baseline when that is ≤ £100k, ≤ baseline, bureau limit present, no adverse band); otherwise `cfo_review` |
+| `v_credit_assessment_due` | reassess on a bureau limit/band, ARR requirement or allowance change |
+| `customer_credit_limit` | automatic limit must equal the recommendation; anything else needs `approve_credit_terms` and a reason |
+| `v_credit_exception` | 13 rules, catalogued in `credit_exception_rule` with severity and action |

@@ -235,5 +235,16 @@
       "group_name": "z. House",
       "house_account": "House"
     }
+  ],
+  "credit_subjects": [
+    {
+      "display_name": "Test Customer",
+      "relationship": "customer",
+      "company_number": "00000000",
+      "creditsafe_ref": "UK00000001",
+      "customer_legal_name": "Test Customer Ltd",
+      "one_off_allowance": "10000",
+      "notes": "SYNTHETIC TEST SUBJECT"
+    }
   ]
 }

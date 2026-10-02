@@ -42,5 +42,15 @@ GRANT SELECT ON ALL TABLES IN SCHEMA audit TO sales_orders_person;
 REVOKE INSERT, UPDATE ON sales.permission, sales.employee_permission, sales.policy_setting
     FROM sales_orders_person;
 
+-- Credit & risk (0014): the rule tables change by migration only; bureau evidence, ARR snapshots,
+-- assessments and PDF snapshots are insert-only (their triggers also refuse UPDATE/DELETE).
+REVOKE INSERT, UPDATE ON sales.credit_bureau, sales.credit_relationship, sales.credit_exposure_rule,
+    sales.credit_arr_status, sales.credit_risk_band, sales.credit_exception_rule
+    FROM sales_orders_app, sales_orders_person;
+REVOKE UPDATE ON sales.credit_alert_email, sales.credit_report, sales.credit_arr_snapshot,
+    sales.credit_arr_line, sales.credit_assessment, sales.credit_assessment_line,
+    sales.credit_assessment_snapshot
+    FROM sales_orders_app, sales_orders_person;
+
 -- PRODUCTION ONLY (run once, as sales_orders_owner, after Entra logins exist):
 --   UPDATE sales.policy_setting SET numeric_value = 1 WHERE setting_key = 'require_personal_login';

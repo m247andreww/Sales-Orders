@@ -5,6 +5,8 @@ Managed247's system of record for sales orders — replacing "signed PDF + email
 
 **Stage: deployed, empty.** The production database is built on Azure (UK South) with the schema, rules and
 permissions. No real data is loaded yet, and nothing is connected to the live mailbox, Xero or SharePoint (see [Roadmap](#roadmap)).
+The credit routine is built and tested; it needs the Microsoft 365 and Xero permissions in
+`docs/owner-guides/credit-automation.md` and a scheduled job host (decision D7) to run by itself.
 
 ---
 
@@ -26,6 +28,11 @@ Every order becomes one record with its lines, documents and checks. The databas
 8. **Records who did what, when** — every change, permanently.
 9. **Keeps ARR as a ledger** — every new, expansion, churn is a dated movement, so ARR on any date and
    the bridge between two dates are exact.
+10. **Sets credit limits by itself** (replaces the Credit Limit Assessment Workings file) — reads the
+   Experian and Creditsafe alert emails and the ARR file every day, recalculates the limit when a rating
+   or recurring revenue changes, applies it when it is within risk appetite, files the PDF summary and a
+   note on the Xero contact and the email in the client's Debt & Credit folder, and emails the CFO only
+   the cases that need a decision (ADR 0005, `docs/owner-guides/credit-automation.md`).
 
 ## Try the test order
 
@@ -52,6 +59,13 @@ sales-orders employee-leaves person@managed.co.uk 2026-10-31   # leaver: account
 sales-orders allocate-account "Customer Ltd" person@managed.co.uk 2027-01-01   # House -> salesperson
 sales-orders sync-xero-groups --file fixtures/test_xero_contact_groups.json   # account owner from Xero groups
 sales-orders xero-owners                                    # database vs Xero owner, with actions
+sales-orders credit-load-arr --file <ARR file.xlsx>         # ARR commitments (daily run reads SharePoint)
+sales-orders credit-read-alert experian fixtures/credit/experian_alert.html \
+    --message-id "<test@example>" --received 2026-10-01T08:00:00+00:00   # one saved bureau alert
+sales-orders credit-assess                                  # assess every company whose inputs changed
+sales-orders credit-status                                  # limits, outcomes and credit exceptions
+SALES_ORDERS_ACTOR=andrew.whitford@managed.co.uk sales-orders credit-decide "Test Customer" 12000 --reason "..."
+sales-orders credit-run                                     # the daily routine (mailbox, SharePoint, Xero)
 ```
 
 The test order is **synthetic** (no real customer data). It deliberately covers every pattern found in
@@ -81,7 +95,9 @@ CI runs all three on every push (`.github/workflows/ci.yml`).
 | `db/bootstrap/` | Database roles and least-privilege grants |
 | `docs/data-model.md` | ERD, email-to-database mapping, controls, exception rules |
 | `src/sales_orders/register.py` | AW SOs Register importer (SN source) |
-| `src/sales_orders/xero.py` | Xero contact groups reader (account owner source) |
+| `src/sales_orders/xero.py` | Xero contact groups reader (account owner source); credit snapshot filing |
+| `src/sales_orders/credit*.py` | Credit & risk: alert parsers, ARR reader, PDF snapshot, services, daily run |
+| `src/sales_orders/graph.py` | Microsoft 365 (mailbox, SharePoint) for the credit routine |
 | `infra/` | Azure infrastructure as code (Bicep) |
 | `docs/deployment.md` | Step-by-step production deployment |
 | `docs/adr/` | Architecture decisions and why |
@@ -112,10 +128,19 @@ CI runs all three on every push (`.github/workflows/ci.yml`).
 | M | Production database built on Azure, UK South (2026-09-25): `psql-salesorders-prod-v7qbwnxbjgf66`, Key Vault `kv-so-prod-v7qbwnxbjgf66`; delete lock on, firewall closed | `infra/deploy.sh` |
 | K | Xero custom connection approved and created (2026-09-25); codes held by the CFO until hosting exists | `docs/owner-guides/xero-connection.md` |
 
+| N | Credit limits: database is master; bureau alerts + ARR file drive automatic assessments; limits inside risk appetite apply themselves, others need the CFO (built 2026-10-02, proposed) | migration 0014, ADR 0005 |
+
 **Still needed**
 
 | # | Decision |
 |---|---|
+| D1 | Credit: multi-year (tri-/quint-annual) exposure at one year's value (workbook, built) or the full invoice? |
+| D2 | Credit: Xero's credit-limit box cannot be set by API — mirror by hand from the daily list (built), or stop using it? |
+| D3 | Credit: "Order" (signed, not yet billing) counts as a commitment; "Renewal - Old"/"Cancelled" do not — confirm |
+| D4 | Credit: Experian bands that always need review — High, Maximum, Serious Adverse (built) — confirm |
+| D5 | Credit: default one-off & project allowance for a newly monitored customer (£5,000 built) |
+| D6 | Credit go-live: which spreadsheet limits typed over the formula to keep as CFO decisions |
+| D7 | Where the daily jobs run (credit-run, Xero sync): a scheduled job next to the Azure database (recommended) |
 
 ## Roadmap
 
@@ -127,3 +152,5 @@ CI runs all three on every push (`.github/workflows/ci.yml`).
 4. **Invoicing** — push approved orders to Xero as draft invoices / repeating invoices; record invoice IDs.
 5. **Reporting** — Power BI (read-only role) over the summary and exception views; MRR/ARR.
 6. **Approval roles** — restrict who can approve, waive and set terms.
+7. **Credit exposure** — compare each client's Xero balance (aged receivables) and open orders with its
+   credit limit; warn on an order that would exceed it.

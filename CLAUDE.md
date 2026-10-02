@@ -61,12 +61,15 @@ These are the owner's stated preferences; follow them in every session.
 - Prefer automated options over workarounds; avoid manual data downloads unless unavoidable.
 - UK English. Cancellation communications go out as Johnathon from contract.admin@.
 - Learn from the owner's language and preferences and record new ones here.
+- Automation target (2026-10-02): routines should need "virtually no input"; the owner's part is a
+  decision by reply to one daily summary email. Never design a step that needs a download or a login.
 
 ## Sources of truth (ADR 0003)
 
 - SN refs: **AW SOs Register** (Google Sheet). Never generate or guess an SN; source it with
   `load-register` / `assign-sn`. The database never writes to AW SOs.
 - ARR refs (TIL030, NAP008-26): the **ARR file**. GL codes: **Xero** chart of accounts.
+- Credit limits: **this database** (from bureau alerts + ARR file). Xero's API cannot set Xero's credit-limit box.
 - Current account owner: **Xero contact groups** (CFO, 2026-09-25). The DB keeps the dated history and
   reconciles (`sync-xero-groups`); the newer side wins, first-sync differences need `--adopt-xero`.
   The Xero MCP connector does not expose groups: use the Xero API (custom connection).
@@ -97,6 +100,12 @@ These are the owner's stated preferences; follow them in every session.
 - Code edits: the formatter re-wraps lines, so a text replace can silently miss. Verify every edit landed
   (grep or a test) — twice this happened and only a test caught it.
 - LAST_ORDER (…LO) rows are Register reversals: excluded from bookings and ARR.
+- Credit & risk (CFO, 2026-10-02, ADR 0005): "wholly automated, virtually no input". The database is the
+  master for credit limits (`customer_credit_limit`); bureau alerts (Experian = its **Credit Limit**,
+  not Credit Rating; Creditsafe) and the ARR file are the inputs; customers match the ARR file by **ARR
+  prefix**, never by name. Limits apply themselves only inside risk appetite; anything else is a CFO
+  decision with a reason. Clients' alert emails are copied to their Debt & Credit folder; suppliers and
+  "for information" companies are monitored only. Use the `credit-review` skill.
 - Read the FULL email thread (salesorders@ / neworders@) — the first email is not the order of
   record if it was amended.
 

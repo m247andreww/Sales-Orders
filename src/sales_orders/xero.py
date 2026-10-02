@@ -139,3 +139,54 @@ def fetch_contact_groups(
         detailed.extend(get(f"ContactGroups/{group.group_id}").get("ContactGroups", []))
     combined = {"ContactGroups": detailed}
     return parse_contact_groups(combined), combined
+
+
+# ---------------------------------------------------------------------------- credit snapshots
+# Filing a credit assessment on the customer's Xero contact (migration 0014). Needs the custom
+# connection to have the scopes "accounting.contacts accounting.attachments" (write).
+# Xero's public API has no credit-limit field on a contact: the limit is recorded in a history note
+# on the contact and held in sales.customer_credit_limit.
+CREDIT_SCOPE = "accounting.contacts accounting.attachments"
+
+
+class XeroClient:
+    """A token-caching client for the write calls the credit routine makes."""
+
+    def __init__(self, creds: XeroCredentials, transport: Transport = _urlopen) -> None:
+        self._creds = creds
+        self._transport = transport
+        self._token: str | None = None
+
+    def _headers(self, extra: Mapping[str, str]) -> dict[str, str]:
+        if self._token is None:
+            self._token = _access_token(self._creds, self._transport)
+        headers = {"Authorization": f"Bearer {self._token}", "Accept": "application/json", **extra}
+        if self._creds.tenant_id:
+            headers["xero-tenant-id"] = self._creds.tenant_id
+        return headers
+
+    def attach_to_contact(
+        self, contact_id: UUID, file_name: str, content: bytes, idempotency_key: str
+    ) -> str:
+        """Upload a file to the contact's Files; returns Xero's AttachmentID."""
+        request = urllib.request.Request(  # noqa: S310 - https base
+            f"{API_BASE}/Contacts/{contact_id}/Attachments/{urllib.parse.quote(file_name)}",
+            data=content,
+            headers=self._headers({"Content-Type": "application/pdf", "Idempotency-Key": idempotency_key}),
+            method="PUT",
+        )
+        body = json.loads(self._transport(request))
+        attachments = body.get("Attachments") if isinstance(body, Mapping) else None
+        if not isinstance(attachments, list) or not attachments or "AttachmentID" not in attachments[0]:
+            raise XeroFormatError("Xero did not confirm the attachment")
+        return str(attachments[0]["AttachmentID"])
+
+    def add_contact_note(self, contact_id: UUID, details: str, idempotency_key: str) -> None:
+        """Add a line to the contact's History and notes."""
+        request = urllib.request.Request(  # noqa: S310 - https base
+            f"{API_BASE}/Contacts/{contact_id}/History",
+            data=json.dumps({"HistoryRecords": [{"Details": details[:2500]}]}).encode(),
+            headers=self._headers({"Content-Type": "application/json", "Idempotency-Key": idempotency_key}),
+            method="PUT",
+        )
+        self._transport(request)
