@@ -68,6 +68,8 @@ These are the owner's stated preferences; follow them in every session.
   self-contained copy-paste block (wrap shell scripts in `bash <<'EOF' ... EOF` so an error cannot close
   their shell). Before giving any step, check it works from the owner's side (e.g. files only on a
   branch do not exist for them). Prefer clicks over commands; prefer doing it yourself over either.
+- **Anything the owner must copy gets a Copy button (CFO, 2026-10-02: "GIVE ME A COPY BUTTON").** Never
+  ask them to select text from a box. Put owner steps on a published page with one Copy button per item.
 - **Microsoft 365 admin will NOT grant further permissions (CFO, 2026-10-02). Never ask again** — no app
   registrations, Graph application permissions, access policies or admin consent. Microsoft 365 access is
   only through the CFO's own login: the Claude Microsoft 365 connector (or Outlook.com). Design within it.
