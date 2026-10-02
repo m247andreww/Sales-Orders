@@ -41,7 +41,7 @@ Discovery (2026-10-02, CFO mailbox read-only and the two files supplied):
 1. **Database is the master** for monitored companies, bureau readings, assessments and credit limits
    (migration 0014). Readings and assessments are append-only evidence.
 2. **Inputs arrive by themselves**: the daily `credit-run` reads every bureau alert from the mailbox
-   (Microsoft Graph, app-only, restricted to that mailbox) and the ARR file from SharePoint.
+   (superseded 2026-10-02: no Microsoft 365 admin permissions will be granted; mailbox and OneDrive access is through the CFO's own Claude Microsoft 365 connector — see the redesign note below) and the ARR file from SharePoint.
 3. **The workbook's rules are data**, not formulas: exposure per frequency (`credit_exposure_rule`),
    which ARR statuses count (`credit_arr_status`), VAT, rounding and appetite (`policy_setting`).
    Customers are matched to the ARR file by their **ARR prefix** (e.g. `TST001` → the customer with prefix TST), never by
@@ -82,3 +82,12 @@ Discovery (2026-10-02, CFO mailbox read-only and the two files supplied):
 | D4 | Which Experian bands always need review? | High Risk, Maximum Risk, Serious Adverse Information |
 | D5 | One-off & project allowance for a newly monitored customer (workbook used £0–£50k by hand) | £5,000 |
 | D6 | Go-live: carry the workbook's typed-over limits (three £100k figures) as CFO decisions? | Not carried: reviewed from the reconciliation first |
+
+## Redesign note (2026-10-02)
+
+The CFO's Microsoft 365 administrator will not grant application permissions. The daily run therefore
+becomes a scheduled Claude routine using the CFO's existing Microsoft 365 and Xero connections. Tested
+limits of that connector: it reads mail, folders and plain-text files in full, moves, tags and forwards
+emails, sends mail and uploads files up to 1 MB; it cannot copy an email into a folder and it truncates
+spreadsheet reads (about 135 of 1,230 ARR rows). The rule engine, database rules and tests are
+unchanged; only how data gets in and out changes.

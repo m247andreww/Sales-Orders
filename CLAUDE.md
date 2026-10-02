@@ -63,6 +63,13 @@ These are the owner's stated preferences; follow them in every session.
 - Learn from the owner's language and preferences and record new ones here.
 - Automation target (2026-10-02): routines should need "virtually no input"; the owner's part is a
   decision by reply to one daily summary email. Never design a step that needs a download or a login.
+- **Microsoft 365 admin will NOT grant further permissions (CFO, 2026-10-02). Never ask again** — no app
+  registrations, Graph application permissions, access policies or admin consent. Microsoft 365 access is
+  only through the CFO's own login: the Claude Microsoft 365 connector (or Outlook.com). Design within it.
+- Connector limits (tested 2026-10-02): it reads mail, folders and plain-text files in full; it can move
+  and tag (category) emails, forward, send, and upload files up to 1 MB; it can NOT copy an email to a
+  folder, and it truncates .xlsx reads (~135 of 1,230 ARR rows, displayed values only).
+- Xero custom connection: CFO added accounting.contacts + accounting.attachments (2026-10-02).
 
 ## Sources of truth (ADR 0003)
 

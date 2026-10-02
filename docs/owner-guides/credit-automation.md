@@ -6,39 +6,15 @@ rating or recurring revenue changed, puts the PDF summary and a note on the clie
 alert email in the client's *Debt & Credit* folder, and emails you one summary. You only reply to the
 cases it cannot decide alone. It replaces the *Credit Limit Assessment Workings* spreadsheet.
 
-You do Parts 1–3 once (about an hour in total, mostly waiting for admins). Part 4 is a one-off review
+You do Parts 2–3 once (about 15 minutes). Part 4 is a one-off review
 before switch-on. Part 5 is the only thing you do from then on.
 
 ---
 
-## Part 1 — Let the system read your mailbox and the ARR file (Microsoft 365 admin, ~20 minutes)
+## Part 1 — Microsoft 365 (nothing to do)
 
-*What this is:* a "service login" for the system in Microsoft 365, limited to your mailbox and the
-Finance SharePoint site. It works without anyone signing in.
-
-**Who:** your Microsoft 365 administrator (IT). Send them this part.
-
-1. Go to **entra.microsoft.com** → **App registrations** → **New registration**.
-2. **Name:** type `Sales Orders – credit automation`. Leave everything else. Click **Register**.
-   *You should see the app's Overview page with an "Application (client) ID".*
-3. Click **API permissions** → **Add a permission** → **Microsoft Graph** → **Application permissions**.
-4. Tick `Mail.ReadWrite`, `Mail.Send` and `Sites.Selected`. Click **Add permissions**.
-5. Click **Grant admin consent for Managed247** and confirm.
-   *You should see three green ticks under "Status".*
-6. Click **Certificates & secrets** → **New client secret** → description `credit automation`,
-   expiry **24 months** → **Add**. Copy the **Value** straight into the password manager as
-   "M365 – credit automation" with the **Application (client) ID** and the **Directory (tenant) ID**
-   from the Overview page. **Never** paste it into email, Teams or a chat (including Claude).
-7. Restrict it to your mailbox only (Exchange Online PowerShell, as an Exchange admin):
-   `New-ApplicationAccessPolicy -AppId <Application (client) ID> -PolicyScopeGroupId andrew.whitford@managed.co.uk -AccessRight RestrictAccess -Description "Credit automation: CFO mailbox only"`
-   *You should see the policy listed with AccessRight "RestrictAccess".*
-8. Give it read access to the Finance SharePoint site only (Graph Explorer or PowerShell, as a
-   SharePoint admin): grant the app **read** on the site `FinanceInternal`.
-   *Ask IT to confirm "read granted on FinanceInternal".*
-
-**If it doesn't look like that:** stop and send a screenshot of the screen you are on.
-
-**Done when:** IT confirms steps 5, 7 and 8, and the three codes are in your password manager.
+The system uses the Microsoft 365 connection you have already approved in Claude, under your own
+login. No administrator is involved and no new permission is needed.
 
 ---
 
@@ -55,7 +31,7 @@ note on a contact needs two more permissions.
 
 **If it doesn't look like that:** stop and send a screenshot.
 
-**Done when:** the app shows both new scopes and is still connected to Managed247.
+**Done when:** the app shows both new scopes and is still connected to Managed247. *(Done 2 Oct 2026.)*
 
 **Please note:** Xero does not let any system change the **credit limit box** on a contact. Until you
 decide otherwise (decision D2), the daily email lists any limit that changed so you can copy it into
