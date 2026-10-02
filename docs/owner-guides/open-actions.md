@@ -18,6 +18,8 @@ Kept current by Claude every turn. Newest state wins.
 | 30 credit PDFs and notes filed on Xero contacts | Claude | Done 2 Oct 2026 |
 | Newly added clients in Experian and Creditsafe | CFO | Done 2 Oct 2026 |
 | First figures for newly monitored clients: check Monday's run; if none, add a one-off "first figures" box to the Credit Desk | Claude | Mon 5 Oct |
+| Outlook rule: alerts to Inbox / Credit alerts, marked read | CFO | Done 2 Oct 2026 |
+| Each client's alerts filed as PDFs on its Xero contact (9 filed; automatic from now on) | Claude | Done 2 Oct 2026 |
 | McGill display name still says "Services" | Claude | Next change |
 | Alert companies classified from Xero: FEI Foods, Weil Gotshal = customers; Westcon, Nuco, Shoreditch Design = suppliers; Nlighten = information | Claude | Done 2 Oct 2026 |
 | First Steps Care: possible Companies House strike-off proposal | Claude to confirm | Open |
