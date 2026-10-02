@@ -68,6 +68,8 @@ These are the owner's stated preferences; follow them in every session.
   self-contained copy-paste block (wrap shell scripts in `bash <<'EOF' ... EOF` so an error cannot close
   their shell). Before giving any step, check it works from the owner's side (e.g. files only on a
   branch do not exist for them). Prefer clicks over commands; prefer doing it yourself over either.
+- Azure: the CFO's Cloud Shell starts on a DISABLED subscription (MCPP); the active one is "Azure
+  subscription 1". Every Azure command must select the enabled subscription that holds rg-salesorders-prod.
 - **Anything the owner must copy gets a Copy button (CFO, 2026-10-02: "GIVE ME A COPY BUTTON").** Never
   ask them to select text from a box. Put owner steps on a published page with one Copy button per item.
 - **Microsoft 365 admin will NOT grant further permissions (CFO, 2026-10-02). Never ask again** — no app
