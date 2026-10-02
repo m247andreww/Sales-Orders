@@ -4,9 +4,7 @@ Kept current by Claude every turn. Newest state wins.
 
 ## Your actions (now)
 
-1. **Add clients to Experian and Creditsafe** using the page with Copy buttons:
-   https://claude.ai/artifact/11xiBVxunoMbzqtR3BZoEi (now 6 + 2 companies, plus Family Building Society by name).
-   Then tell Claude "monitoring added".
+1. None. Make the 10 Credit Desk decisions when convenient: https://claude.ai/artifact/RuebneZC7AjWuvfiVj2nF8
 
 ## Still open
 
@@ -18,8 +16,9 @@ Kept current by Claude every turn. Newest state wins.
 | Weekday 07:45 run switched on (first run Mon 5 Oct; Claude checks it at 07:55) | Claude | Done 2 Oct 2026 |
 | 46 clients linked to Xero contacts and company numbers (from Xero, PandaDoc, alerts, web) | Claude | Done 2 Oct 2026 |
 | 30 credit PDFs and notes filed on Xero contacts | Claude | Done 2 Oct 2026 |
-| Add Princes, Tilbury Douglas, Starlizard, Rascal, Family BS (+ Hypnos, LMAX in Creditsafe) to monitoring | CFO | Page ready |
-| First credit limit for newly monitored clients (alerts only come when something changes) | Claude to test after you add them | Open |
+| Newly added clients in Experian and Creditsafe | CFO | Done 2 Oct 2026 |
+| First figures for newly monitored clients: check Monday's run; if none, add a one-off "first figures" box to the Credit Desk | Claude | Mon 5 Oct |
+| McGill display name still says "Services" | Claude | Next change |
 | Alert companies classified from Xero: FEI Foods, Weil Gotshal = customers; Westcon, Nuco, Shoreditch Design = suppliers; Nlighten = information | Claude | Done 2 Oct 2026 |
 | First Steps Care: possible Companies House strike-off proposal | Claude to confirm | Open |
 | Confirm client list and ARR matches (Analysis Mason sheets AMA/ANA, QPR Trust, Fronius) | CFO | Open |
