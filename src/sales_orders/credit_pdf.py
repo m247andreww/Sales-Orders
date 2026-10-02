@@ -18,6 +18,8 @@ from reportlab.lib.pagesizes import A4
 from reportlab.lib.units import mm
 from reportlab.pdfgen import canvas
 
+from sales_orders.money import gbp
+
 _FREQUENCY_LABELS = {
     "quint-annual": "ARR - quint-annual invoicing",
     "tri-annual": "ARR - tri-annual invoicing",
@@ -63,9 +65,7 @@ class SnapshotData:
 
 
 def _gbp(value: Decimal | None) -> str:
-    if value is None:
-        return "N/A"
-    return f"£{value:,.0f}" if value == value.to_integral_value() else f"£{value:,.2f}"
+    return gbp(value)
 
 
 def _date(value: datetime | None) -> str:

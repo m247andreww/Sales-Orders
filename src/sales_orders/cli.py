@@ -24,6 +24,7 @@ from sales_orders.db import unit_of_work
 from sales_orders.errors import SalesOrderError
 from sales_orders.graph import GraphClient, GraphCredentials, GraphError
 from sales_orders.models import EmployeeAbsenceIn, MasterDataIn, OrderSubmissionIn
+from sales_orders.money import gbp
 from sales_orders.register import parse_register
 from sales_orders.state_store import BlobStateStore, StateStoreError
 from sales_orders.xero import (
@@ -33,6 +34,7 @@ from sales_orders.xero import (
     XeroCredentials,
     XeroFormatError,
     fetch_contact_groups,
+    fetch_contacts,
     parse_contact_groups,
 )
 
@@ -373,7 +375,7 @@ def _xero_credit_client() -> XeroClient | None:
 
 
 def _gbp(value: Any) -> str:
-    return f"£{value:,.0f}" if value is not None else "-"
+    return gbp(value, "-")
 
 
 def cmd_credit_run(args: argparse.Namespace) -> int:
@@ -583,7 +585,7 @@ def cmd_credit_decide(args: argparse.Namespace) -> int:
         )
         credit.queue_filing(conn)
     print(
-        f"{args.subject}: credit limit set to £{Decimal(args.limit):,.0f}; snapshot filed to Xero on the next run"
+        f"{args.subject}: credit limit set to {gbp(Decimal(args.limit))}; snapshot filed to Xero on the next run"
     )
     return 0
 
@@ -640,6 +642,34 @@ def cmd_credit_retry_filing(args: argparse.Namespace) -> int:
     with unit_of_work(_actor(args)) as conn:
         n = credit.retry_failed_filing(conn)
     print(f"{n} failed filing task(s) will be retried on the next credit-run")
+    return 0
+
+
+def cmd_credit_sync_xero_contacts(args: argparse.Namespace) -> int:
+    client_id = os.environ.get("SALES_ORDERS_XERO_CLIENT_ID")
+    secret = os.environ.get("SALES_ORDERS_XERO_CLIENT_SECRET")
+    if not client_id or not secret:
+        print(
+            "PROBLEM: Xero is not configured (SALES_ORDERS_XERO_CLIENT_ID / _SECRET); contact list not refreshed"
+        )
+        return 1
+    creds = XeroCredentials(
+        client_id=client_id,
+        client_secret=secret,
+        scope=os.environ.get("SALES_ORDERS_XERO_CREDIT_SCOPE", CREDIT_SCOPE),
+        tenant_id=os.environ.get("SALES_ORDERS_XERO_TENANT_ID") or None,
+    )
+    contacts = fetch_contacts(creds)
+    with unit_of_work(_actor(args)) as conn:
+        new = credit.sync_xero_contacts(conn, contacts)
+    print(f"Xero contact list refreshed: {len(contacts)} contacts, {new} new")
+    return 0
+
+
+def cmd_credit_add_monitored(args: argparse.Namespace) -> int:
+    with unit_of_work(_actor(args)) as conn:
+        name = credit.add_monitored_customer(conn, args.prefix, args.number, args.xero_contact)
+    print(f"{name} ({args.prefix}) is now a monitored client; its limit follows the first bureau figures")
     return 0
 
 
@@ -748,6 +778,21 @@ def _add_credit_commands(sub: Any) -> None:
 
     p = sub.add_parser("credit-retry-filing", help="retry Xero / folder filing that failed")
     p.set_defaults(func=cmd_credit_retry_filing)
+
+    p = sub.add_parser(
+        "credit-sync-xero-contacts",
+        help="daily job: refresh the copy of the Xero contact list (new-customer scan)",
+    )
+    p.set_defaults(func=cmd_credit_sync_xero_contacts)
+
+    p = sub.add_parser(
+        "credit-add-monitored",
+        help="the CFO added an unmonitored ARR customer to Experian/Creditsafe: create the client record",
+    )
+    p.add_argument("prefix", help="ARR prefix, e.g. TIL")
+    p.add_argument("--number", required=True, help="Companies House number (as added to the bureaus)")
+    p.add_argument("--xero-contact", help="the Xero contact id (from the Credit Desk suggestion)")
+    p.set_defaults(func=cmd_credit_add_monitored)
 
 
 def _pct(value: Any) -> str:

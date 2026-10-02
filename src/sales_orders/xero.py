@@ -141,6 +141,63 @@ def fetch_contact_groups(
     return parse_contact_groups(combined), combined
 
 
+# ---------------------------------------------------------------------------- contact directory
+# The daily credit run keeps a copy of the Xero contact list (migration 0018) to suggest the Xero contact
+# and company number for a customer that is in the ARR file but not yet credit-monitored.
+
+
+@dataclass(frozen=True)
+class XeroDirectoryContact:
+    contact_id: UUID
+    name: str
+    company_number: str | None
+    is_customer: bool
+    is_supplier: bool
+    status: str
+
+
+def parse_contacts(document: Mapping[str, Any]) -> list[XeroDirectoryContact]:
+    """Parse one page of a Xero Contacts response."""
+    contacts = document.get("Contacts")
+    if not isinstance(contacts, list):
+        raise XeroFormatError("the response has no Contacts list")
+    out = []
+    for c in contacts:
+        if not isinstance(c, Mapping) or "ContactID" not in c or not str(c.get("Name") or "").strip():
+            raise XeroFormatError(f"contact without ContactID or Name: {c!r}")
+        number = str(c.get("CompanyNumber") or "").strip().upper() or None
+        out.append(
+            XeroDirectoryContact(
+                contact_id=_uuid(c["ContactID"], "a contact"),
+                name=str(c["Name"]).strip(),
+                company_number=number,
+                is_customer=bool(c.get("IsCustomer")),
+                is_supplier=bool(c.get("IsSupplier")),
+                status=str(c.get("ContactStatus") or "ACTIVE"),
+            )
+        )
+    return out
+
+
+def fetch_contacts(creds: XeroCredentials, transport: Transport = _urlopen) -> list[XeroDirectoryContact]:
+    """Every contact in the organisation (Xero pages them 100 at a time)."""
+    headers = {"Authorization": f"Bearer {_access_token(creds, transport)}", "Accept": "application/json"}
+    if creds.tenant_id:
+        headers["xero-tenant-id"] = creds.tenant_id
+    out: list[XeroDirectoryContact] = []
+    page = 1
+    while True:
+        request = urllib.request.Request(f"{API_BASE}/Contacts?page={page}", headers=headers)  # noqa: S310 - https base
+        batch = parse_contacts(json.loads(transport(request)))
+        out.extend(batch)
+        if len(batch) < XERO_PAGE_SIZE:
+            return out
+        page += 1
+
+
+XERO_PAGE_SIZE = 100
+
+
 # ---------------------------------------------------------------------------- credit snapshots
 # Filing a credit assessment on the customer's Xero contact (migration 0014). Needs the custom
 # connection to have the scopes "accounting.contacts accounting.attachments" (write).

@@ -15,6 +15,7 @@ from dataclasses import dataclass
 from datetime import date, datetime, time
 from decimal import Decimal
 from typing import Any
+from uuid import UUID
 from zoneinfo import ZoneInfo
 
 from openpyxl import load_workbook
@@ -33,6 +34,10 @@ from sales_orders.credit_pdf import (
 )
 from sales_orders.db import Connection
 from sales_orders.errors import SalesOrderError, UnknownReferenceError
+from sales_orders.models import CreditSubjectIn, CustomerIn, MasterDataIn
+from sales_orders.money import gbp
+from sales_orders.service import load_master_data
+from sales_orders.xero import XeroDirectoryContact
 
 LONDON = ZoneInfo("Europe/London")
 MAX_FILING_ATTEMPTS = 3
@@ -489,7 +494,7 @@ def _decision_text(conn: Connection, a: dict[str, Any]) -> tuple[Decimal | None,
         return (
             current["credit_limit"],
             f"CFO decision in force ({current['reason']}); this assessment recommends "
-            f"£{a['recommended_limit']:,.0f}.",
+            f"{gbp(a['recommended_limit'])}.",
         )
     return None, f"Awaiting CFO decision: {a['review_reason']}."
 
@@ -669,14 +674,11 @@ def retry_failed_filing(conn: Connection) -> int:
 def xero_note(conn: Connection, assessment_id: int) -> str:
     d = snapshot_data(conn, assessment_id)
 
-    def gbp(v: Decimal | None, missing: str) -> str:
-        return f"£{v:,.0f}" if v is not None else missing
-
     return (
         f"Credit limit {gbp(d.credit_limit, 'not set')} (assessment {assessment_id}, {d.assessed_at:%d %b %Y}). "
         f"Experian {gbp(d.experian_limit, 'no limit reported')}, "
         f"Creditsafe {gbp(d.creditsafe_limit, 'no limit reported')}, "
-        f"trading requirement £{d.trading_requirement:,.0f}. {d.decision}"
+        f"trading requirement {gbp(d.trading_requirement)}. {d.decision}"
     )
 
 
@@ -687,6 +689,128 @@ _NOISE = re.compile(r"\b(limited|ltd|plc|llp|uk|group|holdings?|the)\b|[^a-z0-9]
 
 def _norm(name: str) -> str:
     return _NOISE.sub("", name.lower())
+
+
+# ============================================================================ new customers to monitor
+
+
+def sync_xero_contacts(conn: Connection, contacts: list[XeroDirectoryContact]) -> int:
+    """Refresh the copy of the Xero contact list (migration 0018). Returns how many contacts were new."""
+    new = 0
+    for c in contacts:
+        row = conn.execute(
+            """
+            INSERT INTO sales.xero_contact_directory
+                   (xero_contact_id, name, company_number, is_customer, is_supplier, contact_status)
+            VALUES (%s, %s, %s, %s, %s, %s)
+            ON CONFLICT (xero_contact_id) DO UPDATE
+               SET name = EXCLUDED.name, company_number = EXCLUDED.company_number,
+                   is_customer = EXCLUDED.is_customer, is_supplier = EXCLUDED.is_supplier,
+                   contact_status = EXCLUDED.contact_status, last_synced_at = now()
+            RETURNING (xmax = 0) AS inserted
+            """,
+            (c.contact_id, c.name, c.company_number, c.is_customer, c.is_supplier, c.status),
+        ).fetchone()
+        new += bool(row and row["inserted"])
+    return new
+
+
+def _xero_suggestion(conn: Connection, arr_name: str) -> dict[str, Any] | None:
+    """The one active Xero customer whose name matches the ARR name (normalised), else None (never a guess)."""
+    key = _norm(arr_name)
+    if len(key) < MIN_NAME_KEY:
+        return None
+    rows = conn.execute(
+        """SELECT xero_contact_id, name, company_number FROM sales.xero_contact_directory
+            WHERE is_customer AND contact_status = 'ACTIVE' ORDER BY name"""
+    ).fetchall()
+    exact = [r for r in rows if _norm(r["name"]) == key]
+    starts = [r for r in rows if _norm(r["name"]).startswith(key)]
+    match = exact if len(exact) == 1 else starts if not exact and len(starts) == 1 else []
+    if not match:
+        return None
+    r = match[0]
+    number = r["company_number"]
+    if number and number.isdigit() and len(number) < COMPANY_NUMBER_LENGTH:  # Xero often drops leading zeros
+        number = number.zfill(COMPANY_NUMBER_LENGTH)
+    return {"xero_contact_id": str(r["xero_contact_id"]), "xero_name": r["name"], "company_number": number}
+
+
+MIN_NAME_KEY = 3
+COMPANY_NUMBER_LENGTH = 8
+
+
+def unmonitored_customers(conn: Connection) -> list[dict[str, Any]]:
+    """Customers with commitments in the latest ARR file but no credit monitoring, largest first."""
+    out = []
+    for r in conn.execute(
+        """SELECT arr_prefix, customer_name, annual_revenue, line_count, first_seen_at, is_new
+             FROM sales.v_credit_unmonitored_customer ORDER BY is_new DESC, annual_revenue DESC"""
+    ):
+        out.append(
+            {
+                "prefix": str(r["arr_prefix"]),
+                "name": r["customer_name"],
+                "annual_revenue": _money_text(r["annual_revenue"]),
+                "lines": int(r["line_count"]),
+                "first_seen": r["first_seen_at"].astimezone(LONDON).date().isoformat(),
+                "new": bool(r["is_new"]),
+                "xero": _xero_suggestion(conn, str(r["customer_name"]).split(" / ")[0]),
+            }
+        )
+    return out
+
+
+def add_monitored_customer(
+    conn: Connection, prefix: str, company_number: str, xero_contact_id: str | None = None
+) -> str:
+    """The CFO has added an unmonitored ARR customer to Experian/Creditsafe: create the client record.
+
+    Only a prefix the scan lists can be added; the company number is required (it is how alerts are
+    matched). The customer is the ARR file's name; an existing customer with that prefix is reused.
+    Returns the client's display name.
+    """
+    row = conn.execute(
+        "SELECT customer_name FROM sales.v_credit_unmonitored_customer WHERE arr_prefix = %s", (prefix,)
+    ).fetchone()
+    if row is None:
+        raise SalesOrderError(f"ARR prefix {prefix} is not an unmonitored customer in the latest ARR file")
+    number = company_number.strip().upper()
+    if number.isdigit():
+        number = number.zfill(COMPANY_NUMBER_LENGTH)
+    contact = None
+    if xero_contact_id:
+        contact = conn.execute(
+            "SELECT xero_contact_id FROM sales.xero_contact_directory WHERE xero_contact_id = %s",
+            (xero_contact_id,),
+        ).fetchone()
+        if contact is None:
+            raise SalesOrderError(f"Xero contact {xero_contact_id} is not in the Xero contact list")
+    existing = conn.execute(
+        """SELECT legal_name, trading_name, xero_tracking_customer, notes FROM sales.customer
+            WHERE arr_prefix = %s""",
+        (prefix,),
+    ).fetchone()
+    name = str(existing["legal_name"]) if existing else str(row["customer_name"]).split(" / ")[0]
+    note = f"added to credit monitoring by the CFO on the Credit Desk ({datetime.now(LONDON):%d %b %Y})"
+    customer = CustomerIn(
+        legal_name=name,
+        trading_name=existing["trading_name"] if existing else None,
+        xero_tracking_customer=existing["xero_tracking_customer"] if existing else None,
+        arr_prefix=prefix,
+        company_number=number,
+        xero_contact_id=UUID(xero_contact_id) if xero_contact_id else None,
+        notes="; ".join(x for x in ((existing["notes"] if existing else None), note) if x),
+    )
+    subject = CreditSubjectIn(
+        display_name=name,
+        relationship="customer",
+        customer_legal_name=name,
+        company_number=number,
+        notes=note,
+    )
+    load_master_data(conn, MasterDataIn(customers=(customer,), credit_subjects=(subject,)))
+    return name
 
 
 def map_folders(conn: Connection, folders: list[tuple[str, tuple[str, ...]]]) -> dict[str, Any]:
@@ -858,6 +982,8 @@ def desk_export(conn: Connection, since: datetime) -> dict[str, Any]:
         "attention": [
             {"rule": e["rule_code"], "company": e["display_name"], "message": e["message"]}
             for e in exceptions
-            if e["rule_code"] != "CREDIT_REVIEW_NEEDED"
+            if e["rule_code"]
+            not in ("CREDIT_REVIEW_NEEDED", "ARR_NOT_MONITORED")  # the latter has its own list
         ],
+        "unmonitored": unmonitored_customers(conn),
     }

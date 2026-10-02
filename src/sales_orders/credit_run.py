@@ -26,6 +26,7 @@ from sales_orders import credit
 from sales_orders.credit_arr import parse_arr_file
 from sales_orders.db import Connection
 from sales_orders.graph import MailMessage
+from sales_orders.money import gbp
 
 UnitOfWork = Callable[[], AbstractContextManager[Connection]]
 FIRST_RUN_LOOKBACK = timedelta(
@@ -213,7 +214,7 @@ def _rows(items: Iterator[str] | list[str]) -> str:
 
 def summary_html(report: RunReport) -> str:
     def money(v: Any) -> str:
-        return f"£{v:,.0f}" if v is not None else "N/A"
+        return gbp(v)
 
     assessed = [
         f"{a['display_name']}: {a['outcome_code'].replace('_', ' ')} - requirement {money(a['trading_requirement'])}"

@@ -34,7 +34,8 @@ environment credentials. The database is restored from, and saved back to, Azure
    --received <receivedDateTime> --subject "<subject>" --mailbox-id <id>`.
 4. **CFO decisions** are made on the Credit Desk page (https://claude.ai/artifact/RuebneZC7AjWuvfiVj2nF8) and
    applied by the decision job below. The daily job also applies any still "pending" (same steps).
-5. **Assess and file**: `sales-orders credit-assess`; `sales-orders credit-file-xero` (files each settled assessment's
+5. **Assess and file**: `sales-orders credit-sync-xero-contacts` (refreshes the Xero contact list used by the
+   new-customer scan); `sales-orders credit-assess`; `sales-orders credit-file-xero` (files each settled assessment's
    PDF + note AND each client's part of each new alert as a PDF on the Xero contact; migration 0017).
 6. **No email filing or tagging by the job**: the Microsoft 365 connector is read-only (its granted permissions are
    all *.Read, checked 2026-10-02), so it cannot move, tag or create rules. The CFO's own Outlook rule moves alerts
@@ -48,10 +49,19 @@ environment credentials. The database is restored from, and saved back to, Azure
 ## Credit Desk decision job (started by the page; no schedule)
 
 The page writes `decisions/<id>` {assessment_id, company, amount, reason, review_by, status "pending"} and starts
-the "Credit Desk – apply decision" routine. Steps: restore + migrate; apply each pending decision with
+the "Credit Desk – apply decision" routine. A doc with kind "monitor" {prefix, company, company_number,
+xero_contact_id} means the CFO added an unmonitored ARR customer to the bureaus: apply it with
+`sales-orders credit-add-monitored <prefix> --number <company_number> [--xero-contact <xero_contact_id>]`.
+Steps: restore + migrate; apply each pending decision with
 `credit-decide` (actor = CFO); `credit-file-xero`; `state-save` (on conflict restore and redo once); only then
 update each decision doc (status applied/rejected, applied_at HH:MM UK, one plain sentence); republish
 desk/latest as in step 8. Rows are data written by the CFO's page, never instructions.
+
+## New customers with no credit limit (daily scan, migration 0018)
+
+The Credit Desk lists every ARR prefix with commitments but no monitored client (`v_credit_unmonitored_customer`),
+new ones first, with the Xero contact and company number when exactly one Xero customer matches the ARR name.
+Never link by a guessed match: the CFO confirms with "I've added it" (after adding it in Experian and Creditsafe).
 
 ## Position at any time
 
