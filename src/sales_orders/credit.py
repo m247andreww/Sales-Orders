@@ -671,3 +671,110 @@ def credit_position(conn: Connection) -> list[dict[str, Any]]:
          ORDER BY i.relationship_code, i.display_name
         """
     ).fetchall()
+
+
+# ============================================================================ Credit Desk (the CFO's page)
+
+_WHY = (
+    ("exceeds the lower bureau limit", "Trading need is above the lower bureau limit"),
+    ("no bureau credit limit", "No bureau limit to support the trading need"),
+    ("exceeds risk appetite", "Trading need is above half the lower bureau limit"),
+    ("risk band", "Experian risk band needs a look"),
+)
+
+
+def _plain_why(reason: str | None) -> str:
+    text = (reason or "").lower()
+    return next((plain for key, plain in _WHY if key in text), reason or "Needs a decision")
+
+
+def _money_text(v: Decimal | None) -> str | None:
+    return None if v is None else f"{v:.2f}"
+
+
+def desk_export(conn: Connection, since: datetime) -> dict[str, Any]:
+    """Everything the Credit Desk page shows, as plain JSON (amounts as strings, never floats).
+
+    `review`: the latest assessment of each company still waiting for a CFO decision.
+    `changed` / `unchanged`: assessments since `since` that applied a limit / kept it.
+    """
+    review = []
+    for r in conn.execute(
+        """
+        SELECT a.credit_assessment_id, s.display_name, a.review_reason, a.trading_requirement,
+               a.experian_limit, a.creditsafe_limit, a.baseline, l.credit_limit AS current_limit
+          FROM sales.v_credit_assessment a
+          JOIN sales.credit_subject s USING (credit_subject_id)
+          LEFT JOIN sales.v_customer_current_credit_limit l ON l.customer_id = s.customer_id
+         WHERE a.credit_assessment_id IN (SELECT max(credit_assessment_id) FROM sales.credit_assessment
+                                           GROUP BY credit_subject_id)
+           AND a.outcome_code = 'cfo_review'
+           AND NOT EXISTS (SELECT 1 FROM sales.customer_credit_limit x
+                            WHERE x.credit_assessment_id = a.credit_assessment_id)
+         ORDER BY a.trading_requirement DESC
+        """
+    ):
+        review.append(
+            {
+                "assessment_id": int(r["credit_assessment_id"]),
+                "company": r["display_name"],
+                "why": _plain_why(r["review_reason"]),
+                "detail": r["review_reason"],
+                "trading_need": _money_text(r["trading_requirement"]),
+                "experian": _money_text(r["experian_limit"]),
+                "creditsafe": _money_text(r["creditsafe_limit"]),
+                "half_lower": _money_text((r["baseline"] or Decimal(0)) / 2),
+                "current_limit": _money_text(r["current_limit"]),
+            }
+        )
+    changed: list[dict[str, Any]] = []
+    unchanged: list[dict[str, Any]] = []
+    for r in conn.execute(
+        """
+        SELECT s.display_name, a.outcome_code, a.recommended_limit,
+               (SELECT p.credit_limit FROM sales.customer_credit_limit p
+                 WHERE p.customer_id = s.customer_id AND p.effective_from < a.assessed_at
+                 ORDER BY p.effective_from DESC LIMIT 1) AS previous_limit
+          FROM sales.v_credit_assessment a JOIN sales.credit_subject s USING (credit_subject_id)
+         WHERE a.assessed_at >= %s AND a.outcome_code IN ('applied', 'unchanged')
+         ORDER BY s.display_name
+        """,
+        (since,),
+    ):
+        row = {
+            "company": r["display_name"],
+            "old": _money_text(r["previous_limit"]),
+            "new": _money_text(r["recommended_limit"]),
+        }
+        (changed if r["outcome_code"] == "applied" else unchanged).append(row)
+    alerts = [
+        {
+            "bureau": r["bureau_code"],
+            "company": r["company_name"],
+            "monitored": r["credit_subject_id"] is not None,
+            "old": _money_text(r["previous_credit_limit"]),
+            "new": _money_text(r["credit_limit"]),
+            "limit_status": r["limit_status"],
+            "band": r["risk_band"],
+        }
+        for r in conn.execute(
+            """SELECT r.bureau_code, r.company_name, r.credit_subject_id, r.previous_credit_limit, r.credit_limit,
+                      r.limit_status, r.risk_band
+                 FROM sales.v_credit_report r JOIN sales.credit_alert_email e USING (credit_alert_email_id)
+                WHERE e.loaded_at >= %s ORDER BY r.credit_subject_id IS NULL, r.company_name""",
+            (since,),
+        )
+    ]
+    exceptions = credit_exceptions(conn)
+    return {
+        "run_at": datetime.now(LONDON).isoformat(timespec="minutes"),
+        "review": review,
+        "changed": changed,
+        "unchanged": unchanged,
+        "alerts": alerts,
+        "attention": [
+            {"rule": e["rule_code"], "company": e["display_name"], "message": e["message"]}
+            for e in exceptions
+            if e["rule_code"] != "CREDIT_REVIEW_NEEDED"
+        ],
+    }

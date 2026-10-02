@@ -7,7 +7,7 @@ import getpass
 import json
 import os
 import sys
-from datetime import date, datetime
+from datetime import UTC, date, datetime, timedelta
 from decimal import Decimal
 from pathlib import Path
 from typing import Any, TypeVar
@@ -509,6 +509,19 @@ def cmd_credit_summary(args: argparse.Namespace) -> int:
     return 0
 
 
+def cmd_credit_desk_export(args: argparse.Namespace) -> int:
+    since = datetime.fromisoformat(args.since) if args.since else datetime.now(UTC) - timedelta(hours=20)
+    with unit_of_work(_actor(args)) as conn:
+        desk = credit.desk_export(conn, since)
+    if args.run_note:
+        desk["run_note"] = args.run_note
+    Path(args.out).write_text(json.dumps(desk, indent=1), encoding="utf-8")
+    print(
+        f"desk: {len(desk['review'])} to decide, {len(desk['changed'])} changed, {len(desk['alerts'])} alert lines"
+    )
+    return 0
+
+
 def _state_store() -> BlobStateStore:
     return BlobStateStore(_env("SALES_ORDERS_STATE_URL"))
 
@@ -658,6 +671,14 @@ def _add_credit_job_commands(sub: Any) -> None:
     p.add_argument("--out", required=True)
     p.add_argument("--since", help="ISO time; default: start of today (UTC)")
     p.set_defaults(func=cmd_credit_summary)
+
+    p = sub.add_parser("credit-desk-export", help="write the Credit Desk page's data (JSON) for publishing")
+    p.add_argument("--out", required=True)
+    p.add_argument("--since", help="ISO time; default: the last 20 hours")
+    p.add_argument(
+        "--run-note", help="one plain sentence shown at the top of the page (e.g. a problem in this run)"
+    )
+    p.set_defaults(func=cmd_credit_desk_export)
 
     p = sub.add_parser(
         "state-restore", help="daily job: restore the saved database (Azure Blob) into an empty database"

@@ -644,3 +644,18 @@ def test_workbook_figures_round_trip_through_json() -> None:
         credit.workbook_from_json(
             '[{"sheet": "A", "experian": null, "creditsafe": null, "one_off": 5.5, "workbook_limit": null}]'
         )
+
+
+def test_desk_export_lists_decisions_and_changes(conn: Connection, master_data: MasterDataIn) -> None:
+    _subject(conn, allowance="8000")
+    _arr(conn)
+    _bureaus(conn, "£10,000", "19000")  # requirement 9,600 > appetite 5,000: needs the CFO
+    credit.assess_due(conn)
+    desk = credit.desk_export(conn, NOW - timedelta(days=3650))
+    assert [(r["company"], r["why"], r["trading_need"], r["half_lower"]) for r in desk["review"]] == [
+        (SUBJECT, "Trading need is above half the lower bureau limit", "9600.00", "5000.00")
+    ]
+    assert desk["changed"] == [] and len(desk["alerts"]) == 2
+    act_as(conn, CFO)
+    credit.decide(conn, SUBJECT, Decimal(9600), "pays by Direct Debit")
+    assert credit.desk_export(conn, NOW - timedelta(days=3650))["review"] == []  # decided: off the list
