@@ -27,16 +27,17 @@ environment credentials. The database is restored from, and saved back to, Azure
    path to `sales-orders credit-load-arr --extract <path>`. It refuses an incomplete read: report, never retry by hand-typing.
 3. **Alerts**: `sales-orders credit-alerts-known` → `latest_received`. `outlook_email_search` with
    `sender` = `ebe.noreply@experian.com`, then `monitoring@creditsafe.com`, `afterDateTime` = latest − 1 hour
-   (first run: 1 day). Skip Message-IDs already known. Copies of one alert share a Message-ID: use the one
-   whose parent folder is the Inbox. For each new one: `read_resource` it, write `body.content` to a file
+   (first run: 1 day). Skip Message-IDs already known. Copies of one alert share a Message-ID: read it once
+   (it may be in the Inbox or, after the CFO's Outlook rule, in Inbox/"Credit alerts"; the search covers all folders). For each new one: `read_resource` it, write `body.content` to a file
    EXACTLY as returned (no edits), then
    `sales-orders credit-read-alert <experian|creditsafe> <file> --message-id "<internetMessageId>"
    --received <receivedDateTime> --subject "<subject>" --mailbox-id <id>`.
 4. **CFO decisions** are made on the Credit Desk page (https://claude.ai/artifact/RuebneZC7AjWuvfiVj2nF8) and
    applied by the decision job below. The daily job also applies any still "pending" (same steps).
 5. **Assess and file**: `sales-orders credit-assess`; `sales-orders credit-file-xero`.
-6. **No email filing or tagging**: the Microsoft 365 connector is read-only (tested 2026-10-02). Alerts are
-   kept as evidence in the database only.
+6. **No email filing or tagging by the job**: the Microsoft 365 connector is read-only (its granted permissions are
+   all *.Read, checked 2026-10-02), so it cannot move, tag or create rules. The CFO's own Outlook rule moves alerts
+   to Inbox/"Credit alerts"; each alert is kept as evidence in the database.
 7. **Save**: `sales-orders state-save`. If it refuses (another run saved first), restore and redo once; then report.
 8. **Publish the Credit Desk**: `sales-orders credit-desk-export --out /tmp/desk.json [--run-note "<problem, plain
    English>"]`; ArtifactData `get` desk/latest (for its version), then `set` desk/latest with `file_path`

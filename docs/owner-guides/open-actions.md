@@ -4,7 +4,10 @@ Kept current by Claude every turn. Newest state wins.
 
 ## Your actions (now)
 
-1. None. Make the 10 Credit Desk decisions when convenient: https://claude.ai/artifact/RuebneZC7AjWuvfiVj2nF8
+1. **One Outlook rule** to move credit alerts out of your inbox (3 minutes, Copy buttons):
+   https://claude.ai/artifact/KPfscCgv7noj234a2mQ2YV. Then tell Claude "rule done".
+2. **Decide:** should each alert email also be attached to the client's Xero contact (automatic), in
+   place of the Outlook Debt & Credit folders? Reply "yes, attach alerts" or "no".
 
 ## Still open
 
@@ -31,6 +34,10 @@ Kept current by Claude every turn. Newest state wins.
 | D5 One-off allowance for a new client: £5,000 | CFO | Open (built as stated) |
 
 ## Requirements recorded
+
+- 2 Oct 2026 (CFO): sweep credit emails out of the inbox. Claude cannot (connector permissions are all
+  read-only); the CFO's one Outlook rule does it. Per-client Debt & Credit folder copies are not possible
+  without per-client rules; proposed replacement: attach the alert to the Xero contact.
 
 - 2 Oct 2026 (CFO): a decision accepted or set on the Credit Desk is applied **immediately** (limit,
   Xero PDF and note), not at the next morning's run. Design: the page starts the credit job at once via
