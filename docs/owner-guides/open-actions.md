@@ -4,10 +4,7 @@ Kept current by Claude every turn. Newest state wins.
 
 ## Your actions (now)
 
-1. **One Outlook rule** to move credit alerts out of your inbox (3 minutes, Copy buttons):
-   https://claude.ai/artifact/KPfscCgv7noj234a2mQ2YV. Then tell Claude "rule done".
-2. **Decide:** should each alert email also be attached to the client's Xero contact (automatic), in
-   place of the Outlook Debt & Credit folders? Reply "yes, attach alerts" or "no".
+1. None. Make the 10 Credit Desk decisions when convenient: https://claude.ai/artifact/RuebneZC7AjWuvfiVj2nF8
 
 ## Still open
 
