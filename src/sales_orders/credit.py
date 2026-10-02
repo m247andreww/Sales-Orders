@@ -996,6 +996,54 @@ def _money_text(v: Decimal | None) -> str | None:
     return None if v is None else f"{v:.2f}"
 
 
+def _exposure_export(conn: Connection) -> dict[str, Any]:
+    from sales_orders import credit_exposure  # noqa: PLC0415 - avoids an import cycle
+
+    money = (
+        "annual_recurring",
+        "credit_limit",
+        "current_amount",
+        "overdue_amount",
+        "overdue_over_60",
+        "outstanding",
+        "pipeline_value",
+        "pipeline_gross",
+        "exposure",
+        "headroom",
+    )
+    rows = [
+        {
+            **{k: v for k, v in r.items() if k not in money and k != "oldest_due_date"},
+            **{k: _money_text(r[k]) for k in money},
+            "oldest_due_date": r["oldest_due_date"].isoformat() if r["oldest_due_date"] else None,
+        }
+        for r in credit_exposure.exposure_rows(conn)
+    ]
+    snaps = conn.execute(
+        """SELECT (SELECT max(as_of) FROM sales.credit_receivable_snapshot) AS receivables_as_of,
+                  (SELECT max(as_of) FROM sales.credit_pipeline_snapshot) AS pipeline_as_of"""
+    ).fetchone()
+    um = credit_exposure.latest_unmatched(conn)
+    return {
+        "exposure": rows,
+        "exposure_as_of": {k: (v.isoformat() if v else None) for k, v in (snaps or {}).items()},
+        "exposure_unmatched": {
+            "receivables": [
+                {"name": r["name"], "outstanding": _money_text(r["outstanding"])} for r in um["receivables"]
+            ],
+            "pipeline": [
+                {
+                    "name": r["name"],
+                    "status": r["status"],
+                    "value": _money_text(r["grand_total"]),
+                    "client_company": r["client_company"],
+                }
+                for r in um["pipeline"]
+            ],
+        },
+    }
+
+
 def desk_export(conn: Connection, since: datetime) -> dict[str, Any]:
     """Everything the Credit Desk page shows, as plain JSON (amounts as strings, never floats).
 
@@ -1083,6 +1131,7 @@ def desk_export(conn: Connection, since: datetime) -> dict[str, Any]:
             not in ("CREDIT_REVIEW_NEEDED", "ARR_NOT_MONITORED")  # the latter has its own list
         ],
         "unmonitored": unmonitored_customers(conn),
+        **_exposure_export(conn),
         "unmonitored_excluded": [
             {"prefix": str(r["arr_prefix"]), "name": r["customer_name"], "reason": r["excluded_reason"]}
             for r in conn.execute(

@@ -18,7 +18,7 @@ from alembic import command
 from alembic.config import Config
 from pydantic import BaseModel, ValidationError
 
-from sales_orders import credit, credit_run, service, state_store
+from sales_orders import credit, credit_exposure, credit_run, service, state_store
 from sales_orders.config import database_url
 from sales_orders.credit_arr import ArrFileError, parse_arr_extract, parse_arr_file
 from sales_orders.db import unit_of_work
@@ -824,6 +824,40 @@ def _add_credit_commands(sub: Any) -> None:
     p.set_defaults(func=cmd_credit_retry_filing)
 
 
+def cmd_credit_load_receivables(args: argparse.Namespace) -> int:
+    with unit_of_work(_actor(args)) as conn:
+        snap, unmatched = credit_exposure.load_receivables(
+            conn, json.loads(Path(args.file).read_text(encoding="utf-8"))
+        )
+    print(
+        f"receivables snapshot {snap} loaded; {len(unmatched)} contact(s) not matched to Xero: {', '.join(unmatched)}"
+    )
+    return 0
+
+
+def cmd_credit_load_pipeline(args: argparse.Namespace) -> int:
+    with unit_of_work(_actor(args)) as conn:
+        snap, unmatched = credit_exposure.load_pipeline(
+            conn, json.loads(Path(args.file).read_text(encoding="utf-8"))
+        )
+    print(f"PandaDoc snapshot {snap} loaded; {len(unmatched)} document(s) not matched to a customer")
+    for name in unmatched:
+        print(f"  unmatched: {name}")
+    return 0
+
+
+def _add_credit_exposure_commands(sub: Any) -> None:
+    """Exposure: invoices owed + in-progress PandaDoc against the credit limit (migration 0021)."""
+    p = sub.add_parser(
+        "credit-load-receivables", help="daily job: load the Xero aged-receivables file (JSON)"
+    )
+    p.add_argument("file")
+    p.set_defaults(func=cmd_credit_load_receivables)
+    p = sub.add_parser("credit-load-pipeline", help="daily job: load the in-progress PandaDoc file (JSON)")
+    p.add_argument("file")
+    p.set_defaults(func=cmd_credit_load_pipeline)
+
+
 def _add_credit_new_customer_commands(sub: Any) -> None:
     """The daily scan for customers with recurring revenue but no credit monitoring (migrations 0018-0019)."""
     p = sub.add_parser(
@@ -973,6 +1007,7 @@ def build_parser() -> argparse.ArgumentParser:
     _add_credit_commands(sub)
     _add_credit_job_commands(sub)
     _add_credit_new_customer_commands(sub)
+    _add_credit_exposure_commands(sub)
     return parser
 
 
