@@ -4,8 +4,10 @@ Kept current by Claude every turn. Newest state wins.
 
 ## Your actions (now)
 
-1. **Look at the Credit Desk** (https://claude.ai/artifact/RuebneZC7AjWuvfiVj2nF8). Read only: do not
-   press Accept or Save yet, because the client list is not confirmed.
+1. **Reply "confirm"** to Claude's list of client matches (company numbers and Xero contacts), adding the
+   numbers of any line that is wrong and answers to the 6 questions.
+2. **Add clients to Experian and Creditsafe** using the page with Copy buttons:
+   https://claude.ai/artifact/11xiBVxunoMbzqtR3BZoEi. Then tell Claude "monitoring added".
 
 ## Still open
 
@@ -15,8 +17,10 @@ Kept current by Claude every turn. Newest state wins.
 | First live run (saved; ARR 1,225 lines; 4 alerts; 10 decisions waiting; 27 limits applied) | Claude | Done 2 Oct 2026 13:51 |
 | Credit Desk page, attention list grouped by type | Claude | Done 2 Oct 2026 |
 | Weekday 07:45 run switched on (first run Mon 5 Oct; Claude checks it at 07:55) | Claude | Done 2 Oct 2026 |
-| Link clients to company numbers (so alerts match) and to Xero contacts (so the PDF can be filed) | Claude drafts, CFO confirms | Next |
-| Legal names and numbers for 5 large unmonitored clients, then add them in Experian and Creditsafe | Claude drafts, CFO adds | Next |
+| Link clients to company numbers and Xero contacts (44 clients drafted and test-loaded) | CFO confirms, then Claude loads | Waiting for your "confirm" |
+| Add Princes, Tilbury Douglas, Starlizard, Rascal, Family BS (+ Hypnos, LMAX in Creditsafe) to monitoring | CFO | Page ready |
+| First credit limit for newly monitored clients (alerts only come when something changes) | Claude to test after you add them | Open |
+| Classify 6 alert companies not on the list (FEI Foods, Nuco, Weil Gotshal, Westcon, Shoreditch Design, Nlighten) | CFO | Open |
 | Confirm client list and ARR matches (Analysis Mason sheets AMA/ANA, QPR Trust, Fronius) | CFO | Open |
 | Which spreadsheet limits to keep as your decisions (e.g. three £100k, McGill £300k) | CFO | Open |
 | First real decision on the page, checked within 5 minutes | CFO + Claude | After client list confirmed |
