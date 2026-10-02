@@ -71,7 +71,8 @@ These are the owner's stated preferences; follow them in every session.
 - Azure: the CFO's Cloud Shell starts on a DISABLED subscription (MCPP); the active one is "Azure
   subscription 1". Every Azure command must select the enabled subscription that holds rg-salesorders-prod.
   Only the database services were registered (deploy.sh); register any other provider (e.g. Microsoft.Storage)
-  before use, or Azure answers with a misleading "SubscriptionNotFound".
+  before use, or Azure answers with a misleading "SubscriptionNotFound". After renewing a storage key, wait and
+  retry (Azure takes ~30s to accept it: "Authentication failure" otherwise).
 - **Always restate actions (CFO, 2026-10-02: "these threads can get v long & hard to find actions lost in
   the words").** End EVERY reply with two short lists, even if unchanged: **Your actions** (what the owner
   must do now, numbered, each with where/how) and **Still open** (decisions and requirements outstanding,

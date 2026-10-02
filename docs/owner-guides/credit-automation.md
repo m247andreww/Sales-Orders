@@ -57,9 +57,11 @@ az provider register --namespace Microsoft.Storage --wait -o none
 ACC=$(az storage account list -g $RG --query "[?tags.purpose=='credit-state'].name | [0]" -o tsv)
 if [ -z "$ACC" ]; then ACC=stsocredit$(openssl rand -hex 4); az storage account create -g $RG -n $ACC -l uksouth --sku Standard_GRS --kind StorageV2 --https-only true --min-tls-version TLS1_2 --allow-blob-public-access false --tags purpose=credit-state -o none; fi
 az storage account blob-service-properties update -g $RG -n $ACC --enable-versioning true --enable-delete-retention true --delete-retention-days 30 -o none
-az storage account keys renew -g $RG -n $ACC --key primary -o none
+az storage account keys renew -g $RG -n $ACC --key key1 -o none 2>/dev/null
+echo "New key made; waiting for Azure to accept it..."
 KEY=$(az storage account keys list -g $RG -n $ACC --query "[0].value" -o tsv)
-az storage container create --account-name $ACC --account-key "$KEY" -n credit-state -o none
+for i in 1 2 3 4 5 6 7 8 9 10; do az storage container create --account-name $ACC --account-key "$KEY" -n credit-state -o none 2>/dev/null && break; sleep 15; done
+az storage container show --account-name $ACC --account-key "$KEY" -n credit-state -o none
 SAS=$(az storage container generate-sas --account-name $ACC --account-key "$KEY" -n credit-state --permissions rcw --expiry $(date -u -d '+12 months' +%Y-%m-%dT%H:%MZ) --https-only -o tsv)
 echo; echo "DONE"
 echo "1) Website for Claude network settings:  $ACC.blob.core.windows.net"
