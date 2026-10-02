@@ -23,6 +23,9 @@ Kept current by Claude every turn. Newest state wins.
 | First figures for newly monitored clients: check Monday's run; if none, add a one-off "first figures" box to the Credit Desk | Claude | Mon 5 Oct |
 | Outlook rule: alerts to Inbox / Credit alerts, marked read | CFO | Done 2 Oct 2026 |
 | Each client's alerts filed as PDFs on its Xero contact (9 filed; automatic from now on) | Claude | Done 2 Oct 2026 |
+| PandaDoc values: alternatives, fee fields and monthly-vs-term totals make sums unreliable; tidy in PandaDoc or agree a rule | CFO + Claude | Open |
+| Match 'BBA CSP Licensing' and 'Exchange Ilford' documents to their customers | Claude | Open |
+| Check the Monday run can read Xero invoices and PandaDoc itself | Claude | Mon 5 Oct |
 | McGill display name still says "Services" | Claude | Next change |
 | Family BS: no Companies House number, so it needs its bureau reference to be set up | Claude | Open |
 | Company numbers found for 22 of 27 unmonitored customers; 15 written into Xero (certain only) | Claude | Done 2 Oct 2026 |
