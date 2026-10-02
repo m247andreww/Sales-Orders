@@ -160,7 +160,7 @@ def test_fetch_contacts_reads_every_page() -> None:
 
 def test_researched_match_is_suggested_and_written_to_xero_once(conn: Connection) -> None:
     other = UUID("00000000-0000-4000-8000-0000000e0009")
-    _directory(conn, (other, "Trading Name Ltd", None))
+    _directory(conn, (other, "Trading Name Ltd", None), (NEWCO, "Likely Co Ltd", None))
     _arr(conn, ("Shortname", "SHO001", "100.00"))  # no Xero contact matches "Shortname" by name
     credit.record_customer_match(
         conn,
@@ -181,7 +181,15 @@ def test_researched_match_is_suggested_and_written_to_xero_once(conn: Connection
     assert row["match"]["registered_name"] == "SHORTNAME TRADING LIMITED"
     assert row["match"]["note"] == "Invoiced under its trading name"
 
-    assert [r["arr_prefix"] for r in credit.matches_to_write_to_xero(conn)] == ["SHO"]
+    credit.record_customer_match(
+        conn,
+        "LIK",
+        source="web (synthetic)",
+        confidence="likely",
+        xero_contact_id=str(NEWCO),
+        company_number="01111111",
+    )
+    assert [r["arr_prefix"] for r in credit.matches_to_write_to_xero(conn)] == ["SHO"]  # never a "likely" one
     credit.mark_written_to_xero(conn, "SHO")
     assert credit.matches_to_write_to_xero(conn) == []  # never written twice
     number = conn.execute(

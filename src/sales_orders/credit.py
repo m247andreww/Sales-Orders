@@ -773,11 +773,11 @@ def record_customer_match(
 
 
 def matches_to_write_to_xero(conn: Connection) -> list[dict[str, Any]]:
-    """Researched company numbers not yet on the Xero contact."""
+    """Researched company numbers not yet on the Xero contact. Only "certain" ones: Xero is a source of truth."""
     return conn.execute(
         """SELECT m.arr_prefix, m.xero_contact_id, m.company_number, d.name
              FROM sales.credit_customer_match m JOIN sales.xero_contact_directory d USING (xero_contact_id)
-            WHERE m.company_number IS NOT NULL AND m.written_to_xero_at IS NULL
+            WHERE m.company_number IS NOT NULL AND m.written_to_xero_at IS NULL AND m.confidence = 'certain'
               AND d.company_number IS DISTINCT FROM m.company_number
             ORDER BY m.arr_prefix"""
     ).fetchall()
