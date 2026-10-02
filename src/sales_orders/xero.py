@@ -238,6 +238,25 @@ class XeroClient:
             raise XeroFormatError("Xero did not confirm the attachment")
         return str(attachments[0]["AttachmentID"])
 
+    def set_company_number(self, contact_id: UUID, company_number: str) -> None:
+        """Set the contact's Company number (only that field is sent, so nothing else changes)."""
+        request = urllib.request.Request(  # noqa: S310 - https base
+            f"{API_BASE}/Contacts/{contact_id}",
+            data=json.dumps(
+                {"Contacts": [{"ContactID": str(contact_id), "CompanyNumber": company_number}]}
+            ).encode(),
+            headers=self._headers({"Content-Type": "application/json"}),
+            method="POST",
+        )
+        body = json.loads(self._transport(request))
+        contacts = body.get("Contacts") if isinstance(body, Mapping) else None
+        if (
+            not isinstance(contacts, list)
+            or not contacts
+            or contacts[0].get("CompanyNumber") != company_number
+        ):
+            raise XeroFormatError("Xero did not confirm the company number")
+
     def add_contact_note(self, contact_id: UUID, details: str, idempotency_key: str) -> None:
         """Add a line to the contact's History and notes."""
         request = urllib.request.Request(  # noqa: S310 - https base

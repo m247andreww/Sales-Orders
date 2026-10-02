@@ -11,6 +11,7 @@ from datetime import UTC, date, datetime, timedelta
 from decimal import Decimal
 from pathlib import Path
 from typing import Any, TypeVar
+from uuid import UUID
 
 import psycopg
 from alembic import command
@@ -666,6 +667,48 @@ def cmd_credit_sync_xero_contacts(args: argparse.Namespace) -> int:
     return 0
 
 
+def cmd_credit_record_matches(args: argparse.Namespace) -> int:
+    """Load researched matches: a JSON list of {prefix, source, confidence, xero_contact_id?, registered_name?,
+    company_number?, note?}. All or nothing."""
+    rows = json.loads(Path(args.file).read_text(encoding="utf-8"))
+    with unit_of_work(_actor(args)) as conn:
+        for r in rows:
+            credit.record_customer_match(
+                conn,
+                r["prefix"],
+                source=r["source"],
+                confidence=r["confidence"],
+                xero_contact_id=r.get("xero_contact_id"),
+                registered_name=r.get("registered_name"),
+                company_number=r.get("company_number"),
+                note=r.get("note"),
+            )
+    print(f"{len(rows)} customer match(es) recorded")
+    return 0
+
+
+def cmd_credit_write_numbers_to_xero(args: argparse.Namespace) -> int:
+    xero = _xero_credit_client()
+    with unit_of_work(_actor(args)) as conn:
+        todo = credit.matches_to_write_to_xero(conn)
+    if args.dry_run or xero is None:
+        for r in todo:
+            print(f"  would set {r['name']} ({r['arr_prefix']}): {r['company_number']}")
+        return 0 if args.dry_run else 1
+    problems = 0
+    for r in todo[: args.limit] if args.limit else todo:
+        try:
+            xero.set_company_number(UUID(str(r["xero_contact_id"])), str(r["company_number"]))
+        except Exception as exc:  # reported, never stops the others
+            problems += 1
+            print(f"  PROBLEM {r['name']}: {type(exc).__name__}: {exc}")
+            continue
+        with unit_of_work(_actor(args)) as conn:
+            credit.mark_written_to_xero(conn, str(r["arr_prefix"]))
+        print(f"  set {r['name']}: {r['company_number']}")
+    return 1 if problems else 0
+
+
 def cmd_credit_add_monitored(args: argparse.Namespace) -> int:
     with unit_of_work(_actor(args)) as conn:
         name = credit.add_monitored_customer(conn, args.prefix, args.number, args.xero_contact)
@@ -779,11 +822,27 @@ def _add_credit_commands(sub: Any) -> None:
     p = sub.add_parser("credit-retry-filing", help="retry Xero / folder filing that failed")
     p.set_defaults(func=cmd_credit_retry_filing)
 
+
+def _add_credit_new_customer_commands(sub: Any) -> None:
+    """The daily scan for customers with recurring revenue but no credit monitoring (migrations 0018-0019)."""
     p = sub.add_parser(
         "credit-sync-xero-contacts",
         help="daily job: refresh the copy of the Xero contact list (new-customer scan)",
     )
     p.set_defaults(func=cmd_credit_sync_xero_contacts)
+
+    p = sub.add_parser(
+        "credit-record-matches", help="load researched Xero contact / company number matches (JSON)"
+    )
+    p.add_argument("file")
+    p.set_defaults(func=cmd_credit_record_matches)
+
+    p = sub.add_parser(
+        "credit-write-numbers-to-xero", help="put researched company numbers on the Xero contacts"
+    )
+    p.add_argument("--dry-run", action="store_true")
+    p.add_argument("--limit", type=int, help="write only the first N (to test)")
+    p.set_defaults(func=cmd_credit_write_numbers_to_xero)
 
     p = sub.add_parser(
         "credit-add-monitored",
@@ -912,6 +971,7 @@ def build_parser() -> argparse.ArgumentParser:
     _add_arr_commands(sub)
     _add_credit_commands(sub)
     _add_credit_job_commands(sub)
+    _add_credit_new_customer_commands(sub)
     return parser
 
 

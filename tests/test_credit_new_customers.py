@@ -20,7 +20,13 @@ from sales_orders.db import Connection
 from sales_orders.errors import SalesOrderError
 from sales_orders.models import CreditSubjectIn, CustomerIn, MasterDataIn
 from sales_orders.service import load_master_data
-from sales_orders.xero import XeroCredentials, XeroDirectoryContact, fetch_contacts
+from sales_orders.xero import (
+    XeroClient,
+    XeroCredentials,
+    XeroDirectoryContact,
+    XeroFormatError,
+    fetch_contacts,
+)
 
 _seq = itertools.count()
 NEWCO = UUID("00000000-0000-4000-8000-0000000e0001")
@@ -150,3 +156,58 @@ def test_fetch_contacts_reads_every_page() -> None:
     contacts = fetch_contacts(XeroCredentials("id", "secret"), transport)
     assert len(contacts) == 103
     assert [c for c in calls if "Contacts" in c][-1].endswith("page=2")
+
+
+def test_researched_match_is_suggested_and_written_to_xero_once(conn: Connection) -> None:
+    other = UUID("00000000-0000-4000-8000-0000000e0009")
+    _directory(conn, (other, "Trading Name Ltd", None))
+    _arr(conn, ("Shortname", "SHO001", "100.00"))  # no Xero contact matches "Shortname" by name
+    credit.record_customer_match(
+        conn,
+        "SHO",
+        source="PandaDoc application form (synthetic)",
+        confidence="certain",
+        xero_contact_id=str(other),
+        registered_name="SHORTNAME TRADING LIMITED",
+        company_number="7654321",
+        note="Invoiced under its trading name",
+    )
+    [row] = credit.unmonitored_customers(conn)
+    assert row["xero"] == {
+        "xero_contact_id": str(other),
+        "xero_name": "Trading Name Ltd",
+        "company_number": "07654321",
+    }
+    assert row["match"]["registered_name"] == "SHORTNAME TRADING LIMITED"
+    assert row["match"]["note"] == "Invoiced under its trading name"
+
+    assert [r["arr_prefix"] for r in credit.matches_to_write_to_xero(conn)] == ["SHO"]
+    credit.mark_written_to_xero(conn, "SHO")
+    assert credit.matches_to_write_to_xero(conn) == []  # never written twice
+    number = conn.execute(
+        "SELECT company_number FROM sales.xero_contact_directory WHERE xero_contact_id = %s", (other,)
+    ).fetchone()
+    assert number == {"company_number": "07654321"}
+
+
+def test_set_company_number_sends_only_that_field() -> None:
+    sent: list[dict[str, object]] = []
+
+    def transport(request: urllib.request.Request) -> bytes:
+        if "connect/token" in request.full_url:
+            return b'{"access_token": "t"}'
+        assert request.data is not None
+        body = json.loads(request.data)
+        sent.append(body)
+        return json.dumps(
+            {"Contacts": [{"ContactID": str(NEWCO), "CompanyNumber": body["Contacts"][0]["CompanyNumber"]}]}
+        ).encode()
+
+    XeroClient(XeroCredentials("id", "secret"), transport).set_company_number(NEWCO, "01234567")
+    assert sent == [{"Contacts": [{"ContactID": str(NEWCO), "CompanyNumber": "01234567"}]}]
+
+    def refuses(request: urllib.request.Request) -> bytes:
+        return b'{"access_token": "t"}' if "connect/token" in request.full_url else b'{"Contacts": [{}]}'
+
+    with pytest.raises(XeroFormatError):
+        XeroClient(XeroCredentials("id", "secret"), refuses).set_company_number(NEWCO, "01234567")

@@ -740,6 +740,86 @@ MIN_NAME_KEY = 3
 COMPANY_NUMBER_LENGTH = 8
 
 
+def record_customer_match(
+    conn: Connection,
+    prefix: str,
+    *,
+    source: str,
+    confidence: str,
+    xero_contact_id: str | None = None,
+    registered_name: str | None = None,
+    company_number: str | None = None,
+    note: str | None = None,
+) -> None:
+    """Record (or replace) the researched Xero contact and registered company for an ARR prefix."""
+    number = company_number.strip().upper() if company_number else None
+    if number and number.isdigit():
+        number = number.zfill(COMPANY_NUMBER_LENGTH)
+    conn.execute(
+        """
+        INSERT INTO sales.credit_customer_match
+               (arr_prefix, xero_contact_id, registered_name, company_number, source, confidence, note)
+        VALUES (%s, %s, %s, %s, %s, %s, %s)
+        ON CONFLICT (arr_prefix) DO UPDATE
+           SET xero_contact_id = EXCLUDED.xero_contact_id, registered_name = EXCLUDED.registered_name,
+               company_number = EXCLUDED.company_number, source = EXCLUDED.source,
+               confidence = EXCLUDED.confidence, note = EXCLUDED.note,
+               written_to_xero_at = CASE WHEN sales.credit_customer_match.company_number
+                                              IS NOT DISTINCT FROM EXCLUDED.company_number
+                                         THEN sales.credit_customer_match.written_to_xero_at END
+        """,
+        (prefix, xero_contact_id, registered_name, number, source, confidence, note),
+    )
+
+
+def matches_to_write_to_xero(conn: Connection) -> list[dict[str, Any]]:
+    """Researched company numbers not yet on the Xero contact."""
+    return conn.execute(
+        """SELECT m.arr_prefix, m.xero_contact_id, m.company_number, d.name
+             FROM sales.credit_customer_match m JOIN sales.xero_contact_directory d USING (xero_contact_id)
+            WHERE m.company_number IS NOT NULL AND m.written_to_xero_at IS NULL
+              AND d.company_number IS DISTINCT FROM m.company_number
+            ORDER BY m.arr_prefix"""
+    ).fetchall()
+
+
+def mark_written_to_xero(conn: Connection, prefix: str) -> None:
+    conn.execute(
+        "UPDATE sales.credit_customer_match SET written_to_xero_at = now() WHERE arr_prefix = %s", (prefix,)
+    )
+    conn.execute(
+        """UPDATE sales.xero_contact_directory d SET company_number = m.company_number
+             FROM sales.credit_customer_match m
+            WHERE m.arr_prefix = %s AND d.xero_contact_id = m.xero_contact_id""",
+        (prefix,),
+    )
+
+
+def _match_suggestion(conn: Connection, prefix: str) -> tuple[dict[str, Any] | None, dict[str, Any] | None]:
+    """(suggestion, match details) from a researched match, if one is recorded."""
+    m = conn.execute(
+        """SELECT m.xero_contact_id, d.name AS xero_name, m.company_number, m.registered_name, m.source,
+                  m.confidence, m.note
+             FROM sales.credit_customer_match m
+             LEFT JOIN sales.xero_contact_directory d USING (xero_contact_id)
+            WHERE m.arr_prefix = %s""",
+        (prefix,),
+    ).fetchone()
+    if m is None:
+        return None, None
+    suggestion = (
+        {
+            "xero_contact_id": str(m["xero_contact_id"]),
+            "xero_name": m["xero_name"],
+            "company_number": m["company_number"],
+        }
+        if m["xero_contact_id"]
+        else None
+    )
+    details = {k: m[k] for k in ("registered_name", "company_number", "source", "confidence", "note")}
+    return suggestion, details
+
+
 def unmonitored_customers(conn: Connection) -> list[dict[str, Any]]:
     """Customers with commitments in the latest ARR file but no credit monitoring, largest first."""
     out = []
@@ -756,8 +836,20 @@ def unmonitored_customers(conn: Connection) -> list[dict[str, Any]]:
                 "first_seen": r["first_seen_at"].astimezone(LONDON).date().isoformat(),
                 "new": bool(r["is_new"]),
                 "xero": _xero_suggestion(conn, str(r["customer_name"]).split(" / ")[0]),
+                "match": None,
             }
         )
+        suggestion, details = _match_suggestion(conn, str(r["arr_prefix"]))
+        if details:
+            out[-1]["match"] = details
+            if suggestion:
+                out[-1]["xero"] = suggestion
+            elif details["company_number"] and out[-1]["xero"] is None:
+                out[-1]["xero"] = {
+                    "xero_contact_id": None,
+                    "xero_name": None,
+                    "company_number": details["company_number"],
+                }
     return out
 
 
