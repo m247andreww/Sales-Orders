@@ -34,7 +34,8 @@ environment credentials. The database is restored from, and saved back to, Azure
    --received <receivedDateTime> --subject "<subject>" --mailbox-id <id>`.
 4. **CFO decisions** are made on the Credit Desk page (https://claude.ai/artifact/RuebneZC7AjWuvfiVj2nF8) and
    applied by the decision job below. The daily job also applies any still "pending" (same steps).
-5. **Assess and file**: `sales-orders credit-assess`; `sales-orders credit-file-xero`.
+5. **Assess and file**: `sales-orders credit-assess`; `sales-orders credit-file-xero` (files each settled assessment's
+   PDF + note AND each client's part of each new alert as a PDF on the Xero contact; migration 0017).
 6. **No email filing or tagging by the job**: the Microsoft 365 connector is read-only (its granted permissions are
    all *.Read, checked 2026-10-02), so it cannot move, tag or create rules. The CFO's own Outlook rule moves alerts
    to Inbox/"Credit alerts"; each alert is kept as evidence in the database.

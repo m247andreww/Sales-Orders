@@ -87,7 +87,21 @@ Discovery (2026-10-02, CFO mailbox read-only and the two files supplied):
 
 The CFO's Microsoft 365 administrator will not grant application permissions. The daily run therefore
 becomes a scheduled Claude routine using the CFO's existing Microsoft 365 and Xero connections. Tested
-limits of that connector: it reads mail, folders and plain-text files in full, moves, tags and forwards
-emails, sends mail and uploads files up to 1 MB; it cannot copy an email into a folder and it truncates
-spreadsheet reads (about 135 of 1,230 ARR rows). The rule engine, database rules and tests are
+limits of that connector: it reads mail, folders and plain-text files in full and truncates spreadsheet
+reads (about 135 of 1,230 ARR rows). It is read-only: Microsoft grants it only *.Read permissions
+(checked 2026-10-02), so it cannot send, move, copy, tag or create rules, although such tools appear in
+its tool list. (An earlier version of this note said it could; a live test and the permission list
+disproved that.) The rule engine, database rules and tests are
 unchanged; only how data gets in and out changes.
+
+## Alert filing (2026-10-02, migration 0017)
+
+The brief asked for each alert email to be copied into the client's Outlook "Debt & Credit" folder. With
+a read-only connector that is impossible, and per-client Outlook rules would need one rule per client
+kept up to date by hand. Decision (CFO, "yes attach alerts"): each alert is filed as a one-page PDF on the
+client's Xero contact beside the assessment snapshot. It shows the bureau, the source email (sender,
+subject, received time, Message-ID, body SHA-256) and that client's lines exactly as read; other companies
+in the same email are left out. The PDF is stored once (`credit_alert_snapshot`, append-only) and filed by
+`credit-file-xero`. Suppliers and "for information" companies are never filed. The Outlook folder copy
+(`mail_copy`) is retired. The CFO's own Outlook rule moves alert emails to Inbox / "Credit alerts" and
+marks them read; the daily job reads them there.

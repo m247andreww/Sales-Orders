@@ -14,8 +14,12 @@ before switch-on. Part 5 is the only thing you do from then on.
 
 The daily job uses the Microsoft 365 connection you have already approved in Claude, under your own
 login. No administrator is involved. That connection can only **read** (tested 2 Oct 2026): it cannot
-send, tag, move or copy emails. So alert emails stay where they are in Outlook, and a copy of each is
-kept as evidence in the credit database instead of in the client's Debt & Credit folder.
+send, tag, move or copy emails. Instead:
+
+- **Your one Outlook rule** (set 2 Oct 2026) moves each alert to Inbox / "Credit alerts" and marks it read.
+- **Each client's alert is filed in Xero**: a one-page PDF of that client's part of the alert goes on its
+  Xero contact, next to the credit limit PDF. This replaces the Outlook "Debt & Credit" folders for credit.
+- A record of every alert is also kept in the credit database.
 
 ---
 

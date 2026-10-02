@@ -21,7 +21,16 @@ from openpyxl import load_workbook
 
 from sales_orders.credit_alerts import AlertCompany, AlertFormatError, parse_alert
 from sales_orders.credit_arr import ParsedArrFile
-from sales_orders.credit_pdf import SnapshotData, SnapshotLine, file_name, render
+from sales_orders.credit_pdf import (
+    AlertCompanyLines,
+    AlertSnapshotData,
+    SnapshotData,
+    SnapshotLine,
+    alert_file_name,
+    file_name,
+    render,
+    render_alert,
+)
 from sales_orders.db import Connection
 from sales_orders.errors import SalesOrderError, UnknownReferenceError
 
@@ -539,6 +548,75 @@ def ensure_snapshot(conn: Connection, assessment_id: int) -> tuple[str, bytes]:
     return name, pdf
 
 
+def alert_snapshot_data(conn: Connection, alert_id: int, subject_id: int) -> AlertSnapshotData:
+    """One client's lines from one alert email, as read (the PDF filed on the Xero contact)."""
+    e = conn.execute(
+        """SELECT e.credit_alert_email_id, b.name AS bureau, b.alert_sender, e.subject, e.received_at,
+                  e.internet_message_id, e.body_sha256, s.display_name
+             FROM sales.credit_alert_email e
+             JOIN sales.credit_bureau b USING (bureau_code)
+             CROSS JOIN sales.credit_subject s
+            WHERE e.credit_alert_email_id = %s AND s.credit_subject_id = %s""",
+        (alert_id, subject_id),
+    ).fetchone()
+    if e is None:
+        raise ValueError(f"alert {alert_id} / subject {subject_id} not found")
+    rows = conn.execute(
+        """SELECT company_name, company_number, bureau_ref, previous_credit_limit, credit_limit, limit_status,
+                  credit_rating, risk_score, risk_band, events
+             FROM sales.v_credit_report
+            WHERE credit_alert_email_id = %s AND credit_subject_id = %s
+            ORDER BY credit_report_id""",
+        (alert_id, subject_id),
+    ).fetchall()
+    if not rows:
+        raise ValueError(f"alert {alert_id} has no lines for subject {subject_id}")
+    return AlertSnapshotData(
+        client_name=str(e["display_name"]),
+        alert_id=int(e["credit_alert_email_id"]),
+        bureau=str(e["bureau"]),
+        sender=str(e["alert_sender"]),
+        subject=str(e["subject"]),
+        received_at=e["received_at"],
+        internet_message_id=str(e["internet_message_id"]),
+        body_sha256=str(e["body_sha256"]),
+        companies=tuple(
+            AlertCompanyLines(
+                company_name=str(r["company_name"]),
+                company_number=r["company_number"],
+                bureau_ref=r["bureau_ref"],
+                previous_credit_limit=r["previous_credit_limit"],
+                credit_limit=r["credit_limit"],
+                limit_status=str(r["limit_status"]),
+                credit_rating=r["credit_rating"],
+                risk_score=r["risk_score"],
+                risk_band=r["risk_band"],
+                events=tuple(str(x) for x in r["events"]),
+            )
+            for r in rows
+        ),
+    )
+
+
+def ensure_alert_snapshot(conn: Connection, alert_id: int, subject_id: int) -> tuple[str, bytes]:
+    """The filed PDF for one client's part of one alert: created once, then always the same bytes."""
+    row = conn.execute(
+        """SELECT file_name, pdf FROM sales.credit_alert_snapshot
+            WHERE credit_alert_email_id = %s AND credit_subject_id = %s""",
+        (alert_id, subject_id),
+    ).fetchone()
+    if row:
+        return str(row["file_name"]), bytes(row["pdf"])
+    data = alert_snapshot_data(conn, alert_id, subject_id)
+    name, pdf = alert_file_name(data), render_alert(data)
+    conn.execute(
+        """INSERT INTO sales.credit_alert_snapshot (credit_alert_email_id, credit_subject_id, file_name, pdf)
+           VALUES (%s, %s, %s, %s)""",
+        (alert_id, subject_id, name, pdf),
+    )
+    return name, pdf
+
+
 def queue_filing(conn: Connection) -> int:
     row = conn.execute("SELECT sales.queue_credit_filing() AS n").fetchone()
     return int(row["n"]) if row else 0
@@ -548,6 +626,7 @@ def pending_filing(conn: Connection) -> list[dict[str, Any]]:
     return conn.execute(
         """
         SELECT t.credit_filing_task_id, t.task_code, t.credit_assessment_id, t.attempts,
+               t.credit_alert_email_id, t.credit_subject_id,
                s.display_name, s.debt_credit_folder_id, c.xero_contact_id,
                e.mailbox_message_id, e.internet_message_id
           FROM sales.credit_filing_task t

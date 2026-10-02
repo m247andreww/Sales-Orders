@@ -17,7 +17,7 @@ from conftest import CFO, FINANCE, act_as, savepoint_rejects
 
 from sales_orders import credit, credit_run
 from sales_orders.credit_arr import ArrLine, ParsedArrFile
-from sales_orders.credit_pdf import render
+from sales_orders.credit_pdf import render, render_alert
 from sales_orders.db import Connection
 from sales_orders.errors import UnknownReferenceError
 from sales_orders.graph import MailMessage
@@ -529,22 +529,28 @@ def test_daily_run_assesses_files_and_reports(conn: Connection, master_data: Mas
     assert [(a["display_name"], a["outcome_code"], a["trading_requirement"]) for a in report.assessments] == [
         (SUBJECT, "applied", Decimal(18400))  # the information-only company is not assessed
     ]
-    # Snapshot + note on the Xero contact; both emails copied to the client's folder (not the supplier's).
-    assert [(str(x[0]), x[1].endswith("__18400.pdf"), x[2][:5], x[3]) for x in xero.attached] == [
-        (
-            "00000000-0000-4000-8000-00000000c001",
-            True,
-            b"%PDF-",
-            f"credit-assessment-{report.assessments[0]['credit_assessment_id']}",
-        )
+    # Snapshot + note on the Xero contact, plus the client's part of each alert (never the supplier's).
+    # Outlook folder copies are retired (migration 0017): nothing is copied in the mailbox.
+    aid = report.assessments[0]["credit_assessment_id"]
+    attached = sorted((str(x[0]), x[1], x[2][:5], x[3]) for x in xero.attached)
+    assert [(a[0], a[2]) for a in attached] == [("00000000-0000-4000-8000-00000000c001", b"%PDF-")] * 3
+    keys = sorted(a[3] for a in attached)
+    assert keys[2] == f"credit-assessment-{aid}"
+    assert all(k.startswith("credit-alert-") for k in keys[:2]) and keys[0] != keys[1]
+    names = [a[1] for a in attached]
+    assert sum(n.endswith("__18400.pdf") for n in names) == 1
+    assert sorted(n.split("_Alert_")[1].split("_")[0] for n in names if "_Alert_" in n) == [
+        "Creditsafe",
+        "Experian",
     ]
+    assert len(xero.notes) == 1  # a note for the assessment only, none for alerts
     assert xero.notes[0].startswith("Credit limit £18,400")
-    assert sorted(mail.copied) == [("g1", "folder-test"), ("g2", "folder-test")]
+    assert mail.copied == []
     assert mail.sent == ["Credit run: 1 limit(s) updated, 0 decision(s) needed"]
 
     again = credit_run.run(_uow(conn), settings, mail, xero)  # idempotent: nothing new
     assert (again.alerts_read, again.assessments, again.filed) == (0, [], [])
-    assert len(xero.attached) == 1
+    assert len(xero.attached) == 3  # nothing filed twice
 
 
 def test_failed_filing_is_retried_then_reported(conn: Connection, master_data: MasterDataIn) -> None:
@@ -600,6 +606,37 @@ def test_only_the_latest_assessment_is_filed_on_xero(
         "SELECT status_code FROM sales.credit_filing_task WHERE credit_assessment_id = %s", (first,)
     ).fetchone()
     assert row == {"status_code": "superseded"}  # kept as a record, never deleted
+
+
+def test_alert_is_filed_on_xero_for_clients_only(conn: Connection, master_data: MasterDataIn) -> None:
+    _subject(conn)
+    _subject(conn, name="Example Supplies", relationship="information", company_number="99999991")
+    _alert(
+        conn,
+        "experian",
+        _experian_html(
+            _experian_company("00000000", "TEST CUSTOMER LIMITED", "£57,000"),
+            _experian_company("99999991", "EXAMPLE SUPPLIES LIMITED", "£5,000"),
+        ),
+    )
+    credit.queue_filing(conn)
+    tasks = [t for t in credit.pending_filing(conn) if t["credit_alert_email_id"] is not None]
+    assert [(t["task_code"], t["display_name"]) for t in tasks] == [("xero_alert", SUBJECT)]  # no mail_copy
+
+    name, pdf = credit.ensure_alert_snapshot(
+        conn, tasks[0]["credit_alert_email_id"], tasks[0]["credit_subject_id"]
+    )
+    assert name.startswith("Test_Customer_Alert_Experian_") and pdf[:5] == b"%PDF-"
+    data = credit.alert_snapshot_data(conn, tasks[0]["credit_alert_email_id"], tasks[0]["credit_subject_id"])
+    assert [c.company_name for c in data.companies] == ["TEST CUSTOMER LIMITED"]  # only this client's lines
+    assert data.companies[0].credit_limit == Decimal(57000)
+    assert render_alert(data) == pdf  # same input, same bytes
+    assert credit.ensure_alert_snapshot(
+        conn, tasks[0]["credit_alert_email_id"], tasks[0]["credit_subject_id"]
+    ) == (
+        name,
+        pdf,
+    )
 
 
 def test_xero_note_says_when_a_bureau_gave_no_limit(conn: Connection, master_data: MasterDataIn) -> None:

@@ -151,6 +151,8 @@ def _file(
         try:
             if t["task_code"] == "xero_snapshot":
                 ref = _file_xero(uow, xero, t)
+            elif t["task_code"] == "xero_alert":
+                ref = _file_xero_alert(uow, xero, t)
             else:
                 if not t["debt_credit_folder_id"]:
                     raise RuntimeError("no Debt & Credit folder mapped")
@@ -177,6 +179,20 @@ def _file_xero(uow: UnitOfWork, xero: XeroFiler | None, t: dict[str, Any]) -> st
     attachment_id = xero.attach_to_contact(UUID(str(t["xero_contact_id"])), name, pdf, key)
     xero.add_contact_note(UUID(str(t["xero_contact_id"])), note, key + "-note")
     return attachment_id
+
+
+def _file_xero_alert(uow: UnitOfWork, xero: XeroFiler | None, t: dict[str, Any]) -> str:
+    """The client's part of a bureau alert, as a PDF on its Xero contact (in place of an Outlook folder copy)."""
+    if xero is None:
+        raise RuntimeError("Xero is not configured (SALES_ORDERS_XERO_CLIENT_ID / _SECRET)")
+    if not t["xero_contact_id"]:
+        raise RuntimeError("the customer has no Xero contact id")
+    with uow() as conn:
+        name, pdf = credit.ensure_alert_snapshot(
+            conn, int(t["credit_alert_email_id"]), int(t["credit_subject_id"])
+        )
+    key = f"credit-alert-{t['credit_alert_email_id']}-{t['credit_subject_id']}"
+    return xero.attach_to_contact(UUID(str(t["xero_contact_id"])), name, pdf, key)
 
 
 # ---------------------------------------------------------------------------- summary
@@ -229,17 +245,21 @@ def summary_html(report: RunReport) -> str:
 def file_xero_tasks(uow: UnitOfWork, xero: XeroFiler | None, report: RunReport) -> None:
     """Only the Xero filing tasks (the daily Claude job files emails itself, via the connector)."""
     with uow() as conn:
-        tasks = [t for t in credit.pending_filing(conn) if t["task_code"] == "xero_snapshot"]
+        tasks = [t for t in credit.pending_filing(conn) if t["task_code"] in ("xero_snapshot", "xero_alert")]
     for t in tasks:
         ref: str | None = None
         error: str | None = None
         try:
-            ref = _file_xero(uow, xero, t)
+            ref = (
+                _file_xero(uow, xero, t)
+                if t["task_code"] == "xero_snapshot"
+                else _file_xero_alert(uow, xero, t)
+            )
         except Exception as exc:  # recorded against the task and retried; never stops the run
             error = f"{type(exc).__name__}: {exc}"
         with uow() as conn:
             credit.record_filing(conn, int(t["credit_filing_task_id"]), ref, error)
-        label = f"xero_snapshot {t['display_name']}"
+        label = f"{t['task_code']} {t['display_name']}"
         (report.filing_errors if error else report.filed).append(f"{label}: {error}" if error else label)
 
 
