@@ -10,6 +10,10 @@ Workings* is superseded: never update it, never take a figure from it after go-l
 
 ## The daily job (scheduled Claude routine) — follow exactly
 
+Schedule: routine "Credit job – weekday 07:45" (trig_01T2Ap4VB7REh4bs71YKSEmr, Mon–Fri 07:45 UK time) wakes the
+session "Credit job – daily run" (session_01EkqpwqBNVxAMcFZ9VXkW3t). Decisions: "Credit Desk – apply decision"
+(trig_015D1x21BRRf6MRmcmzjdQQS), started by the page.
+
 Microsoft 365 is reached ONLY through the Microsoft 365 connector (CFO's own login; no admin
 permissions will ever be granted — never ask). Xero filing uses the Xero custom connection from the
 environment credentials. The database is restored from, and saved back to, Azure Blob Storage.

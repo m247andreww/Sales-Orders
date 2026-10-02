@@ -6,7 +6,6 @@ Kept current by Claude every turn. Newest state wins.
 
 1. **Look at the Credit Desk** (https://claude.ai/artifact/RuebneZC7AjWuvfiVj2nF8). Read only: do not
    press Accept or Save yet, because the client list is not confirmed.
-2. **Say "switch on"** when you are happy for it to run every weekday at about 07:45.
 
 ## Still open
 
@@ -15,7 +14,7 @@ Kept current by Claude every turn. Newest state wins.
 | Azure storage, Xero link, ARR "Credit Extract" tab, Claude settings | CFO | Done 2 Oct 2026 |
 | First live run (saved; ARR 1,225 lines; 4 alerts; 10 decisions waiting; 27 limits applied) | Claude | Done 2 Oct 2026 13:51 |
 | Credit Desk page, attention list grouped by type | Claude | Done 2 Oct 2026 |
-| Switch on the weekday 07:45 run | Claude | Waiting for your "switch on" |
+| Weekday 07:45 run switched on (first run Mon 5 Oct; Claude checks it at 07:55) | Claude | Done 2 Oct 2026 |
 | Link clients to company numbers (so alerts match) and to Xero contacts (so the PDF can be filed) | Claude drafts, CFO confirms | Next |
 | Legal names and numbers for 5 large unmonitored clients, then add them in Experian and Creditsafe | Claude drafts, CFO adds | Next |
 | Confirm client list and ARR matches (Analysis Mason sheets AMA/ANA, QPR Trust, Fronius) | CFO | Open |
