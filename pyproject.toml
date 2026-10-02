@@ -19,9 +19,9 @@ dependencies = [
 
 [project.optional-dependencies]
 dev = [
-    "mypy>=1.10",
+    "mypy==2.4.0",  # pinned: CI and every session must use the same checker versions
     "pytest>=8",
-    "ruff>=0.5",
+    "ruff==0.16.10",  # pinned: an unpinned ruff disagreed with sessions and failed CI (Oct 2026)
     "types-openpyxl",
     "types-reportlab",
 ]
