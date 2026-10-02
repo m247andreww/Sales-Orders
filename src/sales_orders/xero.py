@@ -106,7 +106,7 @@ class XeroCredentials:
 
 def _access_token(creds: XeroCredentials, transport: Transport) -> str:
     basic = base64.b64encode(f"{creds.client_id}:{creds.client_secret}".encode()).decode()
-    request = urllib.request.Request(
+    request = urllib.request.Request(  # noqa: S310 - fixed https endpoint
         TOKEN_URL,
         data=urllib.parse.urlencode({"grant_type": "client_credentials", "scope": creds.scope}).encode(),
         headers={"Authorization": f"Basic {basic}", "Content-Type": "application/x-www-form-urlencoded"},
