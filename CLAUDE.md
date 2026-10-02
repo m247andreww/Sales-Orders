@@ -88,9 +88,12 @@ These are the owner's stated preferences; follow them in every session.
 - **Microsoft 365 admin will NOT grant further permissions (CFO, 2026-10-02). Never ask again** — no app
   registrations, Graph application permissions, access policies or admin consent. Microsoft 365 access is
   only through the CFO's own login: the Claude Microsoft 365 connector (or Outlook.com). Design within it.
-- Connector limits (tested 2026-10-02): it reads mail, folders and plain-text files in full; it can move
-  and tag (category) emails, forward, send, and upload files up to 1 MB; it can NOT copy an email to a
-  folder, and it truncates .xlsx reads (~135 of 1,230 ARR rows, displayed values only).
+- Connector limits (2026-10-02): it READS mail, folders and plain-text files in full, and truncates .xlsx
+  reads (~135 of 1,230 ARR rows; the "Credit Extract" sheet is read completely). It is **READ-ONLY**: the
+  test-day session was refused sending mail ("missing send mail permission"), and tagging and file upload
+  are refused too. Send/tag/move/upload tools APPEAR in the tool list but do not work — never plan on them
+  without a real test. (An earlier note here claimed they worked from the tool list alone: that was wrong.)
+  So: no emails are filed or tagged; the daily summary reaches the CFO as a Claude notification instead.
 - Xero custom connection: CFO added accounting.contacts + accounting.attachments (2026-10-02).
 
 ## Sources of truth (ADR 0003)
@@ -133,8 +136,8 @@ These are the owner's stated preferences; follow them in every session.
   master for credit limits (`customer_credit_limit`); bureau alerts (Experian = its **Credit Limit**,
   not Credit Rating; Creditsafe) and the ARR file are the inputs; customers match the ARR file by **ARR
   prefix**, never by name. Limits apply themselves only inside risk appetite; anything else is a CFO
-  decision with a reason. Clients' alert emails are tagged with an Outlook category "Credit: <client>"
-  (the connector cannot copy emails or see more than 10 sub-folders); suppliers and "for information"
+  decision with a reason. Alert emails are kept as evidence in the database (the connector is read-only,
+  so they are not filed or tagged in Outlook); suppliers and "for information"
   companies are monitored only. The daily job is a scheduled Claude routine following the
   `credit-review` skill; its database is carried between runs in Azure Blob Storage (`state-restore` /
   `state-save`). ARR is read from the "Credit Extract" first sheet of ARR Live.xlsx (connector-complete).
