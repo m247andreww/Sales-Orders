@@ -141,7 +141,11 @@ decision is applied straight away (limit, Xero PDF and note), not the next morni
 2. For each client under **Needs your decision**: click **Accept £…** to take the suggested limit, or type your own
    amount and a reason, then click **Save**.
    *Within about 5 minutes the line should say "Done at HH:MM: limit £…".*
-3. Nothing under **Needs your decision**? Nothing to do.
+3. Under **Customers with no credit limit** (customers in the ARR file nobody monitors; "new" = first seen
+   today): press **Copy** next to the company number, add it in Experian (Monitoring) and Creditsafe (Live
+   Customers), then press **I've added it**. *Within about 5 minutes the line disappears: it is now a client.*
+   No number shown? Type the 8-character Companies House number into the box first.
+4. Nothing under either list? Nothing to do.
 
 **If it doesn't look like that:** if the date is not today's by 9am, or a line has not said "Done" after 10 minutes, tell Claude "the Credit Desk didn't update" and send a screenshot of the page.
 

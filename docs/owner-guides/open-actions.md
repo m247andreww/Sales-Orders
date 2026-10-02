@@ -4,7 +4,12 @@ Kept current by Claude every turn. Newest state wins.
 
 ## Your actions (now)
 
-1. None. Make the 10 Credit Desk decisions when convenient: https://claude.ai/artifact/RuebneZC7AjWuvfiVj2nF8
+1. **Reply "clear review dates"** to remove the review date the page wrongly set to 2 Oct on your Cardano
+   and Pragmatic decisions (or give the date you want).
+2. **Check Interserve** on the Credit Desk: Xero links it to Interserve Group Ltd, which entered
+   administration in 2019.
+3. When convenient: work through **Customers with no credit limit** on the Credit Desk
+   (https://claude.ai/artifact/RuebneZC7AjWuvfiVj2nF8).
 
 ## Still open
 
@@ -21,6 +26,8 @@ Kept current by Claude every turn. Newest state wins.
 | Outlook rule: alerts to Inbox / Credit alerts, marked read | CFO | Done 2 Oct 2026 |
 | Each client's alerts filed as PDFs on its Xero contact (9 filed; automatic from now on) | Claude | Done 2 Oct 2026 |
 | McGill display name still says "Services" | Claude | Next change |
+| Family BS: no Companies House number, so it needs its bureau reference to be set up | Claude | Open |
+| Offer: fill in the 24 missing company numbers by lookup (PandaDoc, web) and write them into Xero | CFO to decide | Open |
 | Alert companies classified from Xero: FEI Foods, Weil Gotshal = customers; Westcon, Nuco, Shoreditch Design = suppliers; Nlighten = information | Claude | Done 2 Oct 2026 |
 | First Steps Care: possible Companies House strike-off proposal | Claude to confirm | Open |
 | Confirm client list and ARR matches (Analysis Mason sheets AMA/ANA, QPR Trust, Fronius) | CFO | Open |
@@ -33,6 +40,10 @@ Kept current by Claude every turn. Newest state wins.
 | D5 One-off allowance for a new client: £5,000 | CFO | Open (built as stated) |
 
 ## Requirements recorded
+
+- 2 Oct 2026 (CFO): amounts in outputs are whole pounds (calculations keep pence).
+- 2 Oct 2026 (CFO): the daily report scans for customers with no credit limit through monitoring
+  (Credit Desk section; "I've added it" sets the client up).
 
 - 2 Oct 2026 (CFO): sweep credit emails out of the inbox. Claude cannot (connector permissions are all
   read-only); the CFO's one Outlook rule does it. Per-client Debt & Credit folder copies are not possible
