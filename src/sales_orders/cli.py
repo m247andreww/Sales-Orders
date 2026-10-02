@@ -682,6 +682,7 @@ def cmd_credit_record_matches(args: argparse.Namespace) -> int:
                 registered_name=r.get("registered_name"),
                 company_number=r.get("company_number"),
                 note=r.get("note"),
+                excluded_reason=r.get("excluded_reason"),
             )
     print(f"{len(rows)} customer match(es) recorded")
     return 0

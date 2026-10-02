@@ -4,12 +4,8 @@ Kept current by Claude every turn. Newest state wins.
 
 ## Your actions (now)
 
-1. **Reply "clear review dates"** to remove the review date the page wrongly set to 2 Oct on your Cardano
-   and Pragmatic decisions (or give the date you want).
-2. **Check Interserve** on the Credit Desk: Xero links it to Interserve Group Ltd, which entered
-   administration in 2019.
-3. When convenient: work through **Customers with no credit limit** on the Credit Desk
-   (https://claude.ai/artifact/RuebneZC7AjWuvfiVj2nF8).
+1. When convenient: on the Credit Desk (https://claude.ai/artifact/RuebneZC7AjWuvfiVj2nF8), work through
+   **Customers with no credit limit**: Copy the number, add it in Experian and Creditsafe, press "I've added it".
 
 ## Still open
 
@@ -27,7 +23,10 @@ Kept current by Claude every turn. Newest state wins.
 | Each client's alerts filed as PDFs on its Xero contact (9 filed; automatic from now on) | Claude | Done 2 Oct 2026 |
 | McGill display name still says "Services" | Claude | Next change |
 | Family BS: no Companies House number, so it needs its bureau reference to be set up | Claude | Open |
-| Offer: fill in the 24 missing company numbers by lookup (PandaDoc, web) and write them into Xero | CFO to decide | Open |
+| Company numbers found for 22 of 27 unmonitored customers; 15 written into Xero (certain only) | Claude | Done 2 Oct 2026 |
+| Numbers still open: PrimeSys (two numbers conflict), The Mall Maidstone, Vivantio, Clearlake (Irish), Family BS | Claude | Open |
+| Review dates on Cardano and Pragmatic cleared | Claude | Done 2 Oct 2026 |
+| Interserve excluded from monitoring (in administration; CFO dealing with administrators) | CFO | Done 2 Oct 2026 |
 | Alert companies classified from Xero: FEI Foods, Weil Gotshal = customers; Westcon, Nuco, Shoreditch Design = suppliers; Nlighten = information | Claude | Done 2 Oct 2026 |
 | First Steps Care: possible Companies House strike-off proposal | Claude to confirm | Open |
 | Confirm client list and ARR matches (Analysis Mason sheets AMA/ANA, QPR Trust, Fronius) | CFO | Open |

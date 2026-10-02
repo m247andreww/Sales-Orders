@@ -198,6 +198,18 @@ def test_researched_match_is_suggested_and_written_to_xero_once(conn: Connection
     assert number == {"company_number": "07654321"}
 
 
+def test_excluded_customer_leaves_the_list_but_is_reported(conn: Connection) -> None:
+    _arr(conn, ("Gone Ltd", "GON001", "900.00"), ("Kept Ltd", "KEP001", "100.00"))
+    credit.record_customer_match(
+        conn, "GON", source="CFO (synthetic)", confidence="certain", excluded_reason="In administration"
+    )
+    assert [r["prefix"] for r in credit.unmonitored_customers(conn)] == ["KEP"]
+    desk = credit.desk_export(conn, credit.datetime.now(credit.LONDON))
+    assert desk["unmonitored_excluded"] == [
+        {"prefix": "GON", "name": "Gone Ltd", "reason": "In administration"}
+    ]
+
+
 def test_set_company_number_sends_only_that_field() -> None:
     sent: list[dict[str, object]] = []
 

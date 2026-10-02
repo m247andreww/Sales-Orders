@@ -750,6 +750,7 @@ def record_customer_match(
     registered_name: str | None = None,
     company_number: str | None = None,
     note: str | None = None,
+    excluded_reason: str | None = None,
 ) -> None:
     """Record (or replace) the researched Xero contact and registered company for an ARR prefix."""
     number = company_number.strip().upper() if company_number else None
@@ -758,17 +759,18 @@ def record_customer_match(
     conn.execute(
         """
         INSERT INTO sales.credit_customer_match
-               (arr_prefix, xero_contact_id, registered_name, company_number, source, confidence, note)
-        VALUES (%s, %s, %s, %s, %s, %s, %s)
+               (arr_prefix, xero_contact_id, registered_name, company_number, source, confidence, note,
+                excluded_reason)
+        VALUES (%s, %s, %s, %s, %s, %s, %s, %s)
         ON CONFLICT (arr_prefix) DO UPDATE
            SET xero_contact_id = EXCLUDED.xero_contact_id, registered_name = EXCLUDED.registered_name,
                company_number = EXCLUDED.company_number, source = EXCLUDED.source,
-               confidence = EXCLUDED.confidence, note = EXCLUDED.note,
+               confidence = EXCLUDED.confidence, note = EXCLUDED.note, excluded_reason = EXCLUDED.excluded_reason,
                written_to_xero_at = CASE WHEN sales.credit_customer_match.company_number
                                               IS NOT DISTINCT FROM EXCLUDED.company_number
                                          THEN sales.credit_customer_match.written_to_xero_at END
         """,
-        (prefix, xero_contact_id, registered_name, number, source, confidence, note),
+        (prefix, xero_contact_id, registered_name, number, source, confidence, note, excluded_reason),
     )
 
 
@@ -824,8 +826,11 @@ def unmonitored_customers(conn: Connection) -> list[dict[str, Any]]:
     """Customers with commitments in the latest ARR file but no credit monitoring, largest first."""
     out = []
     for r in conn.execute(
-        """SELECT arr_prefix, customer_name, annual_revenue, line_count, first_seen_at, is_new
-             FROM sales.v_credit_unmonitored_customer ORDER BY is_new DESC, annual_revenue DESC"""
+        """SELECT u.arr_prefix, u.customer_name, u.annual_revenue, u.line_count, u.first_seen_at, u.is_new
+             FROM sales.v_credit_unmonitored_customer u
+             LEFT JOIN sales.credit_customer_match m USING (arr_prefix)
+            WHERE m.excluded_reason IS NULL
+            ORDER BY u.is_new DESC, u.annual_revenue DESC"""
     ):
         out.append(
             {
@@ -1078,4 +1083,12 @@ def desk_export(conn: Connection, since: datetime) -> dict[str, Any]:
             not in ("CREDIT_REVIEW_NEEDED", "ARR_NOT_MONITORED")  # the latter has its own list
         ],
         "unmonitored": unmonitored_customers(conn),
+        "unmonitored_excluded": [
+            {"prefix": str(r["arr_prefix"]), "name": r["customer_name"], "reason": r["excluded_reason"]}
+            for r in conn.execute(
+                """SELECT u.arr_prefix, u.customer_name, m.excluded_reason
+                     FROM sales.v_credit_unmonitored_customer u JOIN sales.credit_customer_match m USING (arr_prefix)
+                    WHERE m.excluded_reason IS NOT NULL ORDER BY u.customer_name"""
+            )
+        ],
     }
