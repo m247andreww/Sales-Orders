@@ -406,24 +406,22 @@ def test_workbook_import_seeds_readings_and_allowance(conn: Connection, master_d
         (lambda c: _bureaus(c, "£1,000", None), "SINGLE_BUREAU"),
         (lambda c: None, "NO_BUREAU_LIMIT"),
         (lambda c: _bureaus(c, "£1,000", "1000", NOW - timedelta(days=400)), "STALE_BUREAU_DATA"),
-        (lambda c: None, "NO_DEBT_CREDIT_FOLDER"),
         (lambda c: c.execute("UPDATE sales.customer SET xero_contact_id = NULL"), "CUSTOMER_NO_XERO_CONTACT"),
         (lambda c: c.execute("UPDATE sales.customer SET arr_prefix = NULL"), "CUSTOMER_NO_ARR_PREFIX"),
     ],
 )
 def test_subject_exception_rules(conn: Connection, master_data: MasterDataIn, setup: Any, rule: str) -> None:
     _subject(conn)
-    assert rule not in _rules(conn, SUBJECT) or rule in {"NO_BUREAU_LIMIT", "NO_DEBT_CREDIT_FOLDER"}
+    assert rule not in _rules(conn, SUBJECT) or rule == "NO_BUREAU_LIMIT"
     setup(conn)
     assert rule in _rules(conn, SUBJECT)
 
 
 def test_folder_and_bureau_rules_clear_when_fixed(conn: Connection, master_data: MasterDataIn) -> None:
     _subject(conn)
-    assert {"NO_BUREAU_LIMIT", "NO_DEBT_CREDIT_FOLDER"} <= _rules(conn, SUBJECT)
+    assert "NO_BUREAU_LIMIT" in _rules(conn, SUBJECT)
     _bureaus(conn, "£1,000", "1000")
-    conn.execute("UPDATE sales.credit_subject SET debt_credit_folder_id = 'folder-1'")
-    assert _rules(conn, SUBJECT) & {"NO_BUREAU_LIMIT", "NO_DEBT_CREDIT_FOLDER", "SINGLE_BUREAU"} == set()
+    assert _rules(conn, SUBJECT) & {"NO_BUREAU_LIMIT", "SINGLE_BUREAU"} == set()
 
 
 def test_arr_revenue_without_monitoring_is_reported(conn: Connection, master_data: MasterDataIn) -> None:
@@ -600,3 +598,31 @@ def test_debt_and_credit_folders_are_mapped_by_client_name(
     r = credit.map_folders(conn, folders)
     assert r["mapped"] == [{"subject": SUBJECT, "folder": "Inbox/Clients/Test Customer Ltd/Debt & Credit"}]
     assert credit.map_folders(conn, folders)["mapped"] == []  # already mapped: never changed
+
+
+def test_alert_whose_previous_limit_disagrees_is_flagged(
+    conn: Connection, worked_example: dict[str, Any]
+) -> None:
+    def experian(previous: str, new: str, when: datetime) -> None:
+        body = _experian_company("00000000", "TEST CUSTOMER LIMITED", new).replace(
+            "from £1 to", f"from {previous} to"
+        )
+        _alert(conn, "experian", _experian_html(body), when)
+
+    experian("£57,000", "£58,000", NOW + timedelta(days=1))  # continuous with the last reading
+    assert "ALERT_CONTINUITY" not in _rules(conn, SUBJECT)
+    experian("£70,000", "£71,000", NOW + timedelta(days=2))  # says 70,000 but we last recorded 58,000
+    messages = conn.execute(
+        "SELECT message FROM sales.v_credit_exception WHERE rule_code = 'ALERT_CONTINUITY'"
+    ).fetchall()
+    assert [m["message"] for m in messages] == [
+        "experian alert of 2026-10-03 says the previous limit was £70,000; the last recorded limit was £58,000"
+        " (missed alert or misread)"
+    ]
+
+
+def test_summary_reports_today(conn: Connection, worked_example: dict[str, Any]) -> None:
+    report = credit_run.report_since(conn, NOW - timedelta(days=3650))
+    assert [a["credit_assessment_id"] for a in report.assessments] == [worked_example["credit_assessment_id"]]
+    assert credit_run.summary_subject(report) == "Credit run: 1 limit(s) updated, 0 decision(s) needed"
+    assert "Test Customer: applied - requirement £18,400" in credit_run.summary_html(report)

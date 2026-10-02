@@ -6,36 +6,68 @@ rating or recurring revenue changed, puts the PDF summary and a note on the clie
 alert email in the client's *Debt & Credit* folder, and emails you one summary. You only reply to the
 cases it cannot decide alone. It replaces the *Credit Limit Assessment Workings* spreadsheet.
 
-You do Parts 2–3 once (about 15 minutes). Part 4 is a one-off review
+You do Parts 2b, 2c and 3 once (about 20 minutes). Part 4 is a one-off review
 before switch-on. Part 5 is the only thing you do from then on.
 
 ---
 
 ## Part 1 — Microsoft 365 (nothing to do)
 
-The system uses the Microsoft 365 connection you have already approved in Claude, under your own
-login. No administrator is involved and no new permission is needed.
+The daily job uses the Microsoft 365 connection you have already approved in Claude, under your own
+login. No administrator is involved. Alert emails are **tagged** with the client's name (an Outlook
+category such as "Credit: Acme") instead of copied into folders: the connection cannot copy an email,
+and it can only see the first 10 client folders.
+
+**To see a client's credit emails in Outlook:** search `category:"Credit: Acme"`.
 
 ---
 
-## Part 2 — Let Xero accept the PDF and the note (Xero admin, ~10 minutes)
+## Part 2 — Xero (done 2 Oct 2026)
 
-*What this is:* the existing Xero link (set up for account owners) is read-only. Filing a PDF and a
-note on a contact needs two more permissions.
+The Xero link can now attach the PDF and add a note to the contact. Xero does not let any system change
+the **credit limit box** on a contact: the daily email lists any limit that changed (decision D2).
 
-1. Go to **developer.xero.com** → **My Apps** → `Sales Orders – account owner sync`.
-2. Find the access section (it may be called **Scopes**). Tick `accounting.contacts` (not only the
-   ".read" one) and `accounting.attachments`. Click **Save**.
-   *If Xero asks the authorising admin to re-approve, they get an email: click the link and approve
-   for **Managed247**.*
+---
 
-**If it doesn't look like that:** stop and send a screenshot.
+## Part 2b — Give the daily job a safe place to keep its records (Azure, ~10 minutes, once)
 
-**Done when:** the app shows both new scopes and is still connected to Managed247. *(Done 2 Oct 2026.)*
+**What this does and why.** The daily job starts fresh each morning, so it needs somewhere private to
+keep the credit database between runs. This creates a locked storage area in Managed247's own Azure
+account (UK), keeping every day's version.
 
-**Please note:** Xero does not let any system change the **credit limit box** on a contact. Until you
-decide otherwise (decision D2), the daily email lists any limit that changed so you can copy it into
-that box — or you can stop using the Xero box (recommended: this system holds the limit and its history).
+1. Go to **portal.azure.com** and sign in as yourself.
+2. Click the **Cloud Shell** icon (`>_`) at the top. Choose **Bash** if asked.
+   *You should see a black command window at the bottom.*
+3. Type `cd Sales-Orders && git pull && bash infra/credit-state.sh` and press Enter.
+   *If you see "No such file or directory", type `gh repo clone m247andreww/sales-orders Sales-Orders`
+   first, press Enter, then repeat this step.*
+4. When it says **DONE**, it shows one long line starting `https://stsocredit…` and a website name
+   ending `.blob.core.windows.net`. Leave the window open for Part 2c.
+
+**If it doesn't look like that:** send a screenshot of the window. Do not paste the long line anywhere.
+
+**Done when:** you see **DONE** and the long line.
+
+---
+
+## Part 2c — Tell Claude where it may connect, and store the three codes (~5 minutes, once)
+
+**What this does and why.** Claude's cloud workspace blocks websites by default, and keeps codes in a
+protected settings area so they never appear in a chat.
+
+1. In this Claude session, click the **environment name** in the title bar, then **Edit**.
+2. Under **Network access**, add these allowed domains: `api.xero.com`, `identity.xero.com`, and the
+   website name from Part 2b step 4 (ending `.blob.core.windows.net`).
+3. Under **API credentials** (or **Environment variables**), add:
+   - `SALES_ORDERS_STATE_URL` = the long line from Part 2b step 4;
+   - `SALES_ORDERS_XERO_CLIENT_ID` = the Xero Client ID from your password manager;
+   - `SALES_ORDERS_XERO_CLIENT_SECRET` = the Xero Client secret.
+4. Click **Save**.
+
+**If it doesn't look like that:** send a screenshot of the settings screen (never of the codes).
+
+**Done when:** saved. Tell Claude "settings done"; Claude then runs a first test day with you watching
+and schedules the daily job.
 
 ---
 
@@ -71,9 +103,10 @@ it differs from the spreadsheet. Claude prepares both files; you only read and a
 ## Part 5 — Every day from then on (you, a minute)
 
 1. Read the email **"Credit run: … limit(s) updated, … decision(s) needed"**.
-2. Under **Needs you**, each line is a client the system would not decide alone (for example, the
-   trading need is above half the lower bureau limit). Reply to Claude, e.g.
-   "Set Acme at £12,000 because they pay by Direct Debit, review in 6 months."
+2. Under **Needs you**, each line is a client the system would not decide alone. Click **Reply** and
+   type one line per decision, exactly like this:
+   `SET Acme Ltd 12000 BECAUSE pays by Direct Debit REVIEW 2027-04-01` (the REVIEW part is optional).
+   Send it. The next morning's email confirms it, or lists it under "Not understood".
 3. Nothing under **Needs you**? Nothing to do.
 
 **If the email does not arrive by 9am:** tell Claude "the credit run email didn't come" — the run

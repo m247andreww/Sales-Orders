@@ -10,7 +10,7 @@ from conftest import FIXTURES
 from openpyxl import Workbook
 
 from sales_orders.credit_alerts import AlertFormatError, parse_alert
-from sales_orders.credit_arr import ArrFileError, parse_arr_file
+from sales_orders.credit_arr import ArrFileError, parse_arr_extract, parse_arr_file
 
 EXPERIAN_HTML = (FIXTURES / "credit" / "experian_alert.html").read_text(encoding="utf-8")
 CREDITSAFE_HTML = (FIXTURES / "credit" / "creditsafe_alert.html").read_text(encoding="utf-8")
@@ -107,3 +107,39 @@ def test_arr_file_without_the_expected_sheet_is_refused() -> None:
         parse_arr_file(_arr_workbook([], sheet="Other"), "ARR.xlsx")
     with pytest.raises(ArrFileError, match="not a readable"):
         parse_arr_file(b"not a workbook", "ARR.xlsx")
+
+
+_EXTRACT = (
+    "Workbook: 2 worksheets. Cell values are tab-separated rows.\n\n"
+    "## Sheet: Credit Extract \u2014 4 rows \u00d7 5 columns (A1:E4)\n"
+    "Order Status\tCustomer\tInternal Ref.\tFrequency\tAnn Rev\n"
+    "Live\tTest Customer\tTST001\tMonthly\t1592.959984\n"
+    "Cancelled\tTest Customer\tTST002\tAnnual\t300\n"
+    "Live\tNo Amount Ltd\tNOA001\tAnnual\t\n"
+    "Formulas:\nA1: =FILTER(...)\n\n"
+    "## Sheet: Master Data \u2014 1230 rows \u00d7 54 columns (A1:BB1230)\n"
+    "Status\tCustomer\n"
+)
+
+
+def test_connector_extract_is_read_in_full() -> None:
+    parsed = parse_arr_extract(_EXTRACT, "ARR Live.xlsx")
+    assert [(ln.internal_ref, ln.status, ln.frequency, ln.annual_revenue) for ln in parsed.lines] == [
+        ("TST001", "Live", "monthly", Decimal("1592.96")),
+        ("TST002", "Cancelled", "annual", Decimal("300.00")),
+    ]
+    assert parsed.skipped == ((4, "No Amount Ltd: no Ann Rev"),)
+
+
+@pytest.mark.parametrize(
+    ("text", "error"),
+    [
+        (_EXTRACT.replace("4 rows", "5 rows"), "announces 5 rows but 4 were read"),
+        (_EXTRACT.replace("Live\tNo Amount", "[Output truncated]\nLive\tNo Amount"), "truncated"),
+        (_EXTRACT.replace("Credit Extract", "Other"), "no 'Credit Extract' sheet"),
+        (_EXTRACT.replace("\t300\n", "\t\u00a3300.00\n"), "Ann Rev is not a number"),  # a formatted value
+    ],
+)
+def test_connector_extract_is_refused_unless_complete_and_raw(text: str, error: str) -> None:
+    with pytest.raises(ArrFileError, match=error):
+        parse_arr_extract(text, "ARR Live.xlsx")

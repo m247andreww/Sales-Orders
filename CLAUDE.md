@@ -111,8 +111,11 @@ These are the owner's stated preferences; follow them in every session.
   master for credit limits (`customer_credit_limit`); bureau alerts (Experian = its **Credit Limit**,
   not Credit Rating; Creditsafe) and the ARR file are the inputs; customers match the ARR file by **ARR
   prefix**, never by name. Limits apply themselves only inside risk appetite; anything else is a CFO
-  decision with a reason. Clients' alert emails are copied to their Debt & Credit folder; suppliers and
-  "for information" companies are monitored only. Use the `credit-review` skill.
+  decision with a reason. Clients' alert emails are tagged with an Outlook category "Credit: <client>"
+  (the connector cannot copy emails or see more than 10 sub-folders); suppliers and "for information"
+  companies are monitored only. The daily job is a scheduled Claude routine following the
+  `credit-review` skill; its database is carried between runs in Azure Blob Storage (`state-restore` /
+  `state-save`). ARR is read from the "Credit Extract" first sheet of ARR Live.xlsx (connector-complete).
 - Read the FULL email thread (salesorders@ / neworders@) — the first email is not the order of
   record if it was amended.
 

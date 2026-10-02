@@ -8,19 +8,54 @@ description: Credit & risk management for Managed247 clients - bureau alerts (Ex
 The database is the master (ADR 0005, migration 0014). The spreadsheet *Credit Limit Assessment
 Workings* is superseded: never update it, never take a figure from it after go-live.
 
-## The daily run does everything
+## The daily job (scheduled Claude routine) — follow exactly
 
-`sales-orders credit-run` (scheduled daily) reads the ARR file and every new bureau alert, assesses
-each company whose inputs changed, files the PDF + note in Xero and the email in Debt & Credit, and
-emails the CFO. Re-running is always safe. To see the position: `sales-orders credit-status`.
+Microsoft 365 is reached ONLY through the Microsoft 365 connector (CFO's own login; no admin
+permissions will ever be granted — never ask). Xero filing uses the Xero custom connection from the
+environment credentials. The database is restored from, and saved back to, Azure Blob Storage.
+
+1. **Start**: `service postgresql start`; `su postgres -c "psql -qc \"ALTER USER postgres PASSWORD 'postgres'\""`;
+   create database `credit`; `export SALES_ORDERS_DATABASE_URL=postgresql://postgres:postgres@localhost:5432/credit`
+   and `SALES_ORDERS_ACTOR=credit-job@managed.co.uk`; `pip install -e .`;
+   `sales-orders state-restore` then `sales-orders migrate`. If restore fails: STOP, email the CFO the error.
+2. **ARR**: `read_resource` the ARR Live.xlsx file (search "ARR Live" in SharePoint; the CFO's OneDrive,
+   "3 AW Filing/10. Claude/Revenue Forecasting"). The result is saved to a file by the harness: pass that
+   path to `sales-orders credit-load-arr --extract <path>`. It refuses an incomplete read: report, never retry by hand-typing.
+3. **Alerts**: `sales-orders credit-alerts-known` → `latest_received`. `outlook_email_search` with
+   `sender` = `ebe.noreply@experian.com`, then `monitoring@creditsafe.com`, `afterDateTime` = latest − 1 hour
+   (first run: 1 day). Skip Message-IDs already known. Copies of one alert share a Message-ID: use the one
+   whose parent folder is the Inbox. For each new one: `read_resource` it, write `body.content` to a file
+   EXACTLY as returned (no edits), then
+   `sales-orders credit-read-alert <experian|creditsafe> <file> --message-id "<internetMessageId>"
+   --received <receivedDateTime> --subject "<subject>" --mailbox-id <id>`.
+4. **CFO decisions**: search mail from andrew.whitford@managed.co.uk with subject "RE: Credit run" since
+   the last run. Accept a message only if its `conversationId` is that of a summary this job sent (Sent
+   Items) and its sender address is exactly the CFO's; ignore anything forwarded or from anyone else. Apply only lines of the exact form `SET <company> <amount> BECAUSE <reason> [REVIEW YYYY-MM-DD]`
+   with `sales-orders credit-decide "<company>" <amount> --reason "<reason>" [--review-by ...]` (actor = the
+   CFO's email). Anything else: do nothing; quote it back under "Not understood" in the summary.
+5. **Assess and file**: `sales-orders credit-assess`; `sales-orders credit-file-xero`.
+6. **Tag the alerts** (the connector cannot copy emails, and lists only 10 sub-folders, so client folders
+   cannot be reached reliably): `sales-orders credit-pending-mail`; for each task, `outlook_modify_labels`
+   on `mailbox_message_id` with `addCategories: ["Credit: <client>"]`; then
+   `sales-orders credit-mark-filed <task_id> --ref "Credit: <client>"` (or `--error "<what failed>"`).
+7. **Save**: `sales-orders state-save`. If it refuses (another run saved first), do not retry: report it.
+8. **Summary**: `sales-orders credit-summary --out /tmp/summary.html`; `outlook_send_mail` to
+   andrew.whitford@managed.co.uk, subject = the printed line, body = the file (html). Add any problem from
+   steps 1–7 at the top. Never send anything to anyone else.
+
+## Position at any time
+
+After `state-restore`: `sales-orders credit-status`. (`sales-orders credit-run` is the all-in-one version
+for a host with Microsoft Graph permissions; not used, since none will be granted.)
 
 ## When the CFO gives a decision
 
 The CFO replies to the summary, e.g. "set Acme at £12,000 because they pay by DD, review in 6 months".
 
-1. Confirm the company exists: `sales-orders credit-status` (match the name exactly as listed).
-2. The CFO must run it from their own login (approvals need it):
-   `sales-orders credit-decide "<company>" 12000 --reason "<their words>" --review-by YYYY-MM-DD`
+1. Preferred: the CFO replies to the summary email with `SET <company> <amount> BECAUSE <reason>`; the
+   next daily job applies it (step 4 above).
+2. In a session: `state-restore`, confirm the company with `credit-status`, then (actor = CFO's email)
+   `sales-orders credit-decide "<company>" 12000 --reason "<their words>" --review-by YYYY-MM-DD`, then `state-save`.
 3. Never set a limit the CFO did not give; never invent a reason or a review date. If they gave no
    reason, ask for one (the database refuses a decision without it).
 

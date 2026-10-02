@@ -31,13 +31,19 @@ def test_catalogue_matches_rules_in_views(conn: Connection) -> None:
     }
     emitted = _emitted_rule_codes()
     assert len(emitted) >= 18  # guard against the pattern silently matching nothing
-    # NEGATIVE_LINE_MARGIN / LOW_ORDER_MARGIN existed only in 0001's view and were replaced in 0003.
-    assert emitted - {"NEGATIVE_LINE_MARGIN", "LOW_ORDER_MARGIN"} == catalogued
+    # NEGATIVE_LINE_MARGIN / LOW_ORDER_MARGIN existed only in 0001's view and were replaced in 0003;
+    # NO_DEBT_CREDIT_FOLDER existed only in 0014's credit view and was retired in 0015.
+    assert emitted - {"NEGATIVE_LINE_MARGIN", "LOW_ORDER_MARGIN", "NO_DEBT_CREDIT_FOLDER"} == catalogued
 
 
 def test_credit_rule_severity_matches_the_view(conn: Connection) -> None:
-    sql = (ROOT / "migrations" / "sql" / "0014_credit_risk.up.sql").read_text(encoding="utf-8")
-    view = sql[sql.index("CREATE VIEW sales.v_credit_exception") :]
+    # the latest migration that (re)defines the view is the one in force
+    latest = [
+        p.read_text(encoding="utf-8")
+        for p in sorted((ROOT / "migrations" / "sql").glob("*.up.sql"))
+        if "VIEW sales.v_credit_exception AS" in p.read_text(encoding="utf-8")
+    ][-1]
+    view = latest[latest.index("VIEW sales.v_credit_exception AS") :]
     emitted = dict(re.findall(r"SELECT '([A-Z_]+)'(?: AS rule_code)?, '(error|warning)'", view))
     catalogued = {
         r["rule_code"]: r["severity"]

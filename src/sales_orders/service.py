@@ -317,25 +317,28 @@ def _load_credit_subject(conn: Connection, cs: CreditSubjectIn) -> None:
     conn.execute(
         """
         INSERT INTO sales.credit_subject (display_name, company_number, creditsafe_ref, relationship_code,
-                                          customer_id, supplier_id, one_off_allowance, workbook_sheet, notes)
+                                          customer_id, supplier_id, one_off_allowance, workbook_sheet, notes,
+                                          debt_credit_folder_id)
         VALUES (%(name)s, %(num)s, %(ref)s, %(rel)s, %(cust)s, %(supp)s,
                 COALESCE(%(allow)s, (SELECT numeric_value FROM sales.policy_setting
                                       WHERE setting_key = 'credit_default_one_off')),
-                %(sheet)s, %(notes)s)
+                %(sheet)s, %(notes)s, %(folder)s)
         ON CONFLICT ((lower(btrim(display_name)))) DO UPDATE
            SET company_number = EXCLUDED.company_number, creditsafe_ref = EXCLUDED.creditsafe_ref,
                relationship_code = EXCLUDED.relationship_code, customer_id = EXCLUDED.customer_id,
                supplier_id = EXCLUDED.supplier_id,
                one_off_allowance = COALESCE(%(allow)s, sales.credit_subject.one_off_allowance),
-               workbook_sheet = EXCLUDED.workbook_sheet, notes = EXCLUDED.notes
+               workbook_sheet = EXCLUDED.workbook_sheet, notes = EXCLUDED.notes,
+               debt_credit_folder_id = COALESCE(EXCLUDED.debt_credit_folder_id, sales.credit_subject.debt_credit_folder_id)
          WHERE (sales.credit_subject.company_number, sales.credit_subject.creditsafe_ref,
                 sales.credit_subject.relationship_code, sales.credit_subject.customer_id,
                 sales.credit_subject.supplier_id, sales.credit_subject.workbook_sheet, sales.credit_subject.notes,
-                sales.credit_subject.one_off_allowance)
+                sales.credit_subject.one_off_allowance, sales.credit_subject.debt_credit_folder_id)
                IS DISTINCT FROM
                (EXCLUDED.company_number, EXCLUDED.creditsafe_ref, EXCLUDED.relationship_code,
                 EXCLUDED.customer_id, EXCLUDED.supplier_id, EXCLUDED.workbook_sheet, EXCLUDED.notes,
-                COALESCE(%(allow)s, sales.credit_subject.one_off_allowance))
+                COALESCE(%(allow)s, sales.credit_subject.one_off_allowance),
+                COALESCE(EXCLUDED.debt_credit_folder_id, sales.credit_subject.debt_credit_folder_id))
         """,
         {
             "name": cs.display_name,
@@ -347,6 +350,7 @@ def _load_credit_subject(conn: Connection, cs: CreditSubjectIn) -> None:
             "allow": cs.one_off_allowance,
             "sheet": cs.workbook_sheet,
             "notes": cs.notes,
+            "folder": cs.debt_credit_folder_id,
         },
     )
 

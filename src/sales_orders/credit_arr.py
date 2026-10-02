@@ -12,6 +12,7 @@ from __future__ import annotations
 
 import hashlib
 import io
+import re
 from dataclasses import dataclass
 from decimal import ROUND_HALF_UP, Decimal
 from typing import Any
@@ -28,6 +29,10 @@ _HEADERS = {
     "Ann Rev": "annual_revenue",
 }
 _PENNY = Decimal("0.01")
+
+
+EXTRACT_SHEET = "Credit Extract"
+_EXTRACT_HEADING = re.compile("^## Sheet: (.+?) — ([0-9]+) rows \u00d7 ([0-9]+) columns")
 
 
 class ArrFileError(ValueError):
@@ -63,28 +68,13 @@ def _amount(value: Any, row: int) -> Decimal | None:
         raise ArrFileError(f"row {row}: Ann Rev is not a number: {value!r}") from exc
 
 
-def parse_arr_file(content: bytes, source_name: str) -> ParsedArrFile:
-    try:
-        wb = load_workbook(io.BytesIO(content), read_only=True, data_only=True)
-    except Exception as exc:  # openpyxl raises many types for a damaged/non-xlsx file
-        raise ArrFileError(f"{source_name} is not a readable .xlsx workbook: {exc}") from exc
-    if SHEET not in wb.sheetnames:
-        raise ArrFileError(f"{source_name} has no '{SHEET}' sheet")
-    rows = list(wb[SHEET].iter_rows(values_only=True))
-
-    header_index: int | None = None
-    columns: dict[str, int] = {}
-    for i, row in enumerate(rows[:10]):
-        labels = {str(v).strip(): j for j, v in enumerate(row) if v is not None}
-        if all(h in labels for h in _HEADERS):
-            header_index, columns = i, {f: labels[h] for h, f in _HEADERS.items()}
-            break
-    if header_index is None:
-        raise ArrFileError(f"'{SHEET}' has no header row with: {', '.join(_HEADERS)}")
-
+def _lines(
+    rows: list[tuple[Any, ...]], columns: dict[str, int], first_row: int
+) -> tuple[list[ArrLine], list[tuple[int, str]]]:
+    """ARR lines from data rows (after the header); rows with no amount are reported, not loaded."""
     lines: list[ArrLine] = []
     skipped: list[tuple[int, str]] = []
-    for offset, row in enumerate(rows[header_index + 1 :], start=header_index + 2):
+    for offset, row in enumerate(rows, start=first_row):
 
         def cell(field: str, row: tuple[Any, ...] = row) -> Any:
             j = columns[field]
@@ -112,9 +102,81 @@ def parse_arr_file(content: bytes, source_name: str) -> ParsedArrFile:
                 annual_revenue=amount,
             )
         )
+    return lines, skipped
+
+
+def parse_arr_file(content: bytes, source_name: str) -> ParsedArrFile:
+    try:
+        wb = load_workbook(io.BytesIO(content), read_only=True, data_only=True)
+    except Exception as exc:  # openpyxl raises many types for a damaged/non-xlsx file
+        raise ArrFileError(f"{source_name} is not a readable .xlsx workbook: {exc}") from exc
+    if SHEET not in wb.sheetnames:
+        raise ArrFileError(f"{source_name} has no '{SHEET}' sheet")
+    rows = list(wb[SHEET].iter_rows(values_only=True))
+
+    header_index: int | None = None
+    columns: dict[str, int] = {}
+    for i, row in enumerate(rows[:10]):
+        labels = {str(v).strip(): j for j, v in enumerate(row) if v is not None}
+        if all(h in labels for h in _HEADERS):
+            header_index, columns = i, {f: labels[h] for h, f in _HEADERS.items()}
+            break
+    if header_index is None:
+        raise ArrFileError(f"'{SHEET}' has no header row with: {', '.join(_HEADERS)}")
+
+    lines, skipped = _lines(rows[header_index + 1 :], columns, header_index + 2)
     return ParsedArrFile(
         source_name=source_name,
         sha256=hashlib.sha256(content).hexdigest(),
+        lines=tuple(lines),
+        skipped=tuple(skipped),
+    )
+
+
+def parse_arr_extract(text: str, source_name: str) -> ParsedArrFile:
+    """The ARR file's "Credit Extract" sheet, as the Microsoft 365 connector reads a workbook.
+
+    The sheet is one formula, =FILTER(CHOOSECOLS('Master Data'!A3:R5000,1,2,3,15,18), ...), so it holds
+    raw (unformatted) values for the five columns the assessment needs. The connector renders each
+    sheet as "## Sheet: <name> — <rows> rows x <cols> columns" followed by tab-separated rows. The read
+    is refused unless every row the heading announces is present (no truncation, nothing guessed).
+    """
+    lines_in = text.splitlines()
+    start = next(
+        (
+            i
+            for i, ln in enumerate(lines_in)
+            if (m := _EXTRACT_HEADING.match(ln)) and m.group(1) == EXTRACT_SHEET
+        ),
+        None,
+    )
+    if start is None:
+        raise ArrFileError(f"{source_name}: no '{EXTRACT_SHEET}' sheet in the connector output")
+    heading = _EXTRACT_HEADING.match(lines_in[start])
+    if heading is None:  # pragma: no cover - matched above
+        raise ArrFileError("internal error: heading vanished")
+    declared = int(heading.group(2))
+    body: list[str] = []
+    for ln in lines_in[start + 1 :]:
+        if ln.startswith(("## Sheet:", "Formulas")) or not ln.strip():
+            break
+        if ln.startswith("[Output truncated"):
+            raise ArrFileError(f"{source_name}: the '{EXTRACT_SHEET}' sheet was truncated by the connector")
+        body.append(ln)
+    if len(body) != declared:
+        raise ArrFileError(
+            f"{source_name}: '{EXTRACT_SHEET}' announces {declared} rows but {len(body)} were read: incomplete"
+        )
+    rows = [tuple(cell if cell != "" else None for cell in ln.split("\t")) for ln in body]
+    labels = {str(v).strip(): j for j, v in enumerate(rows[0]) if v is not None}
+    missing = [h for h in _HEADERS if h not in labels]
+    if missing:
+        raise ArrFileError(f"{source_name}: '{EXTRACT_SHEET}' lacks columns {missing}")
+    lines, skipped = _lines(rows[1:], {f: labels[h] for h, f in _HEADERS.items()}, 2)
+    section = "\n".join([lines_in[start], *body])
+    return ParsedArrFile(
+        source_name=f"{source_name} ({EXTRACT_SHEET})",
+        sha256=hashlib.sha256(section.encode()).hexdigest(),
         lines=tuple(lines),
         skipped=tuple(skipped),
     )

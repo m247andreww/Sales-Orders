@@ -241,6 +241,7 @@ class CreditSubjectIn(StrictModel):
     supplier_name: str | None = None
     one_off_allowance: Money | None = None
     workbook_sheet: str | None = None
+    debt_credit_folder_id: str | None = None  # the client's Outlook "Debt & Credit" folder (connector id)
     notes: str | None = None
 
     @model_validator(mode="after")

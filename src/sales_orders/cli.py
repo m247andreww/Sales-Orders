@@ -17,13 +17,15 @@ from alembic import command
 from alembic.config import Config
 from pydantic import BaseModel, ValidationError
 
-from sales_orders import credit, credit_run, service
-from sales_orders.credit_arr import ArrFileError, parse_arr_file
+from sales_orders import credit, credit_run, service, state_store
+from sales_orders.config import database_url
+from sales_orders.credit_arr import ArrFileError, parse_arr_extract, parse_arr_file
 from sales_orders.db import unit_of_work
 from sales_orders.errors import SalesOrderError
 from sales_orders.graph import GraphClient, GraphCredentials, GraphError
 from sales_orders.models import EmployeeAbsenceIn, MasterDataIn, OrderSubmissionIn
 from sales_orders.register import parse_register
+from sales_orders.state_store import BlobStateStore, StateStoreError
 from sales_orders.xero import (
     CREDIT_SCOPE,
     DEFAULT_SCOPE,
@@ -398,11 +400,17 @@ def cmd_credit_run(args: argparse.Namespace) -> int:
 
 
 def cmd_credit_load_arr(args: argparse.Namespace) -> int:
-    if args.file:
-        content, modified, name = Path(args.file).read_bytes(), None, Path(args.file).name
+    if args.extract:
+        parsed, modified = (
+            parse_arr_extract(Path(args.extract).read_text(encoding="utf-8"), "ARR Live.xlsx"),
+            None,
+        )
+    elif args.file:
+        modified = None
+        parsed = parse_arr_file(Path(args.file).read_bytes(), Path(args.file).name)
     else:
         content, modified, name = _graph().download_shared_file(_env("SALES_ORDERS_ARR_FILE_URL"))
-    parsed = parse_arr_file(content, name)
+        parsed = parse_arr_file(content, name)
     with unit_of_work(_actor(args)) as conn:
         snapshot_id, created = credit.load_arr_snapshot(conn, parsed, modified)
     print(
@@ -422,6 +430,7 @@ def cmd_credit_read_alert(args: argparse.Namespace) -> int:
             received_at=datetime.fromisoformat(args.received),
             subject=args.subject,
             html=Path(args.file).read_text(encoding="utf-8"),
+            mailbox_message_id=args.mailbox_id,
         )
     state = "loaded" if r.created else "already loaded"
     print(
@@ -429,6 +438,89 @@ def cmd_credit_read_alert(args: argparse.Namespace) -> int:
         + (f"; NOT READ: {r.parse_error}" if r.parse_error else "")
     )
     return 0 if r.parse_error is None else 1
+
+
+def cmd_credit_alerts_known(args: argparse.Namespace) -> int:
+    with unit_of_work(_actor(args)) as conn:
+        rows = conn.execute(
+            """SELECT internet_message_id FROM sales.credit_alert_email
+                WHERE received_at >= now() - make_interval(days => %s) ORDER BY received_at""",
+            (args.days,),
+        ).fetchall()
+        latest = credit.latest_alert_received(conn)
+    print(
+        json.dumps(
+            {
+                "latest_received": latest.isoformat() if latest else None,
+                "known_message_ids": [r["internet_message_id"] for r in rows],
+            },
+            indent=1,
+        )
+    )
+    return 0
+
+
+def cmd_credit_pending_mail(args: argparse.Namespace) -> int:
+    with unit_of_work(_actor(args)) as conn:
+        tasks = [t for t in credit.pending_filing(conn) if t["task_code"] == "mail_copy"]
+    print(
+        json.dumps(
+            [
+                {
+                    "task_id": t["credit_filing_task_id"],
+                    "client": t["display_name"],
+                    "folder_id": t["debt_credit_folder_id"],
+                    "mailbox_message_id": t["mailbox_message_id"],
+                    "internet_message_id": t["internet_message_id"],
+                }
+                for t in tasks
+            ],
+            indent=1,
+        )
+    )
+    return 0
+
+
+def cmd_credit_mark_filed(args: argparse.Namespace) -> int:
+    with unit_of_work(_actor(args)) as conn:
+        credit.record_filing(conn, args.task_id, args.ref, args.error)
+    print(f"task {args.task_id}: {'attempt failed: ' + args.error if args.error else 'done'}")
+    return 0
+
+
+def cmd_credit_file_xero(args: argparse.Namespace) -> int:
+    xero = _xero_credit_client()
+    actor = _actor(args)
+    report = credit_run.RunReport()
+    credit_run.file_xero_tasks(lambda: unit_of_work(actor), xero, report)
+    for f in report.filed:
+        print(f"  filed: {f}")
+    for e in report.filing_errors:
+        print(f"  PROBLEM: {e}")
+    return 1 if report.filing_errors else 0
+
+
+def cmd_credit_summary(args: argparse.Namespace) -> int:
+    since = datetime.fromisoformat(args.since) if args.since else None
+    with unit_of_work(_actor(args)) as conn:
+        report = credit_run.report_since(conn, since)
+    Path(args.out).write_text(credit_run.summary_html(report), encoding="utf-8")
+    print(credit_run.summary_subject(report))
+    return 0
+
+
+def _state_store() -> BlobStateStore:
+    return BlobStateStore(_env("SALES_ORDERS_STATE_URL"))
+
+
+def cmd_state_restore(_args: argparse.Namespace) -> int:
+    print(state_store.restore(_state_store(), database_url()))
+    return 0
+
+
+def cmd_state_save(_args: argparse.Namespace) -> int:
+    print(state_store.save(_state_store(), database_url()))
+    return 0
 
 
 def cmd_credit_import_workbook(args: argparse.Namespace) -> int:
@@ -530,6 +622,44 @@ def cmd_credit_retry_filing(args: argparse.Namespace) -> int:
     return 0
 
 
+def _add_credit_job_commands(sub: Any) -> None:
+    """Steps the daily Claude job calls between Microsoft 365 connector actions."""
+    p = sub.add_parser(
+        "credit-alerts-known", help="JSON: alert Message-IDs already read, and the latest received time"
+    )
+    p.add_argument("--days", type=int, default=14)
+    p.set_defaults(func=cmd_credit_alerts_known)
+
+    p = sub.add_parser(
+        "credit-pending-mail", help="JSON: alert emails still to be filed in Debt & Credit folders"
+    )
+    p.set_defaults(func=cmd_credit_pending_mail)
+
+    p = sub.add_parser("credit-mark-filed", help="record that a filing task was done (or failed)")
+    p.add_argument("task_id", type=int)
+    p.add_argument("--ref", help="id of the filed copy")
+    p.add_argument("--error", help="why it failed (counts as an attempt)")
+    p.set_defaults(func=cmd_credit_mark_filed)
+
+    p = sub.add_parser(
+        "credit-file-xero", help="file pending snapshots + notes on Xero contacts (Xero custom connection)"
+    )
+    p.set_defaults(func=cmd_credit_file_xero)
+
+    p = sub.add_parser("credit-summary", help="write today's summary email (HTML)")
+    p.add_argument("--out", required=True)
+    p.add_argument("--since", help="ISO time; default: start of today (UTC)")
+    p.set_defaults(func=cmd_credit_summary)
+
+    p = sub.add_parser(
+        "state-restore", help="daily job: restore the saved database (Azure Blob) into an empty database"
+    )
+    p.set_defaults(func=cmd_state_restore)
+
+    p = sub.add_parser("state-save", help="daily job: save the database (refuses if another run saved first)")
+    p.set_defaults(func=cmd_state_save)
+
+
 def _add_credit_commands(sub: Any) -> None:
     """Credit & risk management (migration 0014)."""
     p = sub.add_parser(
@@ -539,7 +669,10 @@ def _add_credit_commands(sub: Any) -> None:
     p.set_defaults(func=cmd_credit_run)
 
     p = sub.add_parser("credit-load-arr", help="load the ARR file (SharePoint, or --file)")
-    p.add_argument("--file", help="a local copy instead of SharePoint")
+    p.add_argument("--file", help="a local copy of the workbook instead of SharePoint")
+    p.add_argument(
+        "--extract", help="the Microsoft 365 connector's read of the workbook (Credit Extract sheet)"
+    )
     p.set_defaults(func=cmd_credit_load_arr)
 
     p = sub.add_parser("credit-read-alert", help="load one saved bureau alert email body (HTML)")
@@ -548,6 +681,9 @@ def _add_credit_commands(sub: Any) -> None:
     p.add_argument("--message-id", required=True, help="the email's Message-ID (idempotency key)")
     p.add_argument("--received", required=True, help="ISO time with offset, e.g. 2026-10-01T08:03:20+00:00")
     p.add_argument("--subject", default="bureau alert")
+    p.add_argument(
+        "--mailbox-id", help="the message's Outlook id (from the Microsoft 365 connector), for filing"
+    )
     p.set_defaults(func=cmd_credit_read_alert)
 
     p = sub.add_parser(
@@ -698,6 +834,7 @@ def build_parser() -> argparse.ArgumentParser:
     _add_master_data_commands(sub)
     _add_arr_commands(sub)
     _add_credit_commands(sub)
+    _add_credit_job_commands(sub)
     return parser
 
 
@@ -711,7 +848,7 @@ def main(argv: list[str] | None = None) -> int:
         print(f"rejected: {exc}", file=sys.stderr)
     except XeroFormatError as exc:
         print(f"Xero: {exc}", file=sys.stderr)
-    except (ArrFileError, GraphError) as exc:
+    except (ArrFileError, GraphError, StateStoreError) as exc:
         print(f"rejected: {exc}", file=sys.stderr)
     except OSError as exc:  # Xero unreachable or refused the request: nothing was loaded
         print(f"Xero request failed: {exc}", file=sys.stderr)

@@ -80,7 +80,7 @@ def run(uow: UnitOfWork, settings: RunSettings, mail: Mailbox, xero: XeroFiler |
             report,
             "summary email",
             lambda: mail.send_mail(
-                settings.mailbox, settings.summary_to or "", _subject(report), summary_html(report)
+                settings.mailbox, settings.summary_to or "", summary_subject(report), summary_html(report)
             ),
         )
     return report
@@ -182,7 +182,7 @@ def _file_xero(uow: UnitOfWork, xero: XeroFiler | None, t: dict[str, Any]) -> st
 # ---------------------------------------------------------------------------- summary
 
 
-def _subject(report: RunReport) -> str:
+def summary_subject(report: RunReport) -> str:
     reviews = sum(1 for e in report.exceptions if e["rule_code"] == "CREDIT_REVIEW_NEEDED")
     changed = sum(1 for a in report.assessments if a["outcome_code"] == "applied")
     problems = len(report.errors) + len(report.filing_errors)
@@ -224,3 +224,55 @@ def summary_html(report: RunReport) -> str:
 <h3>Problems in this run</h3><ul>{_rows(report.errors + report.filing_errors)}</ul>
 <p>To decide a limit: sales-orders credit-decide "&lt;company&gt;" &lt;limit&gt; --reason "...".</p>
 """
+
+
+def file_xero_tasks(uow: UnitOfWork, xero: XeroFiler | None, report: RunReport) -> None:
+    """Only the Xero filing tasks (the daily Claude job files emails itself, via the connector)."""
+    with uow() as conn:
+        tasks = [t for t in credit.pending_filing(conn) if t["task_code"] == "xero_snapshot"]
+    for t in tasks:
+        ref: str | None = None
+        error: str | None = None
+        try:
+            ref = _file_xero(uow, xero, t)
+        except Exception as exc:  # recorded against the task and retried; never stops the run
+            error = f"{type(exc).__name__}: {exc}"
+        with uow() as conn:
+            credit.record_filing(conn, int(t["credit_filing_task_id"]), ref, error)
+        label = f"xero_snapshot {t['display_name']}"
+        (report.filing_errors if error else report.filed).append(f"{label}: {error}" if error else label)
+
+
+def report_since(conn: Connection, since: datetime | None = None) -> RunReport:
+    """What happened since `since` (default: start of today, UTC), for the summary email."""
+    start = since or datetime.now(UTC).replace(hour=0, minute=0, second=0, microsecond=0)
+    report = RunReport()
+    report.arr = "see the job log"
+    alerts = conn.execute(
+        "SELECT count(*) AS n, count(*) FILTER (WHERE parse_error IS NOT NULL) AS bad"
+        " FROM sales.credit_alert_email WHERE loaded_at >= %s",
+        (start,),
+    ).fetchone()
+    if alerts:
+        report.alerts_read, report.alerts_unreadable = int(alerts["n"]), int(alerts["bad"])
+    ids = [
+        r["credit_assessment_id"]
+        for r in conn.execute(
+            "SELECT credit_assessment_id FROM sales.credit_assessment WHERE assessed_at >= %s ORDER BY 1",
+            (start,),
+        )
+    ]
+    report.assessments = [credit.assessment(conn, int(i)) for i in ids]
+    for t in conn.execute(
+        """SELECT t.task_code, s.display_name, t.status_code, t.last_error
+             FROM sales.credit_filing_task t JOIN sales.credit_subject s USING (credit_subject_id)
+            WHERE t.updated_at >= %s ORDER BY t.credit_filing_task_id""",
+        (start,),
+    ):
+        label = f"{t['task_code']} {t['display_name']}"
+        if t["status_code"] == "done":
+            report.filed.append(label)
+        elif t["last_error"]:
+            report.filing_errors.append(f"{label}: {t['last_error']}")
+    report.exceptions = credit.credit_exceptions(conn)
+    return report
