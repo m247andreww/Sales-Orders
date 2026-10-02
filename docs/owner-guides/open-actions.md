@@ -4,27 +4,28 @@ Kept current by Claude every turn. Newest state wins.
 
 ## Your actions (now)
 
-1. **Claude settings** — on the Credit Job Setup page (https://claude.ai/artifact/CRQusuBY4xqDxi57qfaJs2),
-   do Step 2: three allowed websites and three codes, then Save. Tell Claude "settings done".
-   *(As of 2 Oct 2026 the codes are not yet visible to Claude sessions.)*
+1. **Look at the Credit Desk** (https://claude.ai/artifact/RuebneZC7AjWuvfiVj2nF8). Read only: do not
+   press Accept or Save yet, because the client list is not confirmed.
+2. **Say "switch on"** when you are happy for it to run every weekday at about 07:45.
 
 ## Still open
 
 | Item | Owner | Status |
 |---|---|---|
-| Azure storage for the daily job | CFO | Done 2 Oct 2026 |
-| Xero link can attach PDFs and notes | CFO | Done 2 Oct 2026 |
-| ARR "Credit Extract" tab | CFO | Done 2 Oct 2026 |
-| Claude settings (websites + codes) | CFO | Waiting |
-| Test day (no Xero filing, no tagging) and summary email | Claude | After settings |
-| Confirm client list and ARR matches (Analysis Mason sheets, QPR Trust, Fronius) | CFO | After test day |
-| Which spreadsheet limits to keep as your decisions (e.g. three £100k, McGill £300k) | CFO | After test day |
+| Azure storage, Xero link, ARR "Credit Extract" tab, Claude settings | CFO | Done 2 Oct 2026 |
+| First live run (saved; ARR 1,225 lines; 4 alerts; 10 decisions waiting; 27 limits applied) | Claude | Done 2 Oct 2026 13:51 |
+| Credit Desk page, attention list grouped by type | Claude | Done 2 Oct 2026 |
+| Switch on the weekday 07:45 run | Claude | Waiting for your "switch on" |
+| Link clients to company numbers (so alerts match) and to Xero contacts (so the PDF can be filed) | Claude drafts, CFO confirms | Next |
+| Legal names and numbers for 5 large unmonitored clients, then add them in Experian and Creditsafe | Claude drafts, CFO adds | Next |
+| Confirm client list and ARR matches (Analysis Mason sheets AMA/ANA, QPR Trust, Fronius) | CFO | Open |
+| Which spreadsheet limits to keep as your decisions (e.g. three £100k, McGill £300k) | CFO | Open |
+| First real decision on the page, checked within 5 minutes | CFO + Claude | After client list confirmed |
 | D1 multi-year invoices: one year (built) or whole invoice | CFO | Open |
-| D2 Xero credit-limit box: copy by hand from daily list, or stop using it | CFO | Open |
+| D2 Xero credit-limit box: copy by hand from the page, or stop using it | CFO | Open |
 | D3 "Order" counts as a commitment; cancelled/old renewals do not | CFO | Open (built as stated) |
 | D4 Experian bands that always come to you: High, Maximum, Serious Adverse | CFO | Open (built as stated) |
 | D5 One-off allowance for a new client: £5,000 | CFO | Open (built as stated) |
-| Switch on the daily run (weekdays ~07:45) | Claude | After you approve the test day |
 
 ## Requirements recorded
 

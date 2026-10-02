@@ -2,9 +2,8 @@
 
 **What this does and why.** Every day the system reads the Experian and Creditsafe alert emails in
 your mailbox and the ARR file in SharePoint, recalculates the credit limit for any client whose
-rating or recurring revenue changed, puts the PDF summary and a note on the client in Xero, files the
-alert email in the client's *Debt & Credit* folder, and emails you one summary. You only reply to the
-cases it cannot decide alone. It replaces the *Credit Limit Assessment Workings* spreadsheet.
+rating or recurring revenue changed, puts the PDF summary and a note on the client in Xero, and fills
+in one page, the **Credit Desk**. You only decide the cases it cannot decide alone, on that page. It replaces the *Credit Limit Assessment Workings* spreadsheet.
 
 You do Parts 2b, 2c and 3 once (about 20 minutes). Part 4 is a one-off review
 before switch-on. Part 5 is the only thing you do from then on.
@@ -14,11 +13,9 @@ before switch-on. Part 5 is the only thing you do from then on.
 ## Part 1 — Microsoft 365 (nothing to do)
 
 The daily job uses the Microsoft 365 connection you have already approved in Claude, under your own
-login. No administrator is involved. Alert emails are **tagged** with the client's name (an Outlook
-category such as "Credit: Acme") instead of copied into folders: the connection cannot copy an email,
-and it can only see the first 10 client folders.
-
-**To see a client's credit emails in Outlook:** search `category:"Credit: Acme"`.
+login. No administrator is involved. That connection can only **read** (tested 2 Oct 2026): it cannot
+send, tag, move or copy emails. So alert emails stay where they are in Outlook, and a copy of each is
+kept as evidence in the credit database instead of in the client's Debt & Credit folder.
 
 ---
 
@@ -130,14 +127,18 @@ it differs from the spreadsheet. Claude prepares both files; you only read and a
 
 ## Part 5 — Every day from then on (you, a minute)
 
-1. Read the email **"Credit run: … limit(s) updated, … decision(s) needed"**.
-2. Under **Needs you**, each line is a client the system would not decide alone. Click **Reply** and
-   type one line per decision, exactly like this:
-   `SET Acme Ltd 12000 BECAUSE pays by Direct Debit REVIEW 2027-04-01` (the REVIEW part is optional).
-   Send it. The next morning's email confirms it, or lists it under "Not understood".
-3. Nothing under **Needs you**? Nothing to do.
+**What this does and why.** Each weekday morning the job fills in the Credit Desk page and Claude
+notifies you when it has finished. Anything it would not decide alone waits there for you. Your
+decision is applied straight away (limit, Xero PDF and note), not the next morning.
 
-**If the email does not arrive by 9am:** tell Claude "the credit run email didn't come" — the run
-reports its own problems in the email, so a missing email means it did not run at all.
+1. Open the **Credit Desk**: https://claude.ai/artifact/RuebneZC7AjWuvfiVj2nF8 (pinning it in your
+   Claude sidebar saves finding the link).
+   *You should see "Last credit run:" with today's date, and a list headed "Needs your decision".*
+2. For each client under **Needs your decision**: click **Accept £…** to take the suggested limit, or type your own
+   amount and a reason, then click **Save**.
+   *Within about 5 minutes the line should say "Done at HH:MM: limit £…".*
+3. Nothing under **Needs your decision**? Nothing to do.
 
-**Done when:** each morning's **Needs you** list is empty.
+**If it doesn't look like that:** if the date is not today's by 9am, or a line has not said "Done" after 10 minutes, tell Claude "the Credit Desk didn't update" and send a screenshot of the page.
+
+**Done when:** the **Needs your decision** list is empty and every decision reads "Done".

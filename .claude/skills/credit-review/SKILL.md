@@ -56,8 +56,7 @@ for a host with Microsoft Graph permissions; not used, since none will be grante
 
 The CFO replies to the summary, e.g. "set Acme at £12,000 because they pay by DD, review in 6 months".
 
-1. Preferred: the CFO replies to the summary email with `SET <company> <amount> BECAUSE <reason>`; the
-   next daily job applies it (step 4 above).
+1. Preferred: the CFO uses the Credit Desk page; the decision job applies it at once (above).
 2. In a session: `state-restore`, confirm the company with `credit-status`, then (actor = CFO's email)
    `sales-orders credit-decide "<company>" 12000 --reason "<their words>" --review-by YYYY-MM-DD`, then `state-save`.
 3. Never set a limit the CFO did not give; never invent a reason or a review date. If they gave no
