@@ -7,8 +7,11 @@
 --   receivables report;
 -- * pipeline: PandaDoc documents sent to a client and not yet signed or closed, with their value.
 -- sales.v_credit_exposure compares, for EVERY customer (monitored or not, excluded or not), what is owed
--- plus what is in progress against the credit limit in force. Pipeline values are quoted figures; VAT is
--- added when credit_pipeline_add_vat = 1 (PandaDoc totals are ex VAT), because limits include VAT.
+-- against the credit limit in force (headroom), and separately what it would be if the customer's LARGEST
+-- in-progress PandaDoc document were signed (headroom_if_signed). PandaDoc totals are not additive: a
+-- customer often has competing alternative quotes, and recurring documents mix monthly and whole-term
+-- figures (2026-10-02 review of 113 documents), so the sum is shown for information only. VAT is added
+-- to the PandaDoc figure when credit_pipeline_add_vat = 1 (PandaDoc totals are ex VAT; limits include VAT).
 -- =============================================================================
 
 INSERT INTO sales.policy_setting (setting_key, numeric_value, description) VALUES
@@ -88,7 +91,8 @@ WITH p AS (
      WHERE l.xero_contact_id IS NOT NULL
      GROUP BY l.xero_contact_id
 ), pl AS (
-    SELECT d.xero_contact_id, count(*) AS pipeline_count, sum(d.grand_total) AS pipeline_value
+    SELECT d.xero_contact_id, count(*) AS pipeline_count, sum(d.grand_total) AS pipeline_value,
+           max(d.grand_total) AS pipeline_largest
       FROM sales.credit_pipeline_document d JOIN pl_snap ON d.credit_pipeline_snapshot_id = pl_snap.id
      WHERE d.xero_contact_id IS NOT NULL
      GROUP BY d.xero_contact_id
@@ -139,11 +143,14 @@ SELECT k.xero_contact_id,
        ar.oldest_due_date,
        COALESCE(pl.pipeline_count, 0) AS pipeline_count,
        COALESCE(pl.pipeline_value, 0) AS pipeline_value,
-       round(COALESCE(pl.pipeline_value, 0) * (1 + CASE WHEN p.add_vat = 1 THEN p.vat ELSE 0 END), 2) AS pipeline_gross,
+       COALESCE(pl.pipeline_largest, 0) AS pipeline_largest,
+       round(COALESCE(pl.pipeline_largest, 0) * (1 + CASE WHEN p.add_vat = 1 THEN p.vat ELSE 0 END), 2) AS pipeline_gross,
+       COALESCE(ar.outstanding, 0) AS exposure,
+       lim.credit_limit - COALESCE(ar.outstanding, 0) AS headroom,
        COALESCE(ar.outstanding, 0)
-         + round(COALESCE(pl.pipeline_value, 0) * (1 + CASE WHEN p.add_vat = 1 THEN p.vat ELSE 0 END), 2) AS exposure,
+         + round(COALESCE(pl.pipeline_largest, 0) * (1 + CASE WHEN p.add_vat = 1 THEN p.vat ELSE 0 END), 2) AS exposure_if_signed,
        lim.credit_limit - (COALESCE(ar.outstanding, 0)
-         + round(COALESCE(pl.pipeline_value, 0) * (1 + CASE WHEN p.add_vat = 1 THEN p.vat ELSE 0 END), 2)) AS headroom
+         + round(COALESCE(pl.pipeline_largest, 0) * (1 + CASE WHEN p.add_vat = 1 THEN p.vat ELSE 0 END), 2)) AS headroom_if_signed
   FROM keys k
   CROSS JOIN p
   LEFT JOIN sales.xero_contact_directory d ON d.xero_contact_id = k.xero_contact_id

@@ -111,12 +111,29 @@ def test_owed_plus_pipeline_with_vat_is_compared_to_the_limit(
     ) == ["Nobody Known"]
     assert _pipeline(conn, ("Acme - Laptop refresh", None, "4000.00")) == []
     r = _row(conn, ACME)
-    assert (r["outstanding"], r["pipeline_value"], r["pipeline_gross"]) == (
+    assert (r["outstanding"], r["pipeline_largest"], r["pipeline_gross"]) == (
         Decimal(5500),
         Decimal(4000),
         Decimal(4800),
     )
-    assert (r["exposure"], r["headroom"], r["status"]) == (Decimal(10300), Decimal(-300), "over_limit")
+    assert (r["exposure"], r["headroom"]) == (Decimal(5500), Decimal(4500))  # what is owed, against the limit
+    assert (r["exposure_if_signed"], r["headroom_if_signed"], r["status"]) == (
+        Decimal(10300),
+        Decimal(-300),
+        "over_if_signed",
+    )
+
+
+def test_alternative_quotes_are_not_added_together(conn: Connection, master_data: MasterDataIn) -> None:
+    _setup(conn)
+    _pipeline(conn, ("Acme - Option 1", None, "3000.00"), ("Acme - Option 2", None, "5000.00"))
+    r = _row(conn, ACME)
+    assert (r["pipeline_count"], r["pipeline_value"], r["pipeline_largest"]) == (
+        2,
+        Decimal(8000),
+        Decimal(5000),
+    )
+    assert r["exposure_if_signed"] == Decimal(6000)  # the largest one, plus VAT; never the sum
 
 
 def test_customer_without_a_limit_is_reported(conn: Connection, master_data: MasterDataIn) -> None:
@@ -124,7 +141,12 @@ def test_customer_without_a_limit_is_reported(conn: Connection, master_data: Mas
     _receivables(conn, ("Beta Services Ltd", "0.00", "900.00"))
     _pipeline(conn, ("Proposal for growth", "Beta Services", "100.00"))  # matched by client company
     r = _row(conn, BETA)
-    assert (r["credit_limit"], r["exposure"], r["status"]) == (None, Decimal(1020), "no_limit")
+    assert (r["credit_limit"], r["exposure"], r["exposure_if_signed"], r["status"]) == (
+        None,
+        Decimal(900),
+        Decimal(1020),
+        "no_limit",
+    )
 
 
 def test_amounts_must_not_be_floats(conn: Connection, master_data: MasterDataIn) -> None:

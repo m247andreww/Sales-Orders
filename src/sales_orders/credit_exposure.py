@@ -165,11 +165,13 @@ def load_pipeline(conn: Connection, document: dict[str, Any]) -> tuple[int, list
 
 def _status(r: dict[str, Any]) -> str:
     if r["credit_limit"] is None:
-        return "no_limit" if r["exposure"] > 0 else "no_limit_nothing_owed"
-    return "over_limit" if r["exposure"] > r["credit_limit"] else "within"
+        return "no_limit" if r["exposure_if_signed"] > 0 else "no_limit_nothing_owed"
+    if r["exposure"] > r["credit_limit"]:
+        return "over_limit"
+    return "over_if_signed" if r["exposure_if_signed"] > r["credit_limit"] else "within"
 
 
-_ORDER = {"over_limit": 0, "no_limit": 1, "within": 2, "no_limit_nothing_owed": 3}
+_ORDER = {"over_limit": 0, "no_limit": 1, "over_if_signed": 2, "within": 3, "no_limit_nothing_owed": 4}
 
 
 def exposure_rows(conn: Connection) -> list[dict[str, Any]]:
@@ -177,14 +179,15 @@ def exposure_rows(conn: Connection) -> list[dict[str, Any]]:
     rows = conn.execute(
         """SELECT xero_contact_id, name, monitored, excluded_reason, arr_prefixes, annual_recurring, credit_limit,
                   current_amount, overdue_amount, overdue_over_60, outstanding, oldest_due_date, pipeline_count,
-                  pipeline_value, pipeline_gross, exposure, headroom
+                  pipeline_value, pipeline_largest, pipeline_gross, exposure, headroom, exposure_if_signed,
+                  headroom_if_signed
              FROM sales.v_credit_exposure"""
     ).fetchall()
     out = []
     for r in rows:
         status = _status(r)
         out.append({**r, "status": status, "xero_contact_id": str(r["xero_contact_id"])})
-    return sorted(out, key=lambda r: (_ORDER[r["status"]], -r["exposure"], r["name"] or ""))
+    return sorted(out, key=lambda r: (_ORDER[r["status"]], -r["exposure_if_signed"], r["name"] or ""))
 
 
 def latest_unmatched(conn: Connection) -> dict[str, list[dict[str, Any]]]:

@@ -1007,9 +1007,12 @@ def _exposure_export(conn: Connection) -> dict[str, Any]:
         "overdue_over_60",
         "outstanding",
         "pipeline_value",
+        "pipeline_largest",
         "pipeline_gross",
         "exposure",
         "headroom",
+        "exposure_if_signed",
+        "headroom_if_signed",
     )
     rows = [
         {

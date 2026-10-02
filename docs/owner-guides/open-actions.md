@@ -4,8 +4,10 @@ Kept current by Claude every turn. Newest state wins.
 
 ## Your actions (now)
 
-1. When convenient: on the Credit Desk (https://claude.ai/artifact/RuebneZC7AjWuvfiVj2nF8), work through
-   **Customers with no credit limit**: Copy the number, add it in Experian and Creditsafe, press "I've added it".
+1. Read **Credit exposure: every customer** on the Credit Desk (https://claude.ai/artifact/RuebneZC7AjWuvfiVj2nF8).
+2. Decide limits for the largest owed-with-no-limit customers: Princes, Motive, Tilbury Douglas (first add
+   Princes and Tilbury Douglas in Experian and Creditsafe if not already).
+3. Reply "exclude Vistair" if it should not be monitored.
 
 ## Still open
 
@@ -39,6 +41,10 @@ Kept current by Claude every turn. Newest state wins.
 | D5 One-off allowance for a new client: £5,000 | CFO | Open (built as stated) |
 
 ## Requirements recorded
+
+- 2 Oct 2026 (CFO): daily report shows every customer: Xero invoices (not yet due, overdue) and in-progress
+  PandaDoc, against the credit limit. Built: headroom on what is owed; "if it signs" adds the customer's
+  largest unsigned PandaDoc (+VAT) only, because PandaDoc totals include alternatives and fee fields.
 
 - 2 Oct 2026 (CFO): amounts in outputs are whole pounds (calculations keep pence).
 - 2 Oct 2026 (CFO): the daily report scans for customers with no credit limit through monitoring
