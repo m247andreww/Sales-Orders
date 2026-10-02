@@ -25,3 +25,9 @@ Kept current by Claude every turn. Newest state wins.
 | D4 Experian bands that always come to you: High, Maximum, Serious Adverse | CFO | Open (built as stated) |
 | D5 One-off allowance for a new client: £5,000 | CFO | Open (built as stated) |
 | Switch on the daily run (weekdays ~07:45) | Claude | After you approve the test day |
+
+## Requirements recorded
+
+- 2 Oct 2026 (CFO): a decision accepted or set on the Credit Desk is applied **immediately** (limit,
+  Xero PDF and note), not at the next morning's run. Design: the page starts the credit job at once via
+  the Claude Code Remote connector; done within about 5 minutes.
