@@ -52,6 +52,8 @@ done
 if [ -z "$SUB" ]; then echo "STOPPED: no active subscription holds $RG. Send a screenshot."; exit 1; fi
 az account set --subscription $SUB
 echo "Using subscription: $(az account show --query name -o tsv)"
+echo "Switching on Azure Storage (1-2 minutes)..."
+az provider register --namespace Microsoft.Storage --wait -o none
 ACC=$(az storage account list -g $RG --query "[?tags.purpose=='credit-state'].name | [0]" -o tsv)
 if [ -z "$ACC" ]; then ACC=stsocredit$(openssl rand -hex 4); az storage account create -g $RG -n $ACC -l uksouth --sku Standard_GRS --kind StorageV2 --https-only true --min-tls-version TLS1_2 --allow-blob-public-access false --tags purpose=credit-state -o none; fi
 az storage account blob-service-properties update -g $RG -n $ACC --enable-versioning true --enable-delete-retention true --delete-retention-days 30 -o none
