@@ -589,10 +589,14 @@ def retry_failed_filing(conn: Connection) -> int:
 
 def xero_note(conn: Connection, assessment_id: int) -> str:
     d = snapshot_data(conn, assessment_id)
-    limit = f"£{d.credit_limit:,.0f}" if d.credit_limit is not None else "not set"
+
+    def gbp(v: Decimal | None, missing: str) -> str:
+        return f"£{v:,.0f}" if v is not None else missing
+
     return (
-        f"Credit limit {limit} (assessment {assessment_id}, {d.assessed_at:%d %b %Y}). "
-        f"Experian £{d.experian_limit or 0:,.0f}, Creditsafe £{d.creditsafe_limit or 0:,.0f}, "
+        f"Credit limit {gbp(d.credit_limit, 'not set')} (assessment {assessment_id}, {d.assessed_at:%d %b %Y}). "
+        f"Experian {gbp(d.experian_limit, 'no limit reported')}, "
+        f"Creditsafe {gbp(d.creditsafe_limit, 'no limit reported')}, "
         f"trading requirement £{d.trading_requirement:,.0f}. {d.decision}"
     )
 

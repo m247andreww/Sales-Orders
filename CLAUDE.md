@@ -95,6 +95,11 @@ These are the owner's stated preferences; follow them in every session.
   without a real test. (An earlier note here claimed they worked from the tool list alone: that was wrong.)
   So: no emails are filed or tagged; the daily summary reaches the CFO as a Claude notification instead.
 - Xero custom connection: CFO added accounting.contacts + accounting.attachments (2026-10-02).
+- **Never ask the CFO what the systems can answer (CFO, 2026-10-02: "you can get who we invoice from Xero").**
+  Who we invoice = the Xero contact (name, company number, address, balances). Who we contract with =
+  PandaDoc (the signed New Customer Application Form holds the registered name and company number; MSAs and
+  variations name the legal entity) and the New Orders emails in the CFO's inbox. Look these up first;
+  ask only what none of them answers. Companies House is blocked by the network: confirm numbers by web search.
 
 ## Sources of truth (ADR 0003)
 

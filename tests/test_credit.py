@@ -586,6 +586,31 @@ def test_snapshot_is_made_once_and_reproducible(conn: Connection, worked_example
     assert row.fetchone() == {"sha256": hashlib.sha256(pdf).hexdigest()}
 
 
+def test_only_the_latest_assessment_is_filed_on_xero(
+    conn: Connection, worked_example: dict[str, Any]
+) -> None:
+    first = int(worked_example["credit_assessment_id"])
+    credit.queue_filing(conn)
+    _arr(conn, ("TST001", "Live", "annual", "9000.00"))  # the same day, before anything is filed
+    [second] = credit.assess_due(conn)
+    credit.queue_filing(conn)
+    pending = [t for t in credit.pending_filing(conn) if t["task_code"] == "xero_snapshot"]
+    assert [t["credit_assessment_id"] for t in pending] == [second["credit_assessment_id"]]
+    row = conn.execute(
+        "SELECT status_code FROM sales.credit_filing_task WHERE credit_assessment_id = %s", (first,)
+    ).fetchone()
+    assert row == {"status_code": "superseded"}  # kept as a record, never deleted
+
+
+def test_xero_note_says_when_a_bureau_gave_no_limit(conn: Connection, master_data: MasterDataIn) -> None:
+    _subject(conn)
+    _arr(conn, ("TST001", "Live", "annual", "5300.00"))
+    _bureaus(conn, "£57,000", None)  # Creditsafe has not reported this company
+    [a] = credit.assess_due(conn)
+    note = credit.xero_note(conn, int(a["credit_assessment_id"]))
+    assert "Experian £57,000, Creditsafe no limit reported," in note
+
+
 def test_debt_and_credit_folders_are_mapped_by_client_name(
     conn: Connection, master_data: MasterDataIn
 ) -> None:
