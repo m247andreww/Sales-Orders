@@ -57,6 +57,7 @@ az provider register --namespace Microsoft.Storage --wait -o none
 ACC=$(az storage account list -g $RG --query "[?tags.purpose=='credit-state'].name | [0]" -o tsv)
 if [ -z "$ACC" ]; then ACC=stsocredit$(openssl rand -hex 4); az storage account create -g $RG -n $ACC -l uksouth --sku Standard_GRS --kind StorageV2 --https-only true --min-tls-version TLS1_2 --allow-blob-public-access false --tags purpose=credit-state -o none; fi
 az storage account blob-service-properties update -g $RG -n $ACC --enable-versioning true --enable-delete-retention true --delete-retention-days 30 -o none
+az storage account keys renew -g $RG -n $ACC --key primary -o none
 KEY=$(az storage account keys list -g $RG -n $ACC --query "[0].value" -o tsv)
 az storage container create --account-name $ACC --account-key "$KEY" -n credit-state -o none
 SAS=$(az storage container generate-sas --account-name $ACC --account-key "$KEY" -n credit-state --permissions rcw --expiry $(date -u -d '+12 months' +%Y-%m-%dT%H:%MZ) --https-only -o tsv)
@@ -66,7 +67,8 @@ echo "2) Code for SALES_ORDERS_STATE_URL:  https://$ACC.blob.core.windows.net/cr
 EOF
 ```
 
-4. Leave the window open: line 1 and line 2 are needed in Part 2c.
+4. Leave the window open: line 1 and line 2 are needed in Part 2c. Each run makes a new line 2 and
+   switches the old one off, so run it again if line 2 is ever shown to anyone.
 
 **If it doesn't look like that:** send a screenshot of the window (it is safe to paste the box again). Never paste line 2 into a chat or email.
 
