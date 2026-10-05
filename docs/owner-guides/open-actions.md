@@ -4,10 +4,8 @@ Kept current by Claude every turn. Newest state wins.
 
 ## Your actions (now)
 
-1. **Decide the 4 waiting on the Credit Desk**: Tilbury Douglas, Rascal Solutions, QPR, Napier Parking. Creditsafe
-   figures for Tilbury (£100,000) and QPR (£3,500) confirmed by the CFO from the portal, 5 Oct 2026. Tilbury's need is
-   driven by one tri-annual ARR line (£664,667 a year): see decision D1.
-2. **Cardano and Pragmatic** review dates: reply with the dates you want.
+1. **Napier Parking: confirm again** on the Credit Desk. Your 12:22 decision (£9,300, review 12 Oct) was made before its
+   Creditsafe figure (£86,000) was entered, so the new evidence brought it back. Recommended is still £9,300.
 
 ## Still open
 
@@ -24,6 +22,9 @@ Kept current by Claude every turn. Newest state wins.
 | First figures entered for all 18 clients (14 settled, 4 to decide) | CFO | Done 5 Oct 2026 |
 | Overlapping decision jobs applied some presses 2-3 times (same values): each press now applied once (migration 0024) | Claude | Done 5 Oct 2026 |
 | Creditsafe Safe numbers recorded: Tilbury UK00067419, QPR UK00005232 | Claude | Done 5 Oct 2026 |
+| Review dates set: Cardano Holding £1,375,300 review 5 Nov 2026; Pragmatic Semiconductor £24,000 review 19 Oct 2026 | CFO / Claude | Done 5 Oct 2026 |
+| Decisions: Tilbury £200,000 (review 30 Oct), Rascal £75,000 (30 Oct), QPR £44,000 (5 Nov) | CFO | Done 5 Oct 2026 |
+| Rule question: should new bureau figures re-open a CFO decision made the same day when the recommendation is unchanged? | CFO | Open |
 | Matrix SCM limit £0 (former customer; owes £42k early-termination charges): collection, not credit | CFO | Open |
 | Stephensons (MK) Trust: Experian figure still from Jan 2025 (only Creditsafe was entered) | CFO | Open |
 | Outlook rule: alerts to Inbox / Credit alerts, marked read | CFO | Done 2 Oct 2026 |
