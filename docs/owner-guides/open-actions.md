@@ -4,13 +4,10 @@ Kept current by Claude every turn. Newest state wins.
 
 ## Your actions (now)
 
-1. **Enter first figures** on the Credit Desk, under "First figures needed" (18 clients, largest owed first). Start
-   with the five that have no figures at all: Princes (£269k owed), Tilbury Douglas (£156k), Starlizard (£98k),
-   Rascal Solutions (£63k), Matrix SCM (£42k).
-2. **Check in Creditsafe that the 12 "Creditsafe only" clients are on your Live Customers list.** Creditsafe has
-   never alerted on any of them, which suggests they were never added there. If one is missing, add it, then enter
-   its figure.
-3. **Cardano and Pragmatic** review dates: reply with the dates you want, e.g. "Cardano 3 months, Pragmatic 1 month".
+1. **Decide the 4 waiting on the Credit Desk**: Tilbury Douglas, Rascal Solutions, QPR, Napier Parking.
+   First re-check two Creditsafe figures you entered, which disagree hugely with Experian: Tilbury Douglas
+   (Creditsafe £100,000 vs Experian £6,600,000) and QPR (Creditsafe £3,500 vs Experian £530,000).
+2. **Cardano and Pragmatic** review dates: reply with the dates you want.
 
 ## Still open
 
@@ -24,8 +21,10 @@ Kept current by Claude every turn. Newest state wins.
 | 30 credit PDFs and notes filed on Xero contacts | Claude | Done 2 Oct 2026 |
 | Newly added clients in Experian and Creditsafe | CFO | Done 2 Oct 2026 |
 | First figures box on the Credit Desk (18 clients missing a bureau figure; saved figures reassess the client at once) | Claude | Done 5 Oct 2026 |
-| First figures entered for the 18 clients | CFO | Open |
-| Stephensons (MK) Trust: Experian figure is from Jan 2025 (stale) | CFO, while entering its Creditsafe figure | Open |
+| First figures entered for all 18 clients (14 settled, 4 to decide) | CFO | Done 5 Oct 2026 |
+| Overlapping decision jobs applied some presses 2-3 times (same values): each press now applied once (migration 0024) | Claude | Done 5 Oct 2026 |
+| Matrix SCM limit £0 (former customer; owes £42k early-termination charges): collection, not credit | CFO | Open |
+| Stephensons (MK) Trust: Experian figure still from Jan 2025 (only Creditsafe was entered) | CFO | Open |
 | Outlook rule: alerts to Inbox / Credit alerts, marked read | CFO | Done 2 Oct 2026 |
 | Each client's alerts filed as PDFs on its Xero contact (9 filed; automatic from now on) | Claude | Done 2 Oct 2026 |
 | PandaDoc values: alternatives, fee fields and monthly-vs-term totals make sums unreliable; tidy in PandaDoc or agree a rule | CFO + Claude | Open |
