@@ -4,9 +4,10 @@ Kept current by Claude every turn. Newest state wins.
 
 ## Your actions (now)
 
-1. **Decide Motive** on the Credit Desk (owes £199,158, all overdue), then the other 7.
-2. **Tilbury Douglas**: its committed ARR fell from £1.72m to £1.21m a year on 5 Oct (a £508,800 line is now
-   Cancelled). Worth knowing given it owes £156k with no limit yet.
+1. **Decide Motive** on the Credit Desk with the new three-step box (limit, reason, review date), then the other 7.
+2. **Cardano and Pragmatic** have no review date (cleared on 2 Oct). Under the new rule every decision has one:
+   reply with the dates you want, e.g. "Cardano 6 months, Pragmatic 12 months".
+3. **Tilbury Douglas**: committed ARR fell from £1.72m to £1.21m a year on 5 Oct; owes £156k with no limit yet.
 
 ## Still open
 
@@ -46,6 +47,9 @@ Kept current by Claude every turn. Newest state wins.
 | D5 One-off allowance for a new client: £5,000 | CFO | Open (built as stated) |
 
 ## Requirements recorded
+
+- 5 Oct 2026 (CFO): decision entry = accept the recommended amount OR choose another; either way a reason and a
+  review / follow-up date are required (page, code and database).
 
 - 2 Oct 2026 (CFO): daily report shows every customer: Xero invoices (not yet due, overdue) and in-progress
   PandaDoc, against the credit limit. Built: headroom on what is owed; "if it signs" adds the customer's
