@@ -4,10 +4,11 @@ Kept current by Claude every turn. Newest state wins.
 
 ## Your actions (now)
 
-1. Read **Credit exposure: every customer** on the Credit Desk (https://claude.ai/artifact/RuebneZC7AjWuvfiVj2nF8).
-2. Decide limits for the largest owed-with-no-limit customers: Princes, Motive, Tilbury Douglas (first add
-   Princes and Tilbury Douglas in Experian and Creditsafe if not already).
-3. Reply "exclude Vistair" if it should not be monitored.
+1. **Two Creditsafe corrections** (McGill, Riverside), Copy buttons at the top of
+   https://claude.ai/artifact/11xiBVxunoMbzqtR3BZoEi. Then tell Claude "Creditsafe corrected".
+2. **Decide Motive** on the Credit Desk (owes £199,158, all overdue), then the other 7.
+3. **Metropolitan Gaming**: its ARR fell from £1.46m to £330k on 5 Oct; its decision on the Credit Desk
+   now rests on the smaller figure.
 
 ## Still open
 
@@ -25,7 +26,9 @@ Kept current by Claude every turn. Newest state wins.
 | Each client's alerts filed as PDFs on its Xero contact (9 filed; automatic from now on) | Claude | Done 2 Oct 2026 |
 | PandaDoc values: alternatives, fee fields and monthly-vs-term totals make sums unreliable; tidy in PandaDoc or agree a rule | CFO + Claude | Open |
 | Match 'BBA CSP Licensing' and 'Exchange Ilford' documents to their customers | Claude | Open |
-| Check the Monday run can read Xero invoices and PandaDoc itself | Claude | Mon 5 Oct |
+| Monday run read Xero invoices and PandaDoc itself, no approvals needed | Claude | Done 5 Oct 2026 |
+| Broadwick number corrected to 12136501; Matrix SCM added as client | Claude | Done 5 Oct 2026 |
+| Daily job asked the CFO questions the systems answer: skill corrected (step 7b) | Claude | Done 5 Oct 2026 |
 | McGill display name still says "Services" | Claude | Next change |
 | Family BS: no Companies House number, so it needs its bureau reference to be set up | Claude | Open |
 | Company numbers found for 22 of 27 unmonitored customers; 15 written into Xero (certain only) | Claude | Done 2 Oct 2026 |
