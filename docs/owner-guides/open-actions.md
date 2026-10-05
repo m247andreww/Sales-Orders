@@ -25,6 +25,7 @@ Kept current by Claude every turn. Newest state wins.
 | Review dates set: Cardano Holding £1,375,300 review 5 Nov 2026; Pragmatic Semiconductor £24,000 review 19 Oct 2026 | CFO / Claude | Done 5 Oct 2026 |
 | Decisions: Tilbury £200,000 (review 30 Oct), Rascal £75,000 (30 Oct), QPR £44,000 (5 Nov) | CFO | Done 5 Oct 2026 |
 | Rule question: should new bureau figures re-open a CFO decision made the same day when the recommendation is unchanged? | CFO | Open |
+| Direct link to the agencies (5 Oct 2026): Experian Business Express has no API (enterprise Commercial Credit API is a separate contract); Creditsafe Connect API is documented and covers limits, monitoring and portfolio adds. Both blocked by this environment's network until allowed. Ask Creditsafe whether API access is in our subscription and its cost; Experian for a quote | CFO | Open |
 | Matrix SCM limit £0 (former customer; owes £42k early-termination charges): collection, not credit | CFO | Open |
 | Stephensons (MK) Trust: Experian figure still from Jan 2025 (only Creditsafe was entered) | CFO | Open |
 | Outlook rule: alerts to Inbox / Credit alerts, marked read | CFO | Done 2 Oct 2026 |
