@@ -149,7 +149,17 @@ decision is applied straight away (limit, Xero PDF and note), not the next morni
    today): press **Copy** next to the company number, add it in Experian (Monitoring) and Creditsafe (Live
    Customers), then press **I've added it**. *Within about 5 minutes the line disappears: it is now a client.*
    No number shown? Type the 8-character Companies House number into the box first.
-4. Nothing under either list? Nothing to do.
+4. Under **First figures needed** (clients the bureaus have not yet sent a figure for, largest amount owed
+   first), for each client:
+   1. Press **Copy** next to the company number.
+   2. In Experian, search for it and note the **Credit Limit** (not the Credit Rating) and the risk band.
+      In Creditsafe, search for it and note the **Credit Limit**.
+   3. Back on the Credit Desk, type each limit in whole pounds (e.g. "120000"). If a portal shows no limit,
+      tick **No limit shown**. If the company is not in that portal, leave that line blank.
+   4. Choose the Experian risk band if you saw one, then click **Save figures**.
+   *Within about 5 minutes the line says "Saved": the client is reassessed, and either gets its limit
+   automatically or appears under **Needs your decision**.*
+5. Nothing under any list? Nothing to do.
 
 **If it doesn't look like that:** if the date is not today's by 9am, or a line has not said "Done" after 10 minutes, tell Claude "the Credit Desk didn't update" and send a screenshot of the page.
 

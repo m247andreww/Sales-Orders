@@ -464,6 +464,134 @@ def decide(
     return int(limit_row["id"])
 
 
+BUREAUX = ("experian", "creditsafe")
+
+
+@dataclass(frozen=True)
+class BureauFigure:
+    """One figure the CFO read from a bureau portal. `limit` None = the portal shows no limit ("N/A")."""
+
+    limit: Decimal | None
+    band: str | None = None
+
+
+def enter_bureau_figures(conn: Connection, subject: str, figures: dict[str, BureauFigure]) -> list[int]:
+    """Record the limits the CFO read from the Experian / Creditsafe portals (migration 0023).
+
+    Used when a bureau has never alerted on a client, so the database has no figure to assess. Each figure is
+    an ordinary dated bureau reading: the next alert supersedes it. Needs approve_credit_terms (held in the
+    database). Returns the new reading ids.
+    """
+    if not figures:
+        raise SalesOrderError("enter at least one bureau figure")
+    for bureau, f in figures.items():
+        if bureau not in BUREAUX:
+            raise SalesOrderError(f"unknown bureau {bureau!r}: expected experian or creditsafe")
+        if f.limit is not None and (
+            not isinstance(f.limit, Decimal) or f.limit < 0 or not f.limit.is_finite()
+        ):
+            raise SalesOrderError(f"{bureau} limit must be a whole amount of money of 0 or more")
+        if f.band is not None and bureau != "experian":
+            raise SalesOrderError("only Experian has a risk band")
+    sid = _subject_id(conn, subject)
+    name = conn.execute(
+        "SELECT display_name FROM sales.credit_subject WHERE credit_subject_id = %s", (sid,)
+    ).fetchone()
+    if name is None:
+        raise SalesOrderError("internal error: credit subject vanished")
+    observed = datetime.now(LONDON)
+    ids = []
+    for bureau, f in figures.items():
+        row = conn.execute(
+            """
+            INSERT INTO sales.credit_report (bureau_code, credit_subject_id, company_name, observed_at,
+                                             source_code, limit_status, credit_limit, risk_band, events)
+            VALUES (%s, %s, %s, %s, 'cfo_entry', %s, %s, %s, %s)
+            RETURNING credit_report_id
+            """,
+            (
+                bureau,
+                sid,
+                name["display_name"],
+                observed,
+                "value" if f.limit is not None else "not_available",
+                f.limit,
+                f.band,
+                json.dumps([f"Entered by the CFO from the {bureau.title()} portal on the Credit Desk"]),
+            ),
+        ).fetchone()
+        if row is None:
+            raise SalesOrderError("internal error: bureau figure not recorded")
+        ids.append(int(row["credit_report_id"]))
+    return ids
+
+
+# Experian's own order, lowest risk first (the table holds the bands; this only orders them for the page).
+_EXPERIAN_BAND_ORDER = (
+    "Very Low Risk",
+    "Low Risk",
+    "Below Average Risk",
+    "Above Average Risk",
+    "High Risk",
+    "Maximum Risk",
+    "Serious Adverse Information",
+)
+
+
+def experian_bands(conn: Connection) -> list[str]:
+    """The Experian bands the database accepts, in Experian's order (any new band last)."""
+    bands = [
+        str(r["band"])
+        for r in conn.execute(
+            "SELECT band FROM sales.credit_risk_band WHERE bureau_code = 'experian' ORDER BY band"
+        )
+    ]
+    rank = {b: i for i, b in enumerate(_EXPERIAN_BAND_ORDER)}
+    return sorted(bands, key=lambda b: rank.get(b, len(rank)))
+
+
+def first_figures_needed(conn: Connection) -> list[dict[str, Any]]:
+    """Active customers with no limit from Experian and/or Creditsafe yet, largest amount owed first."""
+    out = []
+    for r in conn.execute(
+        """
+        SELECT s.display_name, s.company_number, s.creditsafe_ref,
+               e.credit_limit AS experian_limit, e.limit_report_id IS NOT NULL AS has_experian,
+               c.credit_limit AS creditsafe_limit, c.limit_report_id IS NOT NULL AS has_creditsafe,
+               x.outstanding, x.annual_recurring, l.credit_limit AS current_limit
+          FROM sales.credit_subject s
+          JOIN sales.customer cu ON cu.customer_id = s.customer_id
+          LEFT JOIN sales.v_credit_bureau_position e
+                 ON e.credit_subject_id = s.credit_subject_id AND e.bureau_code = 'experian'
+          LEFT JOIN sales.v_credit_bureau_position c
+                 ON c.credit_subject_id = s.credit_subject_id AND c.bureau_code = 'creditsafe'
+          LEFT JOIN sales.v_credit_exposure x ON x.xero_contact_id = cu.xero_contact_id
+          LEFT JOIN sales.v_customer_current_credit_limit l ON l.customer_id = s.customer_id
+         WHERE s.is_active
+           AND (e.limit_report_id IS NULL OR c.limit_report_id IS NULL)
+         ORDER BY x.outstanding DESC NULLS LAST, s.display_name
+        """
+    ):
+        out.append(
+            {
+                "company": r["display_name"],
+                "company_number": r["company_number"],
+                "creditsafe_ref": r["creditsafe_ref"],
+                "needs": [
+                    b
+                    for b, has in (("experian", r["has_experian"]), ("creditsafe", r["has_creditsafe"]))
+                    if not has
+                ],
+                "experian": _money_text(r["experian_limit"]) if r["has_experian"] else None,
+                "creditsafe": _money_text(r["creditsafe_limit"]) if r["has_creditsafe"] else None,
+                "owed": _money_text(r["outstanding"] or Decimal(0)),
+                "annual_recurring": _money_text(r["annual_recurring"]),
+                "current_limit": _money_text(r["current_limit"]),
+            }
+        )
+    return out
+
+
 # ============================================================================ snapshots and filing
 
 
@@ -1171,6 +1299,8 @@ def desk_export(conn: Connection, since: datetime) -> dict[str, Any]:
         )
     ]
     exceptions = credit_exceptions(conn)
+    first_figures = first_figures_needed(conn)
+    needing = {f["company"] for f in first_figures}
     return {
         "run_at": datetime.now(LONDON).isoformat(timespec="minutes"),
         "review": review,
@@ -1180,10 +1310,13 @@ def desk_export(conn: Connection, since: datetime) -> dict[str, Any]:
         "attention": [
             {"rule": e["rule_code"], "company": e["display_name"], "message": e["message"]}
             for e in exceptions
-            if e["rule_code"]
-            not in ("CREDIT_REVIEW_NEEDED", "ARR_NOT_MONITORED")  # the latter has its own list
+            if e["rule_code"] not in ("CREDIT_REVIEW_NEEDED", "ARR_NOT_MONITORED")  # own list
+            # a missing bureau figure for a client in "first figures" is already asked for there
+            and not (e["rule_code"] in ("SINGLE_BUREAU", "NO_BUREAU_LIMIT") and e["display_name"] in needing)
         ],
         "unmonitored": unmonitored_customers(conn),
+        "first_figures": first_figures,
+        "risk_bands": experian_bands(conn),
         **_exposure_export(conn),
         "unmonitored_excluded": [
             {"prefix": str(r["arr_prefix"]), "name": r["customer_name"], "reason": r["excluded_reason"]}

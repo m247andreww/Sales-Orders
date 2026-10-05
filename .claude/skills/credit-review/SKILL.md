@@ -60,6 +60,9 @@ environment credentials. The database is restored from, and saved back to, Azure
    `v_customer_current_credit_limit`), NEVER from the page's decision documents (those are requests, not the record).
    ARR changes: name the customers behind any change over GBP 50,000 a year, comparing the last two snapshots by
    prefix over COMMITTED lines only (credit_arr_status.counts_as_commitment; cancelled lines never count). Only what none of the systems answers goes to the CFO, as a decision.
+   First figures: the Credit Desk lists clients with no limit from Experian and/or Creditsafe (`first_figures`,
+   largest owed first), because the bureaus only alert on a change. The CFO types the portal figures there. Never
+   enter a figure the CFO did not give; never copy one from an old workbook or a guess.
 8. **Publish the Credit Desk**: `sales-orders credit-desk-export --out /tmp/desk.json [--run-note "<problem, plain
    English>"]`; ArtifactData `get` desk/latest (for its version), then `set` desk/latest with `file_path`
    /tmp/desk.json and `if_version`. The routine's own notification tells the CFO the run finished. Never
@@ -72,6 +75,12 @@ The page writes `decisions/<id>` {assessment_id, company, amount, reason, review
 the "Credit Desk – apply decision" routine. A doc with kind "monitor" {prefix, company, company_number,
 xero_contact_id} means the CFO added an unmonitored ARR customer to the bureaus: apply it with
 `sales-orders credit-add-monitored <prefix> --number <company_number> [--xero-contact <xero_contact_id>]`.
+A doc with kind "figures" {company, experian?: {limit: whole pounds as a string, or null = "no limit shown",
+band or null}, creditsafe?: {limit or null}} is the CFO's first figures read from the portals (migration 0023;
+a bureau absent from the doc was left blank): apply it with `sales-orders credit-enter-figures "<company>"
+[--experian <limit|none> [--experian-band "<band>"]] [--creditsafe <limit|none>]`. It saves the readings (actor =
+CFO; the database refuses anyone without approve_credit_terms and any unknown band) and reassesses the client at once:
+report the outcome (limit applied automatically, or now waiting for the CFO's decision on the Credit Desk).
 Steps (order matters, 5 Oct 2026: a blocked Xero step once lost three decisions): restore + migrate; apply each
 pending decision with `credit-decide` (actor = CFO); SAVE; mark the decisions applied; only then `credit-file-xero`
 and save again (if that is blocked, the next daily run files it). Previously: `credit-file-xero`; `state-save` (on conflict restore and redo once); only then

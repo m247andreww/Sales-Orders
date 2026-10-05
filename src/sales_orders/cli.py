@@ -8,7 +8,7 @@ import json
 import os
 import sys
 from datetime import UTC, date, datetime, timedelta
-from decimal import Decimal
+from decimal import Decimal, InvalidOperation
 from pathlib import Path
 from typing import Any, TypeVar
 from uuid import UUID
@@ -591,6 +591,40 @@ def cmd_credit_decide(args: argparse.Namespace) -> int:
     return 0
 
 
+def _figure_arg(value: str | None, band: str | None) -> credit.BureauFigure | None:
+    if value is None:
+        if band is not None:
+            raise SalesOrderError("a band needs the Experian limit too (a number, or none)")
+        return None
+    v = value.strip().replace(",", "").lstrip("£")
+    try:
+        return credit.BureauFigure(None if v.lower() == "none" else Decimal(v), band)
+    except InvalidOperation as exc:
+        raise SalesOrderError(f"{value!r} is not an amount: give a number such as 120000, or none") from exc
+
+
+def cmd_credit_enter_figures(args: argparse.Namespace) -> int:
+    figures = {
+        b: f
+        for b, f in (
+            ("experian", _figure_arg(args.experian, args.experian_band)),
+            ("creditsafe", _figure_arg(args.creditsafe, None)),
+        )
+        if f is not None
+    }
+    with unit_of_work(_actor(args)) as conn:
+        credit.enter_bureau_figures(conn, args.subject, figures)
+        a = credit.assess(conn, args.subject)
+        credit.queue_filing(conn)
+    shown = ", ".join(f"{b.title()} {gbp(f.limit, missing='no limit shown')}" for b, f in figures.items())
+    print(
+        f"{a['display_name']}: figures saved ({shown}); assessment {a['credit_assessment_id']}: "
+        f"{a['outcome_code']}, recommended {gbp(a['recommended_limit'])}"
+        + (f"; needs CFO: {a['review_reason']}" if a["review_reason"] else "")
+    )
+    return 0
+
+
 def _print_credit_exceptions(rows: list[dict[str, Any]]) -> None:
     print("\nCredit exceptions:" + ("  none" if not rows else ""))
     for e in rows:
@@ -808,6 +842,15 @@ def _add_credit_commands(sub: Any) -> None:
     p.add_argument("--reason", required=True)
     p.add_argument("--review-by", required=True, help="review / follow-up date, YYYY-MM-DD, after today")
     p.set_defaults(func=cmd_credit_decide)
+
+    p = sub.add_parser(
+        "credit-enter-figures", help="CFO: limits read from the bureau portals for a client with no alert yet"
+    )
+    p.add_argument("subject", help="company name or number")
+    p.add_argument("--experian", help="Experian limit, e.g. 120000, or none if the portal shows no limit")
+    p.add_argument("--experian-band", help='Experian risk band, e.g. "Low Risk"')
+    p.add_argument("--creditsafe", help="Creditsafe limit, e.g. 50000, or none if the portal shows no limit")
+    p.set_defaults(func=cmd_credit_enter_figures)
 
     p = sub.add_parser("credit-status", help="every monitored company, its limits, and credit exceptions")
     p.set_defaults(func=cmd_credit_status)
