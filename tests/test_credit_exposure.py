@@ -48,7 +48,7 @@ def _setup(conn: Connection) -> None:
     assert row is not None
     act_as(conn, CFO)
     conn.execute(
-        "SELECT sales.set_credit_limit(%s, 10000, 'cfo_decision', NULL, 'test limit', NULL)",
+        "SELECT sales.set_credit_limit(%s, 10000, 'cfo_decision', NULL, 'test limit', DATE '2099-01-01')",
         (row["customer_id"],),
     )
 

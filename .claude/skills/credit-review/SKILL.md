@@ -67,7 +67,8 @@ environment credentials. The database is restored from, and saved back to, Azure
 
 ## Credit Desk decision job (started by the page; no schedule)
 
-The page writes `decisions/<id>` {assessment_id, company, amount, reason, review_by, status "pending"} and starts
+The page writes `decisions/<id>` {assessment_id, company, amount, reason, review_by (always; after today), kind
+"accept" (recommended amount) or "set" (CFO's amount), status "pending"} and starts
 the "Credit Desk – apply decision" routine. A doc with kind "monitor" {prefix, company, company_number,
 xero_contact_id} means the CFO added an unmonitored ARR customer to the bureaus: apply it with
 `sales-orders credit-add-monitored <prefix> --number <company_number> [--xero-contact <xero_contact_id>]`.
@@ -99,8 +100,8 @@ The CFO replies to the summary, e.g. "set Acme at £12,000 because they pay by D
 1. Preferred: the CFO uses the Credit Desk page; the decision job applies it at once (above).
 2. In a session: `state-restore`, confirm the company with `credit-status`, then (actor = CFO's email)
    `sales-orders credit-decide "<company>" 12000 --reason "<their words>" --review-by YYYY-MM-DD`, then `state-save`.
-3. Never set a limit the CFO did not give; never invent a reason or a review date. If they gave no
-   reason, ask for one (the database refuses a decision without it).
+3. Never set a limit the CFO did not give; never invent a reason or a review date. Every decision needs BOTH a
+   reason and a review / follow-up date after today (CFO, 2026-10-05; the database refuses either missing, 0022).
 
 ## Rules that never change
 

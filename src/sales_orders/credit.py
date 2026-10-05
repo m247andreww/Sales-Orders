@@ -434,9 +434,16 @@ def decide(
     subject: str,
     credit_limit: Decimal,
     reason: str,
-    review_by: date | None = None,
+    review_by: date,
 ) -> int:
-    """CFO decision on a customer's limit (needs approve_credit_terms). Linked to the latest assessment."""
+    """CFO decision on a customer's limit (needs approve_credit_terms). Linked to the latest assessment.
+
+    A reason and a review / follow-up date after today are always required (CFO, 2026-10-05; migration 0022).
+    """
+    if not reason or not reason.strip():
+        raise SalesOrderError("a credit decision needs a reason")
+    if review_by is None or review_by <= datetime.now(LONDON).date():
+        raise SalesOrderError("a credit decision needs a review / follow-up date after today")
     sid = _subject_id(conn, subject)
     row = conn.execute(
         """

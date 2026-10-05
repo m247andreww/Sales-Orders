@@ -582,7 +582,7 @@ def cmd_credit_decide(args: argparse.Namespace) -> int:
             args.subject,
             Decimal(args.limit),
             args.reason,
-            date.fromisoformat(args.review_by) if args.review_by else None,
+            date.fromisoformat(args.review_by),
         )
         credit.queue_filing(conn)
     print(
@@ -806,7 +806,7 @@ def _add_credit_commands(sub: Any) -> None:
     p.add_argument("subject", help="company name or number")
     p.add_argument("limit", help="e.g. 100000")
     p.add_argument("--reason", required=True)
-    p.add_argument("--review-by", help="YYYY-MM-DD; reported when passed")
+    p.add_argument("--review-by", required=True, help="review / follow-up date, YYYY-MM-DD, after today")
     p.set_defaults(func=cmd_credit_decide)
 
     p = sub.add_parser("credit-status", help="every monitored company, its limits, and credit exceptions")

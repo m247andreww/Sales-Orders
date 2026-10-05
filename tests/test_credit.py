@@ -19,7 +19,7 @@ from sales_orders import credit, credit_run
 from sales_orders.credit_arr import ArrLine, ParsedArrFile
 from sales_orders.credit_pdf import render, render_alert
 from sales_orders.db import Connection
-from sales_orders.errors import UnknownReferenceError
+from sales_orders.errors import SalesOrderError, UnknownReferenceError
 from sales_orders.graph import MailMessage
 from sales_orders.models import CreditSubjectIn, MasterDataIn
 from sales_orders.service import load_master_data
@@ -239,7 +239,7 @@ def test_requirement_outside_appetite_waits_for_the_cfo(conn: Connection, master
 
     act_as(conn, FINANCE)
     with pytest.raises(psycopg.Error, match="setting a credit limit is not permitted"), conn.transaction():
-        credit.decide(conn, SUBJECT, Decimal(9600), "trading need")
+        credit.decide(conn, SUBJECT, Decimal(9600), "trading need", date(2099, 1, 1))
     act_as(conn, CFO)
     credit.decide(conn, SUBJECT, Decimal(9600), "long-standing client, pays by DD", date(2027, 3, 31))
     assert _limit(conn) == {"credit_limit": Decimal(9600), "source_code": "cfo_decision"}
@@ -310,7 +310,7 @@ def test_limits_are_history(conn: Connection, worked_example: dict[str, Any]) ->
     msg = savepoint_rejects(conn, "UPDATE sales.customer_credit_limit SET credit_limit = 1")
     assert msg.startswith("credit limits are history")
     act_as(conn, CFO)
-    credit.decide(conn, SUBJECT, Decimal(20000), "seasonal peak")
+    credit.decide(conn, SUBJECT, Decimal(20000), "seasonal peak", date(2099, 1, 1))
     periods = conn.execute(
         "SELECT credit_limit, effective_to IS NULL AS open FROM sales.customer_credit_limit ORDER BY 1"
     ).fetchall()
@@ -436,8 +436,35 @@ def test_arr_revenue_without_monitoring_is_reported(conn: Connection, master_dat
 
 def test_cfo_decision_past_review_is_reported(conn: Connection, worked_example: dict[str, Any]) -> None:
     act_as(conn, CFO)
-    credit.decide(conn, SUBJECT, Decimal(30000), "temporary uplift", date(2020, 1, 1))
+    # A decision whose review date has since passed. Only an old decision can have one (0022 refuses a new
+    # decision with a past date), so the rule is switched off for this test transaction to stand in for time.
+    conn.execute("ALTER TABLE sales.customer_credit_limit DISABLE TRIGGER credit_decision_review_required")
+    conn.execute(
+        "SELECT sales.set_credit_limit(c.customer_id, 30000, 'cfo_decision', NULL, 'temporary uplift', DATE '2020-01-01')"
+        " FROM sales.customer c WHERE c.legal_name = %s",
+        (CUSTOMER,),
+    )
+    conn.execute("ALTER TABLE sales.customer_credit_limit ENABLE TRIGGER credit_decision_review_required")
     assert "CREDIT_DECISION_REVIEW_DUE" in _rules(conn, SUBJECT)
+
+
+def test_a_decision_needs_a_review_date_after_today(conn: Connection, worked_example: dict[str, Any]) -> None:
+    act_as(conn, CFO)
+    with pytest.raises(SalesOrderError, match="review / follow-up date"):
+        credit.decide(conn, SUBJECT, Decimal(30000), "uplift", datetime.now(credit.LONDON).date())
+    with pytest.raises(SalesOrderError, match="needs a reason"):
+        credit.decide(conn, SUBJECT, Decimal(30000), "  ", date(2099, 1, 1))
+    for review, message in (
+        (None, "needs a review / follow-up date"),
+        ("2020-01-01", "must be after the decision date"),
+    ):
+        msg = savepoint_rejects(
+            conn,
+            "SELECT sales.set_credit_limit(c.customer_id, 30000, 'cfo_decision', NULL, 'uplift', %s::date)"
+            " FROM sales.customer c WHERE c.legal_name = %s",
+            (review, CUSTOMER),
+        )
+        assert message in msg  # the database refuses it too, whatever the caller
 
 
 # ---------------------------------------------------------------------------- filing and the daily run
@@ -719,5 +746,5 @@ def test_desk_export_lists_decisions_and_changes(conn: Connection, master_data: 
     ]
     assert desk["changed"] == [] and len(desk["alerts"]) == 2
     act_as(conn, CFO)
-    credit.decide(conn, SUBJECT, Decimal(9600), "pays by Direct Debit")
+    credit.decide(conn, SUBJECT, Decimal(9600), "pays by Direct Debit", date(2099, 1, 1))
     assert credit.desk_export(conn, NOW - timedelta(days=3650))["review"] == []  # decided: off the list

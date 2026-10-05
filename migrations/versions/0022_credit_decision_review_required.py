@@ -1,0 +1,24 @@
+"""credit decision review required
+
+Revision ID: 0022
+Revises: 0021
+"""
+
+from __future__ import annotations
+
+from pathlib import Path
+
+from migrations_support import run_sql_file
+
+revision = "0022"
+down_revision = "0021"
+branch_labels = None
+depends_on = None
+
+
+def upgrade() -> None:
+    run_sql_file(f"{Path(__file__).stem}.up.sql")
+
+
+def downgrade() -> None:
+    run_sql_file(f"{Path(__file__).stem}.down.sql")
