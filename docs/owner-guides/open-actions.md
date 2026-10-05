@@ -4,7 +4,8 @@ Kept current by Claude every turn. Newest state wins.
 
 ## Your actions (now)
 
-1. **Decide Motive** on the Credit Desk with the new three-step box (limit, reason, review date), then the other 7.
+1. **Decide the remaining 4** on the Credit Desk (Napier Parking, Stopford, Agechecked, First Steps Care): each card
+   now shows what the client owes and its unsigned PandaDoc documents.
 2. **Cardano and Pragmatic** have no review date (cleared on 2 Oct). Under the new rule every decision has one:
    reply with the dates you want, e.g. "Cardano 6 months, Pragmatic 12 months".
 3. **Tilbury Douglas**: committed ARR fell from £1.72m to £1.21m a year on 5 Oct; owes £156k with no limit yet.
@@ -26,6 +27,8 @@ Kept current by Claude every turn. Newest state wins.
 | PandaDoc values: alternatives, fee fields and monthly-vs-term totals make sums unreliable; tidy in PandaDoc or agree a rule | CFO + Claude | Open |
 | Match 'BBA CSP Licensing' and 'Exchange Ilford' documents to their customers | Claude | Open |
 | McGill and Riverside corrected in Creditsafe | CFO | Done 5 Oct 2026 |
+| Decisions 5 Oct: Motive £191,000; Metropolitan Gaming £100,000, Tinopolis £70,600, Fuelsoft £55,600 (applied by Claude after the job's save was blocked); all review 12 Oct | CFO / Claude | Done 5 Oct 2026 |
+| Decision job reordered: save before Xero filing | Claude | Done 5 Oct 2026 |
 | Monday run read Xero invoices and PandaDoc itself, no approvals needed | Claude | Done 5 Oct 2026 |
 | Broadwick number corrected to 12136501; Matrix SCM added as client | Claude | Done 5 Oct 2026 |
 | Daily job asked the CFO questions the systems answer: skill corrected (step 7b) | Claude | Done 5 Oct 2026 |

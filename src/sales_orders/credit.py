@@ -1003,6 +1003,48 @@ def _money_text(v: Decimal | None) -> str | None:
     return None if v is None else f"{v:.2f}"
 
 
+def _review_position(conn: Connection, assessment_id: int) -> dict[str, Any]:
+    """What a client waiting for a decision owes now and has in PandaDoc (latest daily snapshots)."""
+    e = conn.execute(
+        """SELECT x.current_amount, x.overdue_amount, x.overdue_over_60, x.outstanding, x.oldest_due_date,
+                  x.pipeline_largest, x.pipeline_gross, c.xero_contact_id
+             FROM sales.credit_assessment a
+             JOIN sales.credit_subject s USING (credit_subject_id)
+             JOIN sales.customer c ON c.customer_id = s.customer_id
+             LEFT JOIN sales.v_credit_exposure x ON x.xero_contact_id = c.xero_contact_id
+            WHERE a.credit_assessment_id = %s""",
+        (assessment_id,),
+    ).fetchone()
+    if e is None or e["xero_contact_id"] is None:
+        return {"owed": None, "pandadoc": []}
+    docs = conn.execute(
+        """SELECT name, status, grand_total, date_sent FROM sales.credit_pipeline_document
+            WHERE xero_contact_id = %s AND credit_pipeline_snapshot_id =
+                  (SELECT max(credit_pipeline_snapshot_id) FROM sales.credit_pipeline_snapshot)
+            ORDER BY grand_total DESC""",
+        (e["xero_contact_id"],),
+    ).fetchall()
+    return {
+        "owed": {
+            "current": _money_text(e["current_amount"] or Decimal(0)),
+            "overdue": _money_text(e["overdue_amount"] or Decimal(0)),
+            "overdue_over_60": _money_text(e["overdue_over_60"] or Decimal(0)),
+            "total": _money_text(e["outstanding"] or Decimal(0)),
+            "oldest_due": e["oldest_due_date"].isoformat() if e["oldest_due_date"] else None,
+        },
+        "pandadoc_largest_gross": _money_text(e["pipeline_gross"] or Decimal(0)),
+        "pandadoc": [
+            {
+                "name": d["name"],
+                "status": d["status"],
+                "value": _money_text(d["grand_total"]),
+                "sent": d["date_sent"].date().isoformat() if d["date_sent"] else None,
+            }
+            for d in docs
+        ],
+    }
+
+
 def _exposure_export(conn: Connection) -> dict[str, Any]:
     from sales_orders import credit_exposure  # noqa: PLC0415 - avoids an import cycle
 
@@ -1087,6 +1129,7 @@ def desk_export(conn: Connection, since: datetime) -> dict[str, Any]:
                 "creditsafe": _money_text(r["creditsafe_limit"]),
                 "half_lower": _money_text((r["baseline"] or Decimal(0)) / 2),
                 "current_limit": _money_text(r["current_limit"]),
+                **_review_position(conn, int(r["credit_assessment_id"])),
             }
         )
     changed: list[dict[str, Any]] = []

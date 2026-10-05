@@ -12,6 +12,7 @@ import pytest
 from conftest import CFO, act_as
 
 from sales_orders import credit, credit_exposure
+from sales_orders.credit_arr import ArrLine, ParsedArrFile
 from sales_orders.db import Connection
 from sales_orders.errors import SalesOrderError
 from sales_orders.models import CreditSubjectIn, CustomerIn, MasterDataIn
@@ -180,3 +181,34 @@ def test_unmatched_document_is_listed_not_guessed(conn: Connection, master_data:
         "Mutual Non-Disclosure Agreement"
     ]
     assert _row(conn, ACME)["pipeline_value"] == Decimal(0)
+
+
+def test_decision_card_shows_what_is_owed_and_in_pandadoc(
+    conn: Connection, master_data: MasterDataIn
+) -> None:
+    _setup(conn)
+    _receivables(conn, ("Acme Widgets Ltd", "1200.00", "800.50"))
+    _pipeline(conn, ("Acme - Option 1", None, "3000.00"), ("Acme - Option 2", None, "5000.00"))
+    credit.load_arr_snapshot(
+        conn,
+        ParsedArrFile(
+            source_name="ARR test.xlsx",
+            sha256="ab" * 32,
+            lines=(ArrLine(1, "Acme Widgets", "ACM001", "Live", "monthly", Decimal("1200.00")),),
+            skipped=(),
+        ),
+    )
+    a = credit.assess(conn, "Acme Widgets")
+    card = credit._review_position(conn, int(a["credit_assessment_id"]))
+    assert card["owed"] == {
+        "current": "1200.00",
+        "overdue": "800.50",
+        "overdue_over_60": "0.00",
+        "total": "2000.50",
+        "oldest_due": None,
+    }
+    assert [(d["name"], d["value"]) for d in card["pandadoc"]] == [
+        ("Acme - Option 2", "5000.00"),
+        ("Acme - Option 1", "3000.00"),
+    ]
+    assert card["pandadoc_largest_gross"] == "6000.00"  # the largest one plus VAT, never the sum
