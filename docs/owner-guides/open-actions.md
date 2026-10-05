@@ -4,11 +4,8 @@ Kept current by Claude every turn. Newest state wins.
 
 ## Your actions (now)
 
-1. **Riverside in Creditsafe** (McGill done 5 Oct): remove 04091048, add Safe number UK06978116
-   (IP030938, Industrial / Provident Company), Copy button at the top of
-   https://claude.ai/artifact/11xiBVxunoMbzqtR3BZoEi. Then tell Claude "Riverside done".
-2. **Decide Motive** on the Credit Desk (owes £199,158, all overdue), then the other 7.
-3. **Tilbury Douglas**: its committed ARR fell from £1.72m to £1.21m a year on 5 Oct (a £508,800 line is now
+1. **Decide Motive** on the Credit Desk (owes £199,158, all overdue), then the other 7.
+2. **Tilbury Douglas**: its committed ARR fell from £1.72m to £1.21m a year on 5 Oct (a £508,800 line is now
    Cancelled). Worth knowing given it owes £156k with no limit yet.
 
 ## Still open
@@ -27,6 +24,7 @@ Kept current by Claude every turn. Newest state wins.
 | Each client's alerts filed as PDFs on its Xero contact (9 filed; automatic from now on) | Claude | Done 2 Oct 2026 |
 | PandaDoc values: alternatives, fee fields and monthly-vs-term totals make sums unreliable; tidy in PandaDoc or agree a rule | CFO + Claude | Open |
 | Match 'BBA CSP Licensing' and 'Exchange Ilford' documents to their customers | Claude | Open |
+| McGill and Riverside corrected in Creditsafe | CFO | Done 5 Oct 2026 |
 | Monday run read Xero invoices and PandaDoc itself, no approvals needed | Claude | Done 5 Oct 2026 |
 | Broadwick number corrected to 12136501; Matrix SCM added as client | Claude | Done 5 Oct 2026 |
 | Daily job asked the CFO questions the systems answer: skill corrected (step 7b) | Claude | Done 5 Oct 2026 |
