@@ -97,6 +97,8 @@ These are the owner's stated preferences; follow them in every session.
 - Xero custom connection: CFO added accounting.contacts + accounting.attachments (2026-10-02).
 - **Credit decisions (CFO, 2026-10-05):** accept the recommended amount OR choose another; EITHER way a reason and a
   review / follow-up date are required (page, Python and database, migration 0022). No hidden defaults on the page.
+  Same-day decisions hold (CFO, 2026-10-05, migration 0025): new bureau figures do NOT re-open a decision made the
+  same day when the requirement is unchanged and every reason was already a reason; anything new still goes to the CFO.
   Review choices (CFO, 2026-10-05): 1 week, 2 weeks, last WORKING day of this month (skip weekends and England &
   Wales bank holidays), 1 month, 3 months, pick a date.
 - **Money shown to people is whole pounds (CFO, 2026-10-02: "lose the dp from the outputs").** PDFs, Xero notes,

@@ -119,6 +119,9 @@ The CFO replies to the summary, e.g. "set Acme at £12,000 because they pay by D
 
 ## Rules that never change
 
+- A CFO decision made today is held (outcome override_in_force, `held_by_credit_limit_id`) when new figures leave the
+  requirement unchanged and add no new reason (migration 0025). Never re-ask the CFO in that case.
+
 - A limit is applied automatically **only** inside risk appetite; everything else is the CFO's
   (`CREDIT_REVIEW_NEEDED`). Do not "fix" a review case by changing the policy or the allowance.
 - Master data is never created from an alert. A company in an alert but not monitored is reported as
