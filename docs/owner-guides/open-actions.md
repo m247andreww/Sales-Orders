@@ -4,11 +4,13 @@ Kept current by Claude every turn. Newest state wins.
 
 ## Your actions (now)
 
-1. **Decide the remaining 4** on the Credit Desk (Napier Parking, Stopford, Agechecked, First Steps Care): each card
-   now shows what the client owes and its unsigned PandaDoc documents.
-2. **Cardano and Pragmatic** have no review date (cleared on 2 Oct). Under the new rule every decision has one:
-   reply with the dates you want, e.g. "Cardano 6 months, Pragmatic 12 months".
-3. **Tilbury Douglas**: committed ARR fell from £1.72m to £1.21m a year on 5 Oct; owes £156k with no limit yet.
+1. **Enter first figures** on the Credit Desk, under "First figures needed" (18 clients, largest owed first). Start
+   with the five that have no figures at all: Princes (£269k owed), Tilbury Douglas (£156k), Starlizard (£98k),
+   Rascal Solutions (£63k), Matrix SCM (£42k).
+2. **Check in Creditsafe that the 12 "Creditsafe only" clients are on your Live Customers list.** Creditsafe has
+   never alerted on any of them, which suggests they were never added there. If one is missing, add it, then enter
+   its figure.
+3. **Cardano and Pragmatic** review dates: reply with the dates you want, e.g. "Cardano 3 months, Pragmatic 1 month".
 
 ## Still open
 
@@ -21,7 +23,9 @@ Kept current by Claude every turn. Newest state wins.
 | 46 clients linked to Xero contacts and company numbers (from Xero, PandaDoc, alerts, web) | Claude | Done 2 Oct 2026 |
 | 30 credit PDFs and notes filed on Xero contacts | Claude | Done 2 Oct 2026 |
 | Newly added clients in Experian and Creditsafe | CFO | Done 2 Oct 2026 |
-| First figures for newly monitored clients: check Monday's run; if none, add a one-off "first figures" box to the Credit Desk | Claude | Mon 5 Oct |
+| First figures box on the Credit Desk (18 clients missing a bureau figure; saved figures reassess the client at once) | Claude | Done 5 Oct 2026 |
+| First figures entered for the 18 clients | CFO | Open |
+| Stephensons (MK) Trust: Experian figure is from Jan 2025 (stale) | CFO, while entering its Creditsafe figure | Open |
 | Outlook rule: alerts to Inbox / Credit alerts, marked read | CFO | Done 2 Oct 2026 |
 | Each client's alerts filed as PDFs on its Xero contact (9 filed; automatic from now on) | Claude | Done 2 Oct 2026 |
 | PandaDoc values: alternatives, fee fields and monthly-vs-term totals make sums unreliable; tidy in PandaDoc or agree a rule | CFO + Claude | Open |
@@ -50,6 +54,9 @@ Kept current by Claude every turn. Newest state wins.
 | D5 One-off allowance for a new client: £5,000 | CFO | Open (built as stated) |
 
 ## Requirements recorded
+
+- 5 Oct 2026 (CFO): "build first figures": the CFO types bureau limits read from the portals on the Credit Desk;
+  saved as dated bureau readings that the next alert supersedes (migration 0023).
 
 - 5 Oct 2026 (CFO): decision entry = accept the recommended amount OR choose another; either way a reason and a
   review / follow-up date are required (page, code and database).
