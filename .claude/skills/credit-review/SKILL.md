@@ -58,8 +58,8 @@ environment credentials. The database is restored from, and saved back to, Azure
    which entry to replace in which bureau. A company in an alert but not on the list: Xero says whether it is a
    customer or supplier; add it. Limits and review dates: read them from the database (`credit-status`, or
    `v_customer_current_credit_limit`), NEVER from the page's decision documents (those are requests, not the record).
-   ARR changes: name the customers behind any change over GBP 50,000 a year (compare the last two snapshots by
-   prefix). Only what none of the systems answers goes to the CFO, as a decision.
+   ARR changes: name the customers behind any change over GBP 50,000 a year, comparing the last two snapshots by
+   prefix over COMMITTED lines only (credit_arr_status.counts_as_commitment; cancelled lines never count). Only what none of the systems answers goes to the CFO, as a decision.
 8. **Publish the Credit Desk**: `sales-orders credit-desk-export --out /tmp/desk.json [--run-note "<problem, plain
    English>"]`; ArtifactData `get` desk/latest (for its version), then `set` desk/latest with `file_path`
    /tmp/desk.json and `if_version`. The routine's own notification tells the CFO the run finished. Never
