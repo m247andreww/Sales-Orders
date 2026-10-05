@@ -4,8 +4,9 @@ Kept current by Claude every turn. Newest state wins.
 
 ## Your actions (now)
 
-1. **Two Creditsafe corrections** (McGill, Riverside), Copy buttons at the top of
-   https://claude.ai/artifact/11xiBVxunoMbzqtR3BZoEi. Then tell Claude "Creditsafe corrected".
+1. **Riverside in Creditsafe** (McGill done 5 Oct): remove 04091048, add Safe number UK06978116
+   (IP030938, Industrial / Provident Company), Copy button at the top of
+   https://claude.ai/artifact/11xiBVxunoMbzqtR3BZoEi. Then tell Claude "Riverside done".
 2. **Decide Motive** on the Credit Desk (owes £199,158, all overdue), then the other 7.
 3. **Tilbury Douglas**: its committed ARR fell from £1.72m to £1.21m a year on 5 Oct (a £508,800 line is now
    Cancelled). Worth knowing given it owes £156k with no limit yet.
