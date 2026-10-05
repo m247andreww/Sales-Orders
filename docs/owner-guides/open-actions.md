@@ -4,9 +4,9 @@ Kept current by Claude every turn. Newest state wins.
 
 ## Your actions (now)
 
-1. **Decide the 4 waiting on the Credit Desk**: Tilbury Douglas, Rascal Solutions, QPR, Napier Parking.
-   First re-check two Creditsafe figures you entered, which disagree hugely with Experian: Tilbury Douglas
-   (Creditsafe £100,000 vs Experian £6,600,000) and QPR (Creditsafe £3,500 vs Experian £530,000).
+1. **Decide the 4 waiting on the Credit Desk**: Tilbury Douglas, Rascal Solutions, QPR, Napier Parking. Creditsafe
+   figures for Tilbury (£100,000) and QPR (£3,500) confirmed by the CFO from the portal, 5 Oct 2026. Tilbury's need is
+   driven by one tri-annual ARR line (£664,667 a year): see decision D1.
 2. **Cardano and Pragmatic** review dates: reply with the dates you want.
 
 ## Still open
@@ -23,6 +23,7 @@ Kept current by Claude every turn. Newest state wins.
 | First figures box on the Credit Desk (18 clients missing a bureau figure; saved figures reassess the client at once) | Claude | Done 5 Oct 2026 |
 | First figures entered for all 18 clients (14 settled, 4 to decide) | CFO | Done 5 Oct 2026 |
 | Overlapping decision jobs applied some presses 2-3 times (same values): each press now applied once (migration 0024) | Claude | Done 5 Oct 2026 |
+| Creditsafe Safe numbers recorded: Tilbury UK00067419, QPR UK00005232 | Claude | Done 5 Oct 2026 |
 | Matrix SCM limit £0 (former customer; owes £42k early-termination charges): collection, not credit | CFO | Open |
 | Stephensons (MK) Trust: Experian figure still from Jan 2025 (only Creditsafe was entered) | CFO | Open |
 | Outlook rule: alerts to Inbox / Credit alerts, marked read | CFO | Done 2 Oct 2026 |
