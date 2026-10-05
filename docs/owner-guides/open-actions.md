@@ -7,8 +7,8 @@ Kept current by Claude every turn. Newest state wins.
 1. **Two Creditsafe corrections** (McGill, Riverside), Copy buttons at the top of
    https://claude.ai/artifact/11xiBVxunoMbzqtR3BZoEi. Then tell Claude "Creditsafe corrected".
 2. **Decide Motive** on the Credit Desk (owes £199,158, all overdue), then the other 7.
-3. **Metropolitan Gaming**: its ARR fell from £1.46m to £330k on 5 Oct; its decision on the Credit Desk
-   now rests on the smaller figure.
+3. **Tilbury Douglas**: its committed ARR fell from £1.72m to £1.21m a year on 5 Oct (a £508,800 line is now
+   Cancelled). Worth knowing given it owes £156k with no limit yet.
 
 ## Still open
 
