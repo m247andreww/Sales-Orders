@@ -141,7 +141,8 @@ decision is applied straight away (limit, Xero PDF and note), not the next morni
 2. For each client under **Needs your decision**, in the box **Your decision**:
    1. **Limit:** tick "Accept the recommended £…", or tick "A different amount" and type it (whole pounds).
    2. **Reason:** type why (always required), e.g. "pays by Direct Debit".
-   3. **Review / follow up on:** press 1, 3, 6 or 12 months, or "Pick a date" (always required; after today).
+   3. **Review / follow up on:** press "1 week", "2 weeks", "End of this month", "1 month" or "3 months", or
+      "Pick a date" (always required; after today). The box shows the date chosen, with its weekday.
    4. Click **Confirm decision**. If a step is missing, the box says which.
    *Within about 5 minutes the line should say "Done at HH:MM: limit £…".*
 3. Under **Customers with no credit limit** (customers in the ARR file nobody monitors; "new" = first seen
