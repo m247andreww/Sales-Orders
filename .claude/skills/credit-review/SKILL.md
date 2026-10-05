@@ -51,6 +51,15 @@ environment credentials. The database is restored from, and saved back to, Azure
    `data/credit/pipeline_<date>.json` (layout of `credit_exposure.load_pipeline`); `sales-orders
    credit-load-pipeline <file>`. A failure here never stops the run: say so in --run-note.
 7. **Save**: `sales-orders state-save`. If it refuses (another run saved first), restore and redo once; then report.
+7b. **Before reporting anything to the CFO, answer it yourself (CFO rule, CLAUDE.md: "never ask what the systems
+   can answer")**. A company-number mismatch between our client list and a bureau alert: check the Xero contact
+   (who we invoice) and PandaDoc (the signed New Customer Application Form gives the registered name and number),
+   then correct our record (`load-master-data`) or, when the bureau watches the wrong entity, tell the CFO exactly
+   which entry to replace in which bureau. A company in an alert but not on the list: Xero says whether it is a
+   customer or supplier; add it. Limits and review dates: read them from the database (`credit-status`, or
+   `v_customer_current_credit_limit`), NEVER from the page's decision documents (those are requests, not the record).
+   ARR changes: name the customers behind any change over GBP 50,000 a year (compare the last two snapshots by
+   prefix). Only what none of the systems answers goes to the CFO, as a decision.
 8. **Publish the Credit Desk**: `sales-orders credit-desk-export --out /tmp/desk.json [--run-note "<problem, plain
    English>"]`; ArtifactData `get` desk/latest (for its version), then `set` desk/latest with `file_path`
    /tmp/desk.json and `if_version`. The routine's own notification tells the CFO the run finished. Never
