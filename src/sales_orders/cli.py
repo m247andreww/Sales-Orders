@@ -575,8 +575,15 @@ def cmd_credit_assess(args: argparse.Namespace) -> int:
     return 0
 
 
+def _already_applied(args: argparse.Namespace) -> int:
+    print(f"Credit Desk request {args.request} was already applied: nothing changed")
+    return 0
+
+
 def cmd_credit_decide(args: argparse.Namespace) -> int:
     with unit_of_work(_actor(args)) as conn:
+        if not credit.claim_desk_request(conn, args.request, "decision", args.subject):
+            return _already_applied(args)
         credit.decide(
             conn,
             args.subject,
@@ -613,6 +620,8 @@ def cmd_credit_enter_figures(args: argparse.Namespace) -> int:
         if f is not None
     }
     with unit_of_work(_actor(args)) as conn:
+        if not credit.claim_desk_request(conn, args.request, "figures", args.subject):
+            return _already_applied(args)
         credit.enter_bureau_figures(conn, args.subject, figures)
         a = credit.assess(conn, args.subject)
         credit.queue_filing(conn)
@@ -746,6 +755,8 @@ def cmd_credit_write_numbers_to_xero(args: argparse.Namespace) -> int:
 
 def cmd_credit_add_monitored(args: argparse.Namespace) -> int:
     with unit_of_work(_actor(args)) as conn:
+        if not credit.claim_desk_request(conn, args.request, "monitor", args.prefix):
+            return _already_applied(args)
         name = credit.add_monitored_customer(conn, args.prefix, args.number, args.xero_contact)
     print(f"{name} ({args.prefix}) is now a monitored client; its limit follows the first bureau figures")
     return 0
@@ -841,6 +852,7 @@ def _add_credit_commands(sub: Any) -> None:
     p.add_argument("limit", help="e.g. 100000")
     p.add_argument("--reason", required=True)
     p.add_argument("--review-by", required=True, help="review / follow-up date, YYYY-MM-DD, after today")
+    p.add_argument("--request", help="the Credit Desk request id (decision job): applied once only")
     p.set_defaults(func=cmd_credit_decide)
 
     p = sub.add_parser(
@@ -850,6 +862,7 @@ def _add_credit_commands(sub: Any) -> None:
     p.add_argument("--experian", help="Experian limit, e.g. 120000, or none if the portal shows no limit")
     p.add_argument("--experian-band", help='Experian risk band, e.g. "Low Risk"')
     p.add_argument("--creditsafe", help="Creditsafe limit, e.g. 50000, or none if the portal shows no limit")
+    p.add_argument("--request", help="the Credit Desk request id (decision job): applied once only")
     p.set_defaults(func=cmd_credit_enter_figures)
 
     p = sub.add_parser("credit-status", help="every monitored company, its limits, and credit exceptions")
@@ -929,6 +942,7 @@ def _add_credit_new_customer_commands(sub: Any) -> None:
     p.add_argument("prefix", help="ARR prefix, e.g. TIL")
     p.add_argument("--number", required=True, help="Companies House number (as added to the bureaus)")
     p.add_argument("--xero-contact", help="the Xero contact id (from the Credit Desk suggestion)")
+    p.add_argument("--request", help="the Credit Desk request id (decision job): applied once only")
     p.set_defaults(func=cmd_credit_add_monitored)
 
 

@@ -81,6 +81,10 @@ a bureau absent from the doc was left blank): apply it with `sales-orders credit
 [--experian <limit|none> [--experian-band "<band>"]] [--creditsafe <limit|none>]`. It saves the readings (actor =
 CFO; the database refuses anyone without approve_credit_terms and any unknown band) and reassesses the client at once:
 report the outcome (limit applied automatically, or now waiting for the CFO's decision on the Credit Desk).
+Always pass `--request <decision doc id>` to `credit-decide`, `credit-add-monitored` and `credit-enter-figures`
+(migration 0024): overlapping jobs each restore their own copy, and on 5 Oct 2026 eighteen quick presses were applied
+two or three times. With the id, a request already in the restored database prints "already applied" and changes
+nothing: mark it applied on the page as normal.
 Steps (order matters, 5 Oct 2026: a blocked Xero step once lost three decisions): restore + migrate; apply each
 pending decision with `credit-decide` (actor = CFO); SAVE; mark the decisions applied; only then `credit-file-xero`
 and save again (if that is blocked, the next daily run files it). Previously: `credit-file-xero`; `state-save` (on conflict restore and redo once); only then

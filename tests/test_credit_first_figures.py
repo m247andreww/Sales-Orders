@@ -240,3 +240,30 @@ def test_desk_lists_first_figures_once_not_also_under_attention(
     desk = credit.desk_export(conn, datetime(2026, 1, 1, tzinfo=UTC))
     beta = [f for f in desk["first_figures"] if f["company"] == "Beta Services"]
     assert [f["needs"] for f in beta] == [["creditsafe"]]
+
+
+def test_a_desk_request_is_applied_once(conn: Connection, master_data: MasterDataIn) -> None:
+    assert credit.claim_desk_request(conn, "abc123", "figures", "Acme Widgets") is True
+    assert (
+        credit.claim_desk_request(conn, "abc123", "figures", "Acme Widgets") is False
+    )  # a second job skips it
+    assert credit.claim_desk_request(conn, "def456", "decision", "Acme Widgets") is True
+    assert credit.claim_desk_request(conn, None, "decision", "Acme Widgets") is True  # session change: no id
+
+
+def test_desk_request_log_is_append_only(conn: Connection, master_data: MasterDataIn) -> None:
+    credit.claim_desk_request(conn, "abc123", "figures", "Acme Widgets")
+    msg = savepoint_rejects(conn, "DELETE FROM sales.credit_desk_request WHERE request_id = 'abc123'")
+    assert "append-only" in msg
+
+
+@pytest.mark.parametrize("command", ["credit-decide", "credit-enter-figures", "credit-add-monitored"])
+def test_desk_commands_take_the_request_id(command: str) -> None:
+    from sales_orders import cli  # noqa: PLC0415
+
+    argv = {
+        "credit-decide": [command, "Acme", "1000", "--reason", "r", "--review-by", "2099-01-01"],
+        "credit-enter-figures": [command, "Acme", "--experian", "1000"],
+        "credit-add-monitored": [command, "ACM", "--number", "01234567"],
+    }[command]
+    assert cli.build_parser().parse_args([*argv, "--request", "abc123"]).request == "abc123"

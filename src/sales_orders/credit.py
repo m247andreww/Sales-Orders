@@ -464,6 +464,23 @@ def decide(
     return int(limit_row["id"])
 
 
+def claim_desk_request(conn: Connection, request_id: str | None, kind: str, subject: str) -> bool:
+    """Record a Credit Desk request as applied; False if it already was (migration 0024).
+
+    Call inside the same transaction as the change, before making it: a job that finds the request already
+    recorded skips it, so a button press is never applied twice by overlapping decision jobs.
+    `request_id` None (a change made in a session, not from the page) is always applied.
+    """
+    if request_id is None:
+        return True
+    row = conn.execute(
+        """INSERT INTO sales.credit_desk_request (request_id, kind_code, subject_text) VALUES (%s, %s, %s)
+           ON CONFLICT (request_id) DO NOTHING RETURNING request_id""",
+        (request_id, kind, subject),
+    ).fetchone()
+    return row is not None
+
+
 BUREAUX = ("experian", "creditsafe")
 
 
