@@ -97,6 +97,8 @@ These are the owner's stated preferences; follow them in every session.
 - Xero custom connection: CFO added accounting.contacts + accounting.attachments (2026-10-02).
 - **Credit decisions (CFO, 2026-10-05):** accept the recommended amount OR choose another; EITHER way a reason and a
   review / follow-up date are required (page, Python and database, migration 0022). No hidden defaults on the page.
+  Review choices (CFO, 2026-10-05): 1 week, 2 weeks, last WORKING day of this month (skip weekends and England &
+  Wales bank holidays), 1 month, 3 months, pick a date.
 - **Money shown to people is whole pounds (CFO, 2026-10-02: "lose the dp from the outputs").** PDFs, Xero notes,
   the Credit Desk and summaries use `sales_orders.money.gbp` (rounded half up). Calculations, storage and JSON keep
   exact pence.
