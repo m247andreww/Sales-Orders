@@ -4,8 +4,7 @@ Kept current by Claude every turn. Newest state wins.
 
 ## Your actions (now)
 
-1. **Napier Parking: confirm again** on the Credit Desk. Your 12:22 decision (£9,300, review 12 Oct) was made before its
-   Creditsafe figure (£86,000) was entered, so the new evidence brought it back. Recommended is still £9,300.
+1. **Send the reply to Sam at Creditsafe** (drafted 5 Oct 2026) and pass on his answer when it arrives.
 
 ## Still open
 
@@ -24,7 +23,7 @@ Kept current by Claude every turn. Newest state wins.
 | Creditsafe Safe numbers recorded: Tilbury UK00067419, QPR UK00005232 | Claude | Done 5 Oct 2026 |
 | Review dates set: Cardano Holding £1,375,300 review 5 Nov 2026; Pragmatic Semiconductor £24,000 review 19 Oct 2026 | CFO / Claude | Done 5 Oct 2026 |
 | Decisions: Tilbury £200,000 (review 30 Oct), Rascal £75,000 (30 Oct), QPR £44,000 (5 Nov) | CFO | Done 5 Oct 2026 |
-| Rule question: should new bureau figures re-open a CFO decision made the same day when the recommendation is unchanged? | CFO | Open |
+| Rule: new figures do not re-open a same-day decision when nothing changed (CFO: "no"; migration 0025). Napier held at £9,300, review 12 Oct | CFO / Claude | Done 5 Oct 2026 |
 | Direct link to the agencies (5 Oct 2026): Experian Business Express has no API (enterprise Commercial Credit API is a separate contract); Creditsafe Connect API is documented and covers limits, monitoring and portfolio adds. Both blocked by this environment's network until allowed. Ask Creditsafe whether API access is in our subscription and its cost; Experian for a quote | CFO | Open |
 | Matrix SCM limit £0 (former customer; owes £42k early-termination charges): collection, not credit | CFO | Open |
 | Stephensons (MK) Trust: Experian figure still from Jan 2025 (only Creditsafe was entered) | CFO | Open |
