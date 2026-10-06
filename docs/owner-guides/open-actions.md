@@ -8,9 +8,8 @@ Kept current by Claude every turn. Newest state wins.
    questions (price for ~50 rising to ~80 companies; what is included; usage limits; same renewal date or separate
    contract and minimum term; sandbox). On any call: ask for the price in writing; decline CRM plug-ins.
    Ready-to-send reply drafted 6 Oct (adds a sixth question: how the connection signs in, fixed IP addresses or not).
-2. **McGill: which company carries the credit risk?** Reply "contract" or "invoice". The signed MSA (1 May 2026) is
-   with McGill and Partners Services Ltd (11877390); Xero invoices "McGill and Partners" (11877412). On 5 Oct you
-   switched Creditsafe to 11877412; on 6 Oct the daily job set our record to 11877390. Recommended: "contract".
+2. **McGill figures**: in Experian and in Creditsafe, look up McGill and Partners Ltd (11877412) and reply with each
+   one's credit limit (or "no limit shown"). Claude enters them. The figures on file are May workbook figures.
 
 ## Still open
 
@@ -20,7 +19,9 @@ Kept current by Claude every turn. Newest state wins.
 | Rule: invoices PI-26A… are always non-trade (BPCE £2,415,600, lease paperwork) and are left out of debt and exposure | CFO / Claude | Done 6 Oct 2026 |
 | Daily job now updates this list itself every run (skill step 9) | Claude | Done 6 Oct 2026 |
 | RMD Kwikform added (Experian alert 5 Oct; Xero customer; nothing owed); limit £6,000 applied automatically | Claude | Done 6 Oct 2026 |
-| McGill: contract entity (11877390) vs invoiced entity (11877412) | CFO | Open (Your action 2) |
+| McGill: credit checked on the company we invoice, McGill and Partners Ltd 11877412 (written approval on the application form); contract company Services Ltd 11877390 noted | CFO / Claude | Done 6 Oct 2026 |
+| McGill: fresh Experian and Creditsafe figures for 11877412 | CFO | Open (Your action 2) |
+| Code: a company-number change should stop older bureau readings counting, so the client lands in "first figures" | Claude (development session) | Next change |
 | PI-25A… is real debt, not non-trade: Matrix SCM £42,317 stays as debt to collect | CFO | Done 6 Oct 2026 |
 | Azure storage, Xero link, ARR "Credit Extract" tab, Claude settings | CFO | Done 2 Oct 2026 |
 | First live run (saved; ARR 1,225 lines; 4 alerts; 10 decisions waiting; 27 limits applied) | Claude | Done 2 Oct 2026 13:51 |

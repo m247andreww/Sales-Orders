@@ -158,6 +158,10 @@ These are the owner's stated preferences; follow them in every session.
 - **Non-trade invoices (CFO, 2026-10-06):** Xero invoices numbered `PI-26A…` are ALWAYS non-trade (e.g. raised only for
   lease paperwork, such as PI-26A012 to BPCE Equipment Solutions). Exclude them from debt, exposure, credit limits and
   chasing. The 2025 series `PI-25A…` is NOT covered: it is real debt (CFO, 2026-10-06, Matrix SCM PI-25A017).
+- **Which company to credit-check (CFO, 2026-10-06, McGill):** the company we INVOICE, when the customer approved it in
+  writing (the signed New Customer Application Form), even if the MSA names a group company. Record the contracting
+  company in the credit subject's notes. A company-number change makes earlier bureau readings for the old company
+  irrelevant: get fresh portal figures for the new number.
 - **The daily credit job keeps the open actions current (CFO, 2026-10-06: "allow updated actions").** It may commit and
   push `docs/owner-guides/open-actions.md` only (credit-review skill, daily job step 9); nothing else.
 - Read the FULL email thread (salesorders@ / neworders@) — the first email is not the order of
