@@ -4,7 +4,9 @@ Kept current by Claude every turn. Newest state wins.
 
 ## Your actions (now)
 
-1. **Send the reply to Sam at Creditsafe** (drafted 5 Oct 2026) and pass on his answer when it arrives.
+1. **Creditsafe**: Sam passed us to Dan James (integration specialist), 6 Oct 2026. Reply-all to Dan with the five
+   questions (price for ~50 rising to ~80 companies; what is included; usage limits; same renewal date or separate
+   contract and minimum term; sandbox). On any call: ask for the price in writing; decline CRM plug-ins.
 
 ## Still open
 
