@@ -155,6 +155,11 @@ These are the owner's stated preferences; follow them in every session.
   companies are monitored only. The daily job is a scheduled Claude routine following the
   `credit-review` skill; its database is carried between runs in Azure Blob Storage (`state-restore` /
   `state-save`). ARR is read from the "Credit Extract" first sheet of ARR Live.xlsx (connector-complete).
+- **Non-trade invoices (CFO, 2026-10-06):** Xero invoices numbered `PI-26A…` are ALWAYS non-trade (e.g. raised only for
+  lease paperwork, such as PI-26A012 to BPCE Equipment Solutions). Exclude them from debt, exposure, credit limits and
+  chasing. (Whether the 2025 series `PI-25A…` is the same is not yet confirmed: ask before treating it so.)
+- **The daily credit job keeps the open actions current (CFO, 2026-10-06: "allow updated actions").** It may commit and
+  push `docs/owner-guides/open-actions.md` only (credit-review skill, daily job step 9); nothing else.
 - Read the FULL email thread (salesorders@ / neworders@) — the first email is not the order of
   record if it was amended.
 

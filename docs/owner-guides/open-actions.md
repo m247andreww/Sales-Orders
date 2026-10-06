@@ -5,11 +5,22 @@ Kept current by Claude every turn. Newest state wins.
 ## Your actions (now)
 
 1. **Send the reply to Sam at Creditsafe** (drafted 5 Oct 2026) and pass on his answer when it arrives.
+2. **McGill: which company carries the credit risk?** Reply "contract" or "invoice". The signed MSA (1 May 2026) is
+   with McGill and Partners Services Ltd (11877390); Xero invoices "McGill and Partners" (11877412). On 5 Oct you
+   switched Creditsafe to 11877412; on 6 Oct the daily job set our record to 11877390. Recommended: "contract".
+3. **Is the 2025 series PI-25A… also non-trade?** Reply yes/no. It matters for Matrix SCM (PI-25A017, £42,317
+   early-termination charges, overdue since Dec 2025).
 
 ## Still open
 
 | Item | Owner | Status |
 |---|---|---|
+| Microsoft 365 connector signed out on 6 Oct; reconnected the same day; ARR and alerts caught up | CFO / Claude | Done 6 Oct 2026 |
+| Rule: invoices PI-26A… are always non-trade (BPCE £2,415,600, lease paperwork) and are left out of debt and exposure | CFO / Claude | Done 6 Oct 2026 |
+| Daily job now updates this list itself every run (skill step 9) | Claude | Done 6 Oct 2026 |
+| RMD Kwikform added (Experian alert 5 Oct; Xero customer; nothing owed); limit £6,000 applied automatically | Claude | Done 6 Oct 2026 |
+| McGill: contract entity (11877390) vs invoiced entity (11877412) | CFO | Open (Your action 2) |
+| PI-25A… series non-trade or real debt (Matrix SCM) | CFO | Open (Your action 3) |
 | Azure storage, Xero link, ARR "Credit Extract" tab, Claude settings | CFO | Done 2 Oct 2026 |
 | First live run (saved; ARR 1,225 lines; 4 alerts; 10 decisions waiting; 27 limits applied) | Claude | Done 2 Oct 2026 13:51 |
 | Credit Desk page, attention list grouped by type | Claude | Done 2 Oct 2026 |

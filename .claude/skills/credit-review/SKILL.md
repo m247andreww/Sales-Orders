@@ -45,7 +45,9 @@ environment credentials. The database is restored from, and saved back to, Azure
    `data/credit/ar_<date>.json` in the layout of `credit_exposure.load_receivables` (one row per contact:
    current, overdue, overdue_over_60, oldest_due_date, invoice_count; amounts as strings) BUILT BY A SCRIPT
    from the saved tool results, and check it equals the report's totals; `sales-orders credit-load-receivables
-   <file>`. (ii) PandaDoc connector: documents with status Sent, Viewed, Waiting for Approval, Approved,
+   <file>`. NON-TRADE: invoices numbered `PI-26A…` are always non-trade (CFO, 6 Oct 2026; e.g. PI-26A012 to
+   BPCE Equipment Solutions, raised only for lease paperwork). Leave them out of the file, and check the file
+   plus the excluded invoices equals the report's totals. Never chase, limit or report them as debt. (ii) PandaDoc connector: documents with status Sent, Viewed, Waiting for Approval, Approved,
    External Review, Waiting for Payment and not expired; `documents_details_get` each for grand_total,
    the Client.Company token and recipient domains; skip zero-value NDAs/brochures/application forms; write
    `data/credit/pipeline_<date>.json` (layout of `credit_exposure.load_pipeline`); `sales-orders
@@ -55,7 +57,9 @@ environment credentials. The database is restored from, and saved back to, Azure
    can answer")**. A company-number mismatch between our client list and a bureau alert: check the Xero contact
    (who we invoice) and PandaDoc (the signed New Customer Application Form gives the registered name and number),
    then correct our record (`load-master-data`) or, when the bureau watches the wrong entity, tell the CFO exactly
-   which entry to replace in which bureau. A company in an alert but not on the list: Xero says whether it is a
+   which entry to replace in which bureau. FIRST read `docs/owner-guides/open-actions.md` and `git log` for that
+   company: never reverse a correction another session or the CFO has already made without saying so and why
+   (6 Oct 2026: the job changed McGill to the MSA's number unaware the CFO had switched Creditsafe the day before). A company in an alert but not on the list: Xero says whether it is a
    customer or supplier; add it. Limits and review dates: read them from the database (`credit-status`, or
    `v_customer_current_credit_limit`), NEVER from the page's decision documents (those are requests, not the record).
    ARR changes: name the customers behind any change over GBP 50,000 a year, comparing the last two snapshots by
@@ -67,6 +71,13 @@ environment credentials. The database is restored from, and saved back to, Azure
    English>"]`; ArtifactData `get` desk/latest (for its version), then `set` desk/latest with `file_path`
    /tmp/desk.json and `if_version`. The routine's own notification tells the CFO the run finished. Never
    send email.
+9. **Update the open actions (CFO, 6 Oct 2026: "allow updated actions")**: edit `docs/owner-guides/open-actions.md`
+   with what this run found or closed (Your actions, Still open table, newest state wins; whole pounds; facts only,
+   no invoice line detail). Commit ONLY that file ("Open actions: daily run <date>: <one line>"), then
+   `git pull --rebase origin claude/great-archimedes-pzg03d` and `git push -u origin claude/great-archimedes-pzg03d`
+   (network failure: retry with backoff; a rebase conflict in that file: keep both sides' rows, newest state wins,
+   once; then report). Never commit `data/`, code, the skill or anything else from the daily job, and never force-push.
+   End the run's reply with the same two lists (Your actions, Still open).
 
 ## Credit Desk decision job (started by the page; no schedule)
 
