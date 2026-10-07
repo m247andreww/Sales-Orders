@@ -15,6 +15,8 @@ Kept current by Claude every turn. Newest state wins.
 
 | Item | Owner | Status |
 |---|---|---|
+| Daily run 7 Oct: Motive paid £199,158 and Hypnos £33,844; owed now £1,262,254 (BPCE non-trade excluded); 1 Creditsafe alert filed; no ARR change over £50,000 | Claude | Done 7 Oct 2026 |
+| Vistair: ARR shows no committed contract lines from 7 Oct (was £26,327 a year); one invoice of £7,898 open, not yet due | Claude to watch | Open |
 | Microsoft 365 connector signed out on 6 Oct; reconnected the same day; ARR and alerts caught up | CFO / Claude | Done 6 Oct 2026 |
 | Rule: invoices PI-26A… are always non-trade (BPCE £2,415,600, lease paperwork) and are left out of debt and exposure | CFO / Claude | Done 6 Oct 2026 |
 | Daily job now updates this list itself every run (skill step 9) | Claude | Done 6 Oct 2026 |
