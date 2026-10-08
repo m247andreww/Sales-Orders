@@ -10,11 +10,19 @@ Kept current by Claude every turn. Newest state wins.
    Ready-to-send reply drafted 6 Oct (adds a sixth question: how the connection signs in, fixed IP addresses or not).
 2. **McGill figures**: in Experian and in Creditsafe, look up McGill and Partners Ltd (11877412) and reply with each
    one's credit limit (or "no limit shown"). Claude enters them. The figures on file are May workbook figures.
+3. **Cardano Holding decision (Credit Desk, top of the page)**: Experian cut Cardano Holding (09740394) from
+   £110,000 to £750 on 7 Oct (score 70 to 38). We hold £97,309, due 26 Oct; your limit is £1,375,300 (review 5 Nov).
+   Cardano belongs to Marsh McLennan (Mercer bought it in Nov 2024) and its invoices go to Marsh McLennan's mailbox,
+   so the drop most likely reflects holding-company accounts. Choose: keep the limit on group strength, or ask
+   for a parent-company guarantee or letter of comfort. Either way give a reason and a review date.
 
 ## Still open
 
 | Item | Owner | Status |
 |---|---|---|
+| Daily run 8 Oct: owed £1,258,509 (The Television Corporation paid £3,745); 2 alerts (Experian 35 companies, Creditsafe 4); no ARR change; 2 decisions on the desk (Cardano, First Steps Care) | Claude | Done 8 Oct 2026 |
+| Cardano Holding: Experian limit £110,000 to £750; owned by Marsh McLennan; keep limit or ask for a parent guarantee | CFO | Open (Your action 3) |
+| Pragmatic Semiconductor proposal V1.4 shows £678,848 in PandaDoc but adds alternative price options together: overstated | Claude | Noted 8 Oct 2026 |
 | Daily run 7 Oct: Motive paid £199,158 and Hypnos £33,844; owed now £1,262,254 (BPCE non-trade excluded); 1 Creditsafe alert filed; no ARR change over £50,000 | Claude | Done 7 Oct 2026 |
 | Vistair: ARR shows no committed contract lines from 7 Oct (was £26,327 a year); one invoice of £7,898 open, not yet due | Claude to watch | Open |
 | Microsoft 365 connector signed out on 6 Oct; reconnected the same day; ARR and alerts caught up | CFO / Claude | Done 6 Oct 2026 |
@@ -59,7 +67,7 @@ Kept current by Claude every turn. Newest state wins.
 | Review dates on Cardano and Pragmatic cleared | Claude | Done 2 Oct 2026 |
 | Interserve excluded from monitoring (in administration; CFO dealing with administrators) | CFO | Done 2 Oct 2026 |
 | Alert companies classified from Xero: FEI Foods, Weil Gotshal = customers; Westcon, Nuco, Shoreditch Design = suppliers; Nlighten = information | Claude | Done 2 Oct 2026 |
-| First Steps Care: possible Companies House strike-off proposal | Claude to confirm | Open |
+| First Steps Care: strike-off worry looks resolved (confirmation statement filed; Experian score 1 to 40, limit £2,200, 7 Oct). Small decision on the desk: £1,800 needed vs £1,000 appetite | CFO | Open |
 | Confirm client list and ARR matches (Analysis Mason sheets AMA/ANA, QPR Trust, Fronius) | CFO | Open |
 | Which spreadsheet limits to keep as your decisions (e.g. three £100k, McGill £300k) | CFO | Open |
 | First real decision on the page, checked within 5 minutes | CFO + Claude | After client list confirmed |
