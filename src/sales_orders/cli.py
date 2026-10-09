@@ -584,17 +584,68 @@ def cmd_credit_decide(args: argparse.Namespace) -> int:
     with unit_of_work(_actor(args)) as conn:
         if not credit.claim_desk_request(conn, args.request, "decision", args.subject):
             return _already_applied(args)
+        terms = _terms_arg(args)
         credit.decide(
             conn,
             args.subject,
             Decimal(args.limit),
             args.reason,
             date.fromisoformat(args.review_by),
+            terms=terms,
         )
         credit.queue_filing(conn)
     print(
-        f"{args.subject}: credit limit set to {gbp(Decimal(args.limit))}; snapshot filed to Xero on the next run"
+        f"{args.subject}: credit limit set to {gbp(Decimal(args.limit))}"
+        + (f"; payment terms {_terms_words(terms)}" if terms else "")
+        + "; snapshot filed to Xero on the next run"
     )
+    return 0
+
+
+def _terms_arg(args: argparse.Namespace) -> credit.PaymentTerms | None:
+    given = (args.recurring_days, args.recurring_method, args.one_off_days)
+    if all(v is None for v in given) and not args.one_off_prepay:
+        return None  # terms unchanged
+    if any(v is None for v in given):
+        raise SalesOrderError(
+            "payment terms need --recurring-days, --recurring-method and --one-off-days together"
+        )
+    return credit.PaymentTerms(
+        args.recurring_days, args.recurring_method, args.one_off_days, args.one_off_prepay
+    )
+
+
+def _terms_words(t: credit.PaymentTerms) -> str:
+    one = "payment with order" if t.one_off_prepay else f"{t.one_off_days} days"
+    return f"recurring {t.recurring_days} days ({t.recurring_method.replace('_', ' ')}), one-off {one}"
+
+
+def _add_terms_args(p: argparse.ArgumentParser) -> None:
+    p.add_argument("--recurring-days", type=int, help="days from the invoice date for recurring invoices")
+    p.add_argument(
+        "--recurring-method", choices=credit.PAYMENT_METHODS, help="how recurring invoices are paid"
+    )
+    p.add_argument("--one-off-days", type=int, help="days from the invoice date for one-off invoices")
+    p.add_argument("--one-off-prepay", action="store_true", help="one-off work is paid with the order")
+
+
+def cmd_credit_set_terms(args: argparse.Namespace) -> int:
+    terms = _terms_arg(args)
+    if terms is None:
+        raise SalesOrderError("give the terms: --recurring-days, --recurring-method and --one-off-days")
+    with unit_of_work(_actor(args)) as conn:
+        if not credit.claim_desk_request(conn, args.request, "terms", args.subject):
+            return _already_applied(args)
+        credit.set_payment_terms(conn, args.subject, terms, args.reason)
+    print(f"{args.subject}: payment terms from today: {_terms_words(terms)}")
+    return 0
+
+
+def cmd_credit_register_export(args: argparse.Namespace) -> int:
+    with unit_of_work(_actor(args)) as conn:
+        reg = credit.register_export(conn)
+    Path(args.out).write_text(json.dumps(reg, indent=1), encoding="utf-8")
+    print(f"register: {len(reg['customers'])} customers, {len(reg['not_credit_checked'])} not credit-checked")
     return 0
 
 
@@ -853,6 +904,7 @@ def _add_credit_commands(sub: Any) -> None:
     p.add_argument("--reason", required=True)
     p.add_argument("--review-by", required=True, help="review / follow-up date, YYYY-MM-DD, after today")
     p.add_argument("--request", help="the Credit Desk request id (decision job): applied once only")
+    _add_terms_args(p)
     p.set_defaults(func=cmd_credit_decide)
 
     p = sub.add_parser(
@@ -900,6 +952,22 @@ def cmd_credit_load_pipeline(args: argparse.Namespace) -> int:
     for name in unmatched:
         print(f"  unmatched: {name}")
     return 0
+
+
+def _add_credit_terms_commands(sub: Any) -> None:
+    """Payment terms and the internal Customer Credit Register (migration 0026)."""
+    p = sub.add_parser("credit-set-terms", help="CFO: set a customer's payment terms from today")
+    p.add_argument("subject", help="company name or number")
+    p.add_argument("--reason", help="required for anything other than the standard 30 days")
+    p.add_argument("--request", help="the Credit Desk request id (decision job): applied once only")
+    _add_terms_args(p)
+    p.set_defaults(func=cmd_credit_set_terms)
+
+    p = sub.add_parser(
+        "credit-register-export", help="write the internal Customer Credit Register page's data"
+    )
+    p.add_argument("--out", required=True)
+    p.set_defaults(func=cmd_credit_register_export)
 
 
 def _add_credit_exposure_commands(sub: Any) -> None:
@@ -1065,6 +1133,7 @@ def build_parser() -> argparse.ArgumentParser:
     _add_credit_job_commands(sub)
     _add_credit_new_customer_commands(sub)
     _add_credit_exposure_commands(sub)
+    _add_credit_terms_commands(sub)
     return parser
 
 

@@ -435,6 +435,8 @@ def decide(
     credit_limit: Decimal,
     reason: str,
     review_by: date,
+    *,
+    terms: PaymentTerms | None = None,
 ) -> int:
     """CFO decision on a customer's limit (needs approve_credit_terms). Linked to the latest assessment.
 
@@ -461,6 +463,8 @@ def decide(
     ).fetchone()
     if limit_row is None:
         raise SalesOrderError("internal error: credit limit not recorded")
+    if terms is not None:  # decided with the limit, in the same transaction (CFO, 9 Oct 2026)
+        set_payment_terms(conn, subject, terms, reason)
     return int(limit_row["id"])
 
 
@@ -607,6 +611,94 @@ def first_figures_needed(conn: Connection) -> list[dict[str, Any]]:
             }
         )
     return out
+
+
+PAYMENT_METHODS = ("direct_debit", "bank_transfer", "card")
+MAX_TERMS_DAYS = 180  # as the register allows (0001)
+
+
+@dataclass(frozen=True)
+class PaymentTerms:
+    """A customer's payment terms: days from the invoice date (CFO, 9 Oct 2026; migration 0026)."""
+
+    recurring_days: int
+    recurring_method: str
+    one_off_days: int
+    one_off_prepay: bool = False
+
+    def validate(self) -> None:
+        for label, days in (("recurring", self.recurring_days), ("one-off", self.one_off_days)):
+            if isinstance(days, bool) or not isinstance(days, int) or not 0 <= days <= MAX_TERMS_DAYS:
+                raise SalesOrderError(f"{label} payment terms must be a whole number of days from 0 to 180")
+        if self.recurring_method not in PAYMENT_METHODS:
+            raise SalesOrderError(
+                f"unknown payment method {self.recurring_method!r}: {', '.join(PAYMENT_METHODS)}"
+            )
+
+
+def _customer_of(conn: Connection, subject: str) -> int:
+    row = conn.execute(
+        "SELECT customer_id FROM sales.credit_subject WHERE credit_subject_id = %s",
+        (_subject_id(conn, subject),),
+    ).fetchone()
+    if row is None or row["customer_id"] is None:
+        raise SalesOrderError(f"{subject} is not a customer: only customers have payment terms")
+    return int(row["customer_id"])
+
+
+def set_payment_terms(conn: Connection, subject: str, terms: PaymentTerms, reason: str | None) -> int:
+    """Set a customer's payment terms from today (needs approve_credit_terms; migration 0026).
+
+    Terms other than the standard (30 days, recurring and one-off, no prepayment) need a reason.
+    """
+    terms.validate()
+    customer_id = _customer_of(conn, subject)
+    row = conn.execute(
+        "SELECT sales.set_customer_payment_terms(%s, %s, %s, %s, %s, %s) AS id",
+        (
+            customer_id,
+            terms.recurring_days,
+            terms.recurring_method,
+            terms.one_off_days,
+            terms.one_off_prepay,
+            reason,
+        ),
+    ).fetchone()
+    if row is None:
+        raise SalesOrderError("internal error: payment terms not recorded")
+    return int(row["id"])
+
+
+def terms_text(r: dict[str, Any]) -> dict[str, Any]:
+    """Plain-English terms for people: '30 days (Direct Debit)', '14 days', 'payment with order'."""
+    method = {"direct_debit": "Direct Debit", "bank_transfer": "bank transfer", "card": "card"}
+    rec = f"{r['recurring_terms_days']} days"
+    if r["recurring_payment_method_code"]:
+        rec += f" ({method.get(str(r['recurring_payment_method_code']), r['recurring_payment_method_code'])})"
+    one = "payment with order" if r["one_off_prepayment_required"] else f"{r['one_off_terms_days']} days"
+    return {
+        "recurring": rec,
+        "one_off": one,
+        "standard": not r["is_non_standard"],
+        "default": bool(r["is_default"]),
+        "reason": r["reason"],
+        "recurring_days": int(r["recurring_terms_days"]),
+        "recurring_method": r["recurring_payment_method_code"],
+        "one_off_days": int(r["one_off_terms_days"]),
+        "one_off_prepay": bool(r["one_off_prepayment_required"]),
+    }
+
+
+def customer_terms(conn: Connection, customer_id: int) -> dict[str, Any]:
+    row = conn.execute(
+        """SELECT recurring_terms_days, recurring_payment_method_code, one_off_terms_days, one_off_prepayment_required,
+                  is_non_standard, reason, is_default
+             FROM sales.v_customer_payment_terms WHERE customer_id = %s""",
+        (customer_id,),
+    ).fetchone()
+    if row is None:
+        raise SalesOrderError(f"customer {customer_id} not found")
+    return terms_text(dict(row))
 
 
 # ============================================================================ snapshots and filing
@@ -1250,7 +1342,7 @@ def desk_export(conn: Connection, since: datetime) -> dict[str, Any]:
     review = []
     for r in conn.execute(
         """
-        SELECT a.credit_assessment_id, s.display_name, a.review_reason, a.trading_requirement,
+        SELECT a.credit_assessment_id, s.display_name, s.customer_id, a.review_reason, a.trading_requirement,
                a.experian_limit, a.creditsafe_limit, a.baseline, l.credit_limit AS current_limit
           FROM sales.v_credit_assessment a
           JOIN sales.credit_subject s USING (credit_subject_id)
@@ -1274,6 +1366,7 @@ def desk_export(conn: Connection, since: datetime) -> dict[str, Any]:
                 "creditsafe": _money_text(r["creditsafe_limit"]),
                 "half_lower": _money_text((r["baseline"] or Decimal(0)) / 2),
                 "current_limit": _money_text(r["current_limit"]),
+                "terms": customer_terms(conn, int(r["customer_id"])),
                 **_review_position(conn, int(r["credit_assessment_id"])),
             }
         )
@@ -1342,5 +1435,67 @@ def desk_export(conn: Connection, since: datetime) -> dict[str, Any]:
                      FROM sales.v_credit_unmonitored_customer u JOIN sales.credit_customer_match m USING (arr_prefix)
                     WHERE m.excluded_reason IS NOT NULL ORDER BY u.customer_name"""
             )
+        ],
+    }
+
+
+def register_export(conn: Connection) -> dict[str, Any]:
+    """The internal Customer Credit Register: limit, payment terms and what is owed, per customer.
+
+    For colleagues (sales, credit control): no bureau figures and no decision reasons, which stay on the Credit Desk.
+    """
+    rows = []
+    for r in conn.execute(
+        """
+        SELECT s.display_name, c.customer_id, l.credit_limit, l.review_by,
+               x.current_amount, x.overdue_amount, x.outstanding, x.oldest_due_date,
+               t.recurring_terms_days, t.recurring_payment_method_code, t.one_off_terms_days,
+               t.one_off_prepayment_required, t.is_non_standard, t.reason, t.is_default
+          FROM sales.credit_subject s
+          JOIN sales.customer c ON c.customer_id = s.customer_id
+          JOIN sales.v_customer_payment_terms t ON t.customer_id = c.customer_id
+          LEFT JOIN sales.v_customer_current_credit_limit l ON l.customer_id = c.customer_id
+          LEFT JOIN sales.v_credit_exposure x ON x.xero_contact_id = c.xero_contact_id
+         WHERE s.is_active
+         ORDER BY lower(s.display_name)
+        """
+    ):
+        owed = r["outstanding"] or Decimal(0)
+        overdue = r["overdue_amount"] or Decimal(0)
+        limit = r["credit_limit"]
+        if limit is None:
+            status = "no_limit"
+        elif owed > limit:
+            status = "over_limit"
+        elif overdue > 0:
+            status = "overdue"
+        else:
+            status = "ok"
+        terms = terms_text(dict(r))
+        terms.pop("reason")  # decision reasons stay on the Credit Desk
+        rows.append(
+            {
+                "customer": r["display_name"],
+                "credit_limit": _money_text(limit),
+                "review_by": r["review_by"].isoformat() if r["review_by"] else None,
+                "terms": terms,
+                "not_yet_due": _money_text(r["current_amount"] or Decimal(0)),
+                "overdue": _money_text(overdue),
+                "owed": _money_text(owed),
+                "oldest_due": r["oldest_due_date"].isoformat() if r["oldest_due_date"] else None,
+                "status": status,
+            }
+        )
+    std = conn.execute(
+        "SELECT numeric_value::integer AS d FROM sales.policy_setting WHERE setting_key = 'credit_standard_terms_days'"
+    ).fetchone()
+    asof = conn.execute("SELECT max(as_of) AS d FROM sales.credit_receivable_snapshot").fetchone()
+    return {
+        "run_at": datetime.now(LONDON).isoformat(timespec="minutes"),
+        "standard_terms_days": int(std["d"]) if std else None,
+        "owed_as_of": asof["d"].isoformat() if asof and asof["d"] else None,
+        "customers": rows,
+        "not_credit_checked": [
+            {"name": u["name"], "annual_revenue": u["annual_revenue"]} for u in unmonitored_customers(conn)
         ],
     }
