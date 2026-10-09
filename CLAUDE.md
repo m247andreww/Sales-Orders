@@ -169,6 +169,8 @@ These are the owner's stated preferences; follow them in every session.
   writing (the signed New Customer Application Form), even if the MSA names a group company. Record the contracting
   company in the credit subject's notes. A company-number change makes earlier bureau readings for the old company
   irrelevant: get fresh portal figures for the new number.
+- **Chaser (credit control) shows a customer only after its first Xero invoice** (CFO, 2026-10-09): a new customer
+  missing from Chaser before then is expected, not a fault.
 - **The daily credit job keeps the open actions current (CFO, 2026-10-06: "allow updated actions").** It may commit and
   push `docs/owner-guides/open-actions.md` only (credit-review skill, daily job step 9); nothing else.
 - Read the FULL email thread (salesorders@ / neworders@) — the first email is not the order of

@@ -55,7 +55,8 @@ Kept current by Claude every turn. Newest state wins.
 | Oikos limit £10,000, review 9 Nov 2026 (CFO) | CFO | Done 9 Oct 2026 |
 | Stopford PI-260478 (£2,820) chased (CFO) | CFO | Done 9 Oct 2026 |
 | Sales-order checks: a customer with no saved terms is on the standard 30 days; the blocking "no credit terms" error is retired (0029) | Claude | Done 9 Oct 2026 |
-| Oikos: link the Xero contact once Finance creates it (its credit PDF files then) | Claude (daily run) | Open |
+| Oikos linked to its Xero contact; credit summary and note filed on it | Claude | Done 9 Oct 2026 |
+| Oikos appears in Chaser after its first invoice (Chaser shows a customer only once invoiced) | Finance | When invoiced |
 | A one-step command for new customers not yet in the ARR file (Oikos was set up by hand) | Claude | Open |
 | Payment terms now read from Xero daily (one-off = contact terms; monthly = repeating invoices; RD = Direct Debit); 25 customers updated 9 Oct; Princes and Motive 60 days, McGill 90, LMAX 31, Stopford one-off 14 | Claude | Done 9 Oct 2026 |
 | Payment terms in the credit process (standard 30 days; decision card step 3); Customer Credit Register page for colleagues; Stopford one-off 14 days, recurring 30 days by Direct Debit | CFO / Claude | Done 9 Oct 2026 |
