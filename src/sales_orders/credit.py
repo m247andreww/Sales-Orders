@@ -686,7 +686,9 @@ def terms_text(r: dict[str, Any]) -> dict[str, Any]:
     """Plain-English terms for people: '30 days (Direct Debit)', '14 days', 'payment with order'."""
     method = {"direct_debit": "Direct Debit", "bank_transfer": "bank transfer", "card": "card"}
     rec = basis_text(int(r["recurring_terms_days"]), "DAYSAFTERBILLDATE")
-    if r["recurring_payment_method_code"]:
+    if r["recurring_payment_method_code"] == "not_seen":
+        rec = "no monthly invoices seen"
+    elif r["recurring_payment_method_code"]:
         rec += f" ({method.get(str(r['recurring_payment_method_code']), r['recurring_payment_method_code'])})"
     one = (
         "payment with order"
@@ -1652,12 +1654,13 @@ def sync_terms_from_xero(conn: Connection) -> list[dict[str, Any]]:
         if cfo_pending or nothing_in_xero:  # standard terms need no register entry
             continue
         want = PaymentTerms(
+            # no recurring invoice seen: keep what is on record, else follow the one-off terms, method 'not_seen'
             recurring_days=int(
-                x["recurring_days"] if x["recurring_days"] is not None else x["recurring_terms_days"]
+                x["recurring_days"]
+                if x["recurring_days"] is not None
+                else (x["one_off_days"] if x["is_default"] else x["recurring_terms_days"])
             ),
-            recurring_method=str(
-                x["recurring_method"] or x["recurring_payment_method_code"] or "bank_transfer"
-            ),
+            recurring_method=str(x["recurring_method"] or x["recurring_payment_method_code"] or "not_seen"),
             one_off_days=int(x["one_off_days"]),
             one_off_basis=str(x["one_off_basis"]),
         )

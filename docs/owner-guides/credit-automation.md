@@ -141,9 +141,9 @@ decision is applied straight away (limit, Xero PDF and note), not the next morni
 2. For each client under **Needs your decision**, in the box **Your decision**:
    1. **Limit:** tick "Accept the recommended £…", or tick "A different amount" and type it (whole pounds).
    2. **Reason:** type why (always required), e.g. "pays by Direct Debit".
-   3. **Payment terms:** tick "Keep: …" (the terms shown), or tick "Change to:" and type the days for recurring
-      and one-off invoices (standard is 30 days from the invoice date for both), choose how recurring invoices are
-      paid, or tick "payment with order" for one-off work. Your reason covers the terms too.
+   3. **Payment terms for one-off invoices:** tick "Keep: …", or tick "Change to:" and type the days from the invoice
+      date (tick "due on invoice" for payment straight away). Standard is 30 days. Your change is written to the
+      customer in Xero, so new invoices fall due accordingly. Monthly invoices follow their repeating invoices in Xero.
    4. **Review / follow up on:** press "1 week", "2 weeks", "Last working day of this month" (skips weekends and bank holidays), "1 month" or "3 months", or
       "Pick a date" (always required; after today). The box shows the date chosen, with its weekday.
    5. Click **Confirm decision**. If a step is missing, the box says which.

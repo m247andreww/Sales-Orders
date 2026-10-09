@@ -52,6 +52,16 @@ environment credentials. The database is restored from, and saved back to, Azure
    the Client.Company token and recipient domains; skip zero-value NDAs/brochures/application forms; write
    `data/credit/pipeline_<date>.json` (layout of `credit_exposure.load_pipeline`); `sales-orders
    credit-load-pipeline <file>`. A failure here never stops the run: say so in --run-note.
+6c. **Payment terms from Xero (CFO, 9 Oct 2026: "refer to xero"; migrations 0026-0028)**, after step 5's contact
+   sync (which reads each contact's sales payment terms): (i) `sales-orders credit-write-terms-to-xero` (puts any
+   CFO change from the Credit Desk on the Xero contact first); (ii) Xero connector `get_invoices` with contact_ids =
+   every credited customer (`psql "$SALES_ORDERS_DATABASE_URL" -Atc "select c.xero_contact_id from
+   sales.credit_subject s join sales.customer c using (customer_id) where s.is_active and c.xero_contact_id is not
+   null"`), issued_date_start = 40 days ago, issued_date_end = today, every page; write
+   `data/credit/invoices_<date>.json` = {as_of, source, invoices: [{invoice_number, xero_contact_id, invoice_date,
+   due_date}]} BUILT BY A SCRIPT from the saved tool results; `sales-orders credit-load-invoices <file>`; (iii)
+   `sales-orders credit-sync-terms`. Invoice series (CFO): **RD-… = collected by Direct Debit**, RI-… = recurring paid
+   by transfer, PI-… = one-off (PI-26A… = non-trade). A failure here never stops the run: say so in --run-note.
 7. **Save**: `sales-orders state-save`. If it refuses (another run saved first), restore and redo once; then report.
 7b. **Before reporting anything to the CFO, answer it yourself (CFO rule, CLAUDE.md: "never ask what the systems
    can answer")**. A company-number mismatch between our client list and a bureau alert: check the Xero contact
@@ -90,6 +100,9 @@ The page writes `decisions/<id>` {assessment_id, company, amount, reason, review
 the "Credit Desk – apply decision" routine. A doc with kind "monitor" {prefix, company, company_number,
 xero_contact_id} means the CFO added an unmonitored ARR customer to the bureaus: apply it with
 `sales-orders credit-add-monitored <prefix> --number <company_number> [--xero-contact <xero_contact_id>]`.
+A decision doc may carry `terms` {one_off_days} (null = terms kept): pass `--one-off-days <one_off_days>` to
+`credit-decide` (0 = due on invoice); after the first save run `sales-orders credit-write-terms-to-xero` so the Xero
+contact carries the new terms (monthly invoices keep the terms of their repeating invoices in Xero).
 A doc with kind "figures" {company, experian?: {limit: whole pounds as a string, or null = "no limit shown",
 band or null}, creditsafe?: {limit or null}} is the CFO's first figures read from the portals (migration 0023;
 a bureau absent from the doc was left blank): apply it with `sales-orders credit-enter-figures "<company>"
@@ -134,9 +147,10 @@ The CFO replies to the summary, e.g. "set Acme at £12,000 because they pay by D
 
 ## Rules that never change
 
-- Payment terms (CFO, 9 Oct 2026; migration 0026): standard is 30 days from the invoice date, recurring and one-off.
-  Anything else is non-standard, set only by the CFO (`credit-set-terms`, or with a decision) with a reason. Never
-  infer a customer's terms; a customer with no register entry is on the standard terms.
+- Payment terms (CFO, 9 Oct 2026; migrations 0026-0028): XERO IS THE MASTER. Standard is 30 days from the invoice
+  date. One-off terms = the Xero contact's sales terms (e.g. Princes and Motive 60, McGill 90); monthly terms = what
+  the repeating invoices show; RD invoices = Direct Debit. The CFO changes one-off terms on the Credit Desk and the
+  job writes them to Xero. Never guess a payment method: no monthly invoice seen is recorded as 'not_seen'.
 
 - A CFO decision made today is held (outcome override_in_force, `held_by_credit_limit_id`) when new figures leave the
   requirement unchanged and add no new reason (migration 0025). Never re-ask the CFO in that case.

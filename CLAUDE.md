@@ -101,8 +101,10 @@ These are the owner's stated preferences; follow them in every session.
   same day when the requirement is unchanged and every reason was already a reason; anything new still goes to the CFO.
   Payment terms (CFO, 2026-10-09, migration 0026): standard 30 days from the invoice date (recurring and one-off);
   anything else is non-standard with a reason, chosen on the decision card. Limits and terms are shared internally on
-  the Customer Credit Register page (no bureau figures or decision reasons there). Stopford: one-off 14 days;
-  recurring stays 30 days because it is collected by Direct Debit.
+  the Customer Credit Register page (no bureau figures or decision reasons there). **Xero is the master for terms
+  (CFO, 2026-10-09: "refer to xero"):** one-off = the Xero contact's sales terms (some clients are on 60 days);
+  monthly = the repeating invoices. **Invoices numbered RD-… are collected by Direct Debit** (RI-… recurring by
+  transfer, PI-… one-off). CFO changes made on the Credit Desk are written back to the Xero contact.
   Review choices (CFO, 2026-10-05): 1 week, 2 weeks, last WORKING day of this month (skip weekends and England &
   Wales bank holidays), 1 month, 3 months, pick a date.
 - **Money shown to people is whole pounds (CFO, 2026-10-02: "lose the dp from the outputs").** PDFs, Xero notes,

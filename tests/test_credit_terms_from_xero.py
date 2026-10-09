@@ -157,3 +157,10 @@ def test_the_same_invoices_file_loads_once(conn: Connection, master_data: Master
 )
 def test_terms_in_plain_english(day: int, basis: str, text: str) -> None:
     assert credit.basis_text(day, basis) == text
+
+
+def test_no_monthly_invoices_seen_is_said_not_guessed(conn: Connection, master_data: MasterDataIn) -> None:
+    _setup(conn, (90, "DAYSAFTERBILLDATE"))
+    _invoices(conn, ("PI-7", ACME, "2026-09-01", "2026-11-30"))  # one-off only
+    credit.sync_terms_from_xero(conn)
+    assert _terms(conn, "Acme Widgets") == ("no monthly invoices seen", "90 days", "xero")
