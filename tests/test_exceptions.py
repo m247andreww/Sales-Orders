@@ -116,9 +116,17 @@ def test_high_risk_customer(conn: Connection, master_data: MasterDataIn, order_j
     assert "payment on order" in exceptions[0]["message"]
 
 
-def test_no_credit_terms(conn: Connection, master_data: MasterDataIn, order_json: dict[str, Any]) -> None:
+def test_no_saved_terms_means_standard_terms_not_an_exception(
+    conn: Connection, master_data: MasterDataIn, order_json: dict[str, Any]
+) -> None:
+    # 0029: a customer with no saved terms is on the standard 30 days (0026), so its order is not blocked
     conn.execute("UPDATE sales.customer_credit_terms SET effective_from = DATE '2027-01-01'")
-    assert _rules(conn, order_json) == {"NO_CREDIT_TERMS"}
+    assert _rules(conn, order_json) == set()
+    row = conn.execute(
+        "SELECT one_off_terms_days, is_default FROM sales.v_customer_payment_terms"
+        " WHERE customer_id = (SELECT customer_id FROM sales.customer)"
+    ).fetchone()
+    assert row == {"one_off_terms_days": 30, "is_default": True}
 
 
 def test_supplier_not_approved(

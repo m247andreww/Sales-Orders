@@ -32,8 +32,10 @@ def test_catalogue_matches_rules_in_views(conn: Connection) -> None:
     emitted = _emitted_rule_codes()
     assert len(emitted) >= 18  # guard against the pattern silently matching nothing
     # NEGATIVE_LINE_MARGIN / LOW_ORDER_MARGIN existed only in 0001's view and were replaced in 0003;
-    # NO_DEBT_CREDIT_FOLDER existed only in 0014's credit view and was retired in 0015.
-    assert emitted - {"NEGATIVE_LINE_MARGIN", "LOW_ORDER_MARGIN", "NO_DEBT_CREDIT_FOLDER"} == catalogued
+    # NO_DEBT_CREDIT_FOLDER existed only in 0014's credit view and was retired in 0015;
+    # NO_CREDIT_TERMS was retired in 0029 (no saved terms = the standard terms, 0026).
+    retired = {"NEGATIVE_LINE_MARGIN", "LOW_ORDER_MARGIN", "NO_DEBT_CREDIT_FOLDER", "NO_CREDIT_TERMS"}
+    assert emitted - retired == catalogued
 
 
 def test_credit_rule_severity_matches_the_view(conn: Connection) -> None:

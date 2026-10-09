@@ -105,6 +105,7 @@ These are the owner's stated preferences; follow them in every session.
   (CFO, 2026-10-09: "refer to xero"):** one-off = the Xero contact's sales terms (some clients are on 60 days);
   monthly = the repeating invoices. **Invoices numbered RD-… are collected by Direct Debit** (RI-… recurring by
   transfer, PI-… one-off). CFO changes made on the Credit Desk are written back to the Xero contact.
+  A customer with no saved terms is on the standard terms; orders are never blocked for "no credit terms" (0029).
   Review choices (CFO, 2026-10-05): 1 week, 2 weeks, last WORKING day of this month (skip weekends and England &
   Wales bank holidays), 1 month, 3 months, pick a date.
 - **Money shown to people is whole pounds (CFO, 2026-10-02: "lose the dp from the outputs").** PDFs, Xero notes,

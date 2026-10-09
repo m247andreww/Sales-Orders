@@ -54,6 +54,7 @@ Kept current by Claude every turn. Newest state wins.
 | Oikos Storage Ltd (00315280) set up: Experian £570,000 Very Low Risk, Creditsafe £645,000 (UK00072450); limit £6,000 automatic. Signed Meraki quote £1,191; PS quote £4,200 viewed | Claude | Done 9 Oct 2026 |
 | Oikos limit £10,000, review 9 Nov 2026 (CFO) | CFO | Done 9 Oct 2026 |
 | Stopford PI-260478 (£2,820) chased (CFO) | CFO | Done 9 Oct 2026 |
+| Sales-order checks: a customer with no saved terms is on the standard 30 days; the blocking "no credit terms" error is retired (0029) | Claude | Done 9 Oct 2026 |
 | Oikos: link the Xero contact once Finance creates it (its credit PDF files then) | Claude (daily run) | Open |
 | A one-step command for new customers not yet in the ARR file (Oikos was set up by hand) | Claude | Open |
 | Payment terms now read from Xero daily (one-off = contact terms; monthly = repeating invoices; RD = Direct Debit); 25 customers updated 9 Oct; Princes and Motive 60 days, McGill 90, LMAX 31, Stopford one-off 14 | Claude | Done 9 Oct 2026 |
