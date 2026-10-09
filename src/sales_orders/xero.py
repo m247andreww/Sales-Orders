@@ -154,6 +154,21 @@ class XeroDirectoryContact:
     is_customer: bool
     is_supplier: bool
     status: str
+    sales_terms_days: int | None = None  # the contact's own sales payment terms; None = Xero's default
+    sales_terms_type: str | None = None
+
+
+SALES_TERMS_TYPES = ("DAYSAFTERBILLDATE", "DAYSAFTERBILLMONTH", "OFCURRENTMONTH", "OFFOLLOWINGMONTH")
+
+
+def _sales_terms(c: Mapping[str, Any]) -> tuple[int | None, str | None]:
+    sales = (c.get("PaymentTerms") or {}).get("Sales") if isinstance(c.get("PaymentTerms"), Mapping) else None
+    if not isinstance(sales, Mapping) or sales.get("Type") is None:
+        return None, None
+    day, kind = sales.get("Day"), str(sales.get("Type"))
+    if kind not in SALES_TERMS_TYPES or isinstance(day, bool) or not isinstance(day, int):
+        raise XeroFormatError(f"unexpected sales payment terms on {c.get('Name')!r}: {sales!r}")
+    return day, kind
 
 
 def parse_contacts(document: Mapping[str, Any]) -> list[XeroDirectoryContact]:
@@ -166,6 +181,7 @@ def parse_contacts(document: Mapping[str, Any]) -> list[XeroDirectoryContact]:
         if not isinstance(c, Mapping) or "ContactID" not in c or not str(c.get("Name") or "").strip():
             raise XeroFormatError(f"contact without ContactID or Name: {c!r}")
         number = str(c.get("CompanyNumber") or "").strip().upper() or None
+        terms_days, terms_type = _sales_terms(c)
         out.append(
             XeroDirectoryContact(
                 contact_id=_uuid(c["ContactID"], "a contact"),
@@ -174,6 +190,8 @@ def parse_contacts(document: Mapping[str, Any]) -> list[XeroDirectoryContact]:
                 is_customer=bool(c.get("IsCustomer")),
                 is_supplier=bool(c.get("IsSupplier")),
                 status=str(c.get("ContactStatus") or "ACTIVE"),
+                sales_terms_days=terms_days,
+                sales_terms_type=terms_type,
             )
         )
     return out
@@ -256,6 +274,27 @@ class XeroClient:
             or contacts[0].get("CompanyNumber") != company_number
         ):
             raise XeroFormatError("Xero did not confirm the company number")
+
+    def set_sales_terms(self, contact_id: UUID, days: int, kind: str) -> None:
+        """Set the contact's sales payment terms (only that field is sent, so nothing else changes)."""
+        if kind not in SALES_TERMS_TYPES:
+            raise XeroFormatError(f"unknown Xero payment terms type {kind!r}")
+        request = urllib.request.Request(  # noqa: S310 - https base
+            f"{API_BASE}/Contacts/{contact_id}",
+            data=json.dumps(
+                {
+                    "Contacts": [
+                        {"ContactID": str(contact_id), "PaymentTerms": {"Sales": {"Day": days, "Type": kind}}}
+                    ]
+                }
+            ).encode(),
+            headers=self._headers({"Content-Type": "application/json"}),
+            method="POST",
+        )
+        body = json.loads(self._transport(request))
+        contacts = body.get("Contacts") if isinstance(body, Mapping) else None
+        if not isinstance(contacts, list) or not contacts or _sales_terms(contacts[0]) != (days, kind):
+            raise XeroFormatError("Xero did not confirm the payment terms")
 
     def add_contact_note(self, contact_id: UUID, details: str, idempotency_key: str) -> None:
         """Add a line to the contact's History and notes."""

@@ -79,7 +79,9 @@ def test_non_standard_terms_need_a_reason(conn: Connection, master_data: MasterD
     cid = _setup(conn)
     act_as(conn, CFO)
     msg = savepoint_rejects(
-        conn, "SELECT sales.set_customer_payment_terms(%s, 30, 'direct_debit', 14, false, NULL)", (cid,)
+        conn,
+        "SELECT sales.set_customer_payment_terms(%s, 30, 'direct_debit', 14, false, NULL, 'DAYSAFTERBILLDATE', 'cfo')",
+        (cid,),
     )
     assert "need a reason" in msg
 
@@ -88,7 +90,9 @@ def test_only_the_credit_approver_may_set_terms(conn: Connection, master_data: M
     cid = _setup(conn)
     act_as(conn, FINANCE)
     msg = savepoint_rejects(
-        conn, "SELECT sales.set_customer_payment_terms(%s, 30, 'bank_transfer', 30, false, NULL)", (cid,)
+        conn,
+        "SELECT sales.set_customer_payment_terms(%s, 30, 'bank_transfer', 30, false, NULL, 'DAYSAFTERBILLDATE', 'cfo')",
+        (cid,),
     )
     assert "setting payment terms is not permitted" in msg
 

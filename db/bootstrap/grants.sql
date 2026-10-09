@@ -49,7 +49,8 @@ REVOKE INSERT, UPDATE ON sales.credit_bureau, sales.credit_relationship, sales.c
     FROM sales_orders_app, sales_orders_person;
 REVOKE UPDATE ON sales.credit_alert_email, sales.credit_report, sales.credit_arr_snapshot,
     sales.credit_arr_line, sales.credit_assessment, sales.credit_assessment_line,
-    sales.credit_assessment_snapshot, sales.credit_alert_snapshot, sales.credit_desk_request
+    sales.credit_assessment_snapshot, sales.credit_alert_snapshot, sales.credit_desk_request,
+    sales.credit_invoice_snapshot, sales.credit_invoice_line
     FROM sales_orders_app, sales_orders_person;
 
 -- PRODUCTION ONLY (run once, as sales_orders_owner, after Entra logins exist):

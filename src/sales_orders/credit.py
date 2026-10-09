@@ -37,7 +37,7 @@ from sales_orders.errors import SalesOrderError, UnknownReferenceError
 from sales_orders.models import CreditSubjectIn, CustomerIn, MasterDataIn
 from sales_orders.money import gbp
 from sales_orders.service import load_master_data
-from sales_orders.xero import XeroDirectoryContact
+from sales_orders.xero import SALES_TERMS_TYPES, XeroDirectoryContact
 
 LONDON = ZoneInfo("Europe/London")
 MAX_FILING_ATTEMPTS = 3
@@ -625,11 +625,14 @@ class PaymentTerms:
     recurring_method: str
     one_off_days: int
     one_off_prepay: bool = False
+    one_off_basis: str = "DAYSAFTERBILLDATE"  # Xero's kinds of payment terms (migration 0027)
 
     def validate(self) -> None:
         for label, days in (("recurring", self.recurring_days), ("one-off", self.one_off_days)):
             if isinstance(days, bool) or not isinstance(days, int) or not 0 <= days <= MAX_TERMS_DAYS:
                 raise SalesOrderError(f"{label} payment terms must be a whole number of days from 0 to 180")
+        if self.one_off_basis not in SALES_TERMS_TYPES:
+            raise SalesOrderError(f"unknown kind of payment terms {self.one_off_basis!r}")
         if self.recurring_method not in PAYMENT_METHODS:
             raise SalesOrderError(
                 f"unknown payment method {self.recurring_method!r}: {', '.join(PAYMENT_METHODS)}"
@@ -646,15 +649,23 @@ def _customer_of(conn: Connection, subject: str) -> int:
     return int(row["customer_id"])
 
 
-def set_payment_terms(conn: Connection, subject: str, terms: PaymentTerms, reason: str | None) -> int:
-    """Set a customer's payment terms from today (needs approve_credit_terms; migration 0026).
+def set_payment_terms(
+    conn: Connection, subject: str, terms: PaymentTerms, reason: str | None, source: str = "cfo"
+) -> int:
+    """Set a customer's payment terms from today (needs approve_credit_terms; migrations 0026-0027).
 
-    Terms other than the standard (30 days, recurring and one-off, no prepayment) need a reason.
+    Terms other than the standard (30 days, recurring and one-off, no prepayment) need a reason. `source` "cfo" is a
+    CFO decision (written back to the Xero contact); "xero" is the daily copy of what Xero holds.
     """
     terms.validate()
-    customer_id = _customer_of(conn, subject)
+    return _set_terms(conn, _customer_of(conn, subject), terms, reason, source)
+
+
+def _set_terms(
+    conn: Connection, customer_id: int, terms: PaymentTerms, reason: str | None, source: str
+) -> int:
     row = conn.execute(
-        "SELECT sales.set_customer_payment_terms(%s, %s, %s, %s, %s, %s) AS id",
+        "SELECT sales.set_customer_payment_terms(%s, %s, %s, %s, %s, %s, %s, %s) AS id",
         (
             customer_id,
             terms.recurring_days,
@@ -662,6 +673,8 @@ def set_payment_terms(conn: Connection, subject: str, terms: PaymentTerms, reaso
             terms.one_off_days,
             terms.one_off_prepay,
             reason,
+            terms.one_off_basis,
+            source,
         ),
     ).fetchone()
     if row is None:
@@ -672,10 +685,16 @@ def set_payment_terms(conn: Connection, subject: str, terms: PaymentTerms, reaso
 def terms_text(r: dict[str, Any]) -> dict[str, Any]:
     """Plain-English terms for people: '30 days (Direct Debit)', '14 days', 'payment with order'."""
     method = {"direct_debit": "Direct Debit", "bank_transfer": "bank transfer", "card": "card"}
-    rec = f"{r['recurring_terms_days']} days"
+    rec = basis_text(int(r["recurring_terms_days"]), "DAYSAFTERBILLDATE")
     if r["recurring_payment_method_code"]:
         rec += f" ({method.get(str(r['recurring_payment_method_code']), r['recurring_payment_method_code'])})"
-    one = "payment with order" if r["one_off_prepayment_required"] else f"{r['one_off_terms_days']} days"
+    one = (
+        "payment with order"
+        if r["one_off_prepayment_required"]
+        else basis_text(
+            int(r["one_off_terms_days"]), str(r.get("one_off_terms_basis") or "DAYSAFTERBILLDATE")
+        )
+    )
     return {
         "recurring": rec,
         "one_off": one,
@@ -686,13 +705,40 @@ def terms_text(r: dict[str, Any]) -> dict[str, Any]:
         "recurring_method": r["recurring_payment_method_code"],
         "one_off_days": int(r["one_off_terms_days"]),
         "one_off_prepay": bool(r["one_off_prepayment_required"]),
+        "one_off_basis": str(r.get("one_off_terms_basis") or "DAYSAFTERBILLDATE"),
+        "source": r.get("source_code"),
     }
+
+
+def basis_text(day: int, basis: str) -> str:
+    """Xero's four kinds of payment terms, in plain English."""
+    if basis == "DAYSAFTERBILLDATE":
+        return "due on invoice" if day == 0 else f"{day} days"
+    if basis == "DAYSAFTERBILLMONTH":
+        return f"{day} days after the end of the invoice month"
+    teens = range(11, 14)
+    suffix = "th" if day % 100 in teens else {1: "st", 2: "nd", 3: "rd"}.get(day % 10, "th")
+    month = "invoice month" if basis == "OFCURRENTMONTH" else "following month"
+    return f"by the {day}{suffix} of the {month}"
+
+
+def with_one_off_terms(
+    conn: Connection, subject: str, days: int, basis: str = "DAYSAFTERBILLDATE"
+) -> PaymentTerms:
+    """The customer's current terms with new one-off terms (recurring terms follow the invoices in Xero)."""
+    t = customer_terms(conn, _customer_of(conn, subject))
+    return PaymentTerms(
+        recurring_days=int(t["recurring_days"]),
+        recurring_method=str(t["recurring_method"] or "bank_transfer"),
+        one_off_days=days,
+        one_off_basis=basis,
+    )
 
 
 def customer_terms(conn: Connection, customer_id: int) -> dict[str, Any]:
     row = conn.execute(
         """SELECT recurring_terms_days, recurring_payment_method_code, one_off_terms_days, one_off_prepayment_required,
-                  is_non_standard, reason, is_default
+                  one_off_terms_basis, is_non_standard, reason, is_default, source_code
              FROM sales.v_customer_payment_terms WHERE customer_id = %s""",
         (customer_id,),
     ).fetchone()
@@ -945,15 +991,26 @@ def sync_xero_contacts(conn: Connection, contacts: list[XeroDirectoryContact]) -
         row = conn.execute(
             """
             INSERT INTO sales.xero_contact_directory
-                   (xero_contact_id, name, company_number, is_customer, is_supplier, contact_status)
-            VALUES (%s, %s, %s, %s, %s, %s)
+                   (xero_contact_id, name, company_number, is_customer, is_supplier, contact_status,
+                    sales_terms_days, sales_terms_type)
+            VALUES (%s, %s, %s, %s, %s, %s, %s, %s)
             ON CONFLICT (xero_contact_id) DO UPDATE
                SET name = EXCLUDED.name, company_number = EXCLUDED.company_number,
                    is_customer = EXCLUDED.is_customer, is_supplier = EXCLUDED.is_supplier,
-                   contact_status = EXCLUDED.contact_status, last_synced_at = now()
+                   contact_status = EXCLUDED.contact_status, sales_terms_days = EXCLUDED.sales_terms_days,
+                   sales_terms_type = EXCLUDED.sales_terms_type, last_synced_at = now()
             RETURNING (xmax = 0) AS inserted
             """,
-            (c.contact_id, c.name, c.company_number, c.is_customer, c.is_supplier, c.status),
+            (
+                c.contact_id,
+                c.name,
+                c.company_number,
+                c.is_customer,
+                c.is_supplier,
+                c.status,
+                c.sales_terms_days,
+                c.sales_terms_type,
+            ),
         ).fetchone()
         new += bool(row and row["inserted"])
     return new
@@ -1450,7 +1507,8 @@ def register_export(conn: Connection) -> dict[str, Any]:
         SELECT s.display_name, c.customer_id, l.credit_limit, l.review_by,
                x.current_amount, x.overdue_amount, x.outstanding, x.oldest_due_date,
                t.recurring_terms_days, t.recurring_payment_method_code, t.one_off_terms_days,
-               t.one_off_prepayment_required, t.is_non_standard, t.reason, t.is_default
+               t.one_off_prepayment_required, t.one_off_terms_basis, t.is_non_standard, t.reason, t.is_default,
+               t.source_code
           FROM sales.credit_subject s
           JOIN sales.customer c ON c.customer_id = s.customer_id
           JOIN sales.v_customer_payment_terms t ON t.customer_id = c.customer_id
@@ -1499,3 +1557,147 @@ def register_export(conn: Connection) -> dict[str, Any]:
             {"name": u["name"], "annual_revenue": u["annual_revenue"]} for u in unmonitored_customers(conn)
         ],
     }
+
+
+# ============================================================================ payment terms from Xero (0027)
+
+
+def load_invoices(conn: Connection, doc: dict[str, Any]) -> tuple[int, list[str]]:
+    """Load the recent sales invoices read from Xero (number, contact, invoice and due dates).
+
+    `doc` = {"as_of", "source", "invoices": [{"invoice_number", "xero_contact_id", "invoice_date", "due_date"}]}.
+    Invoices for contacts not in the Xero contact list are reported, never guessed. The same file loads once.
+    """
+    invoices = doc.get("invoices")
+    if not isinstance(invoices, list) or not doc.get("as_of") or not doc.get("source"):
+        raise SalesOrderError("the invoices file needs as_of, source and an invoices list")
+    sha = hashlib.sha256(json.dumps(doc, sort_keys=True).encode()).hexdigest()
+    if conn.execute(
+        "SELECT 1 FROM sales.credit_invoice_snapshot WHERE source_sha256 = %s", (sha,)
+    ).fetchone():
+        raise SalesOrderError("this invoices file has already been loaded")
+    row = conn.execute(
+        """INSERT INTO sales.credit_invoice_snapshot (as_of, source, source_sha256) VALUES (%s, %s, %s)
+           RETURNING credit_invoice_snapshot_id""",
+        (date.fromisoformat(str(doc["as_of"])), str(doc["source"]), sha),
+    ).fetchone()
+    if row is None:
+        raise SalesOrderError("internal error: invoices snapshot not created")
+    snap = int(row["credit_invoice_snapshot_id"])
+    known = {
+        str(r["xero_contact_id"])
+        for r in conn.execute("SELECT xero_contact_id FROM sales.xero_contact_directory")
+    }
+    unmatched = []
+    for inv in invoices:
+        if not isinstance(inv, dict) or not all(
+            inv.get(k) for k in ("invoice_number", "xero_contact_id", "invoice_date", "due_date")
+        ):
+            raise SalesOrderError(f"invoice without number, contact or dates: {inv!r}")
+        if str(inv["xero_contact_id"]) not in known:
+            unmatched.append(str(inv["invoice_number"]))
+            continue
+        conn.execute(
+            """INSERT INTO sales.credit_invoice_line
+                   (credit_invoice_snapshot_id, invoice_number, xero_contact_id, invoice_date, due_date)
+               VALUES (%s, %s, %s, %s, %s) ON CONFLICT DO NOTHING""",
+            (
+                snap,
+                str(inv["invoice_number"]),
+                str(inv["xero_contact_id"]),
+                date.fromisoformat(str(inv["invoice_date"])[:10]),
+                date.fromisoformat(str(inv["due_date"])[:10]),
+            ),
+        )
+    return snap, unmatched
+
+
+def _xero_terms_reason(x: dict[str, Any]) -> str:
+    one = basis_text(int(x["one_off_days"]), str(x["one_off_basis"]))
+    bits = [f"one-off {one}" + (" (Xero contact)" if x["sales_terms_days"] is not None else " (standard)")]
+    if x["recurring_days"] is not None:
+        how = "RD invoices, collected by Direct Debit" if x["collected_by_dd"] else "RI invoices"
+        bits.append(f"monthly {x['recurring_days']} days ({how})")
+    return "From Xero: " + "; ".join(bits)
+
+
+def sync_terms_from_xero(conn: Connection) -> list[dict[str, Any]]:
+    """Make each credited customer's terms match Xero (CFO, 9 Oct 2026: "refer to xero"; migration 0027).
+
+    One-off terms = the Xero contact's sales terms (else the standard). Recurring = what the latest invoices show:
+    RD invoices (Direct Debit) first, else RI; no recurring invoice seen keeps the recurring terms on record.
+    A CFO change not yet written to Xero (write `terms_to_write_to_xero` first) is never overwritten.
+    """
+    changes = []
+    for x in conn.execute(
+        """SELECT x.customer_id, s.display_name, x.sales_terms_days, x.sales_terms_type, x.collected_by_dd,
+                  x.recurring_days, x.recurring_method, x.one_off_days, x.one_off_basis, x.standard_terms_days,
+                  t.recurring_terms_days, t.recurring_payment_method_code, t.one_off_terms_days,
+                  t.one_off_terms_basis, t.one_off_prepayment_required, t.source_code, t.is_default
+             FROM sales.v_xero_customer_terms x
+             JOIN sales.credit_subject s ON s.customer_id = x.customer_id AND s.is_active
+             JOIN sales.v_customer_payment_terms t ON t.customer_id = x.customer_id
+            ORDER BY s.display_name"""
+    ).fetchall():
+        cfo_pending = (
+            x["source_code"] == "cfo"
+            and not x["is_default"]
+            and (x["one_off_terms_days"], x["one_off_terms_basis"]) != (x["one_off_days"], x["one_off_basis"])
+        )
+        nothing_in_xero = (
+            x["is_default"]
+            and x["recurring_days"] is None
+            and (x["one_off_days"], x["one_off_basis"]) == (x["standard_terms_days"], "DAYSAFTERBILLDATE")
+        )
+        if cfo_pending or nothing_in_xero:  # standard terms need no register entry
+            continue
+        want = PaymentTerms(
+            recurring_days=int(
+                x["recurring_days"] if x["recurring_days"] is not None else x["recurring_terms_days"]
+            ),
+            recurring_method=str(
+                x["recurring_method"] or x["recurring_payment_method_code"] or "bank_transfer"
+            ),
+            one_off_days=int(x["one_off_days"]),
+            one_off_basis=str(x["one_off_basis"]),
+        )
+        have = (
+            int(x["recurring_terms_days"]),
+            x["recurring_payment_method_code"],
+            int(x["one_off_terms_days"]),
+            str(x["one_off_terms_basis"]),
+            bool(x["one_off_prepayment_required"]),
+        )
+        if have == (want.recurring_days, want.recurring_method, want.one_off_days, want.one_off_basis, False):
+            continue
+        reason = _xero_terms_reason(dict(x))
+        _set_terms(conn, int(x["customer_id"]), want, reason, "xero")
+        changes.append({"customer": x["display_name"], "terms": reason})
+    return changes
+
+
+def terms_to_write_to_xero(conn: Connection) -> list[dict[str, Any]]:
+    """CFO-set one-off terms that the Xero contact does not show yet (write these before syncing from Xero)."""
+    return [
+        dict(r)
+        for r in conn.execute(
+            """SELECT s.display_name, c.xero_contact_id, t.one_off_terms_days AS days, t.one_off_terms_basis AS kind
+                 FROM sales.v_customer_payment_terms t
+                 JOIN sales.customer c USING (customer_id)
+                 JOIN sales.credit_subject s ON s.customer_id = c.customer_id AND s.is_active
+                 JOIN sales.xero_contact_directory d ON d.xero_contact_id = c.xero_contact_id
+                WHERE t.source_code = 'cfo' AND NOT t.is_default AND NOT t.one_off_prepayment_required
+                  AND (d.sales_terms_days, d.sales_terms_type)
+                      IS DISTINCT FROM (t.one_off_terms_days, t.one_off_terms_basis)
+                ORDER BY s.display_name"""
+        )
+    ]
+
+
+def mark_terms_written(conn: Connection, xero_contact_id: UUID, days: int, kind: str) -> None:
+    """Record that the Xero contact now carries these terms (after Xero confirmed the write)."""
+    conn.execute(
+        "UPDATE sales.xero_contact_directory SET sales_terms_days = %s, sales_terms_type = %s"
+        " WHERE xero_contact_id = %s",
+        (days, kind, xero_contact_id),
+    )

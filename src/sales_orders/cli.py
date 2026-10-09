@@ -31,6 +31,7 @@ from sales_orders.state_store import BlobStateStore, StateStoreError
 from sales_orders.xero import (
     CREDIT_SCOPE,
     DEFAULT_SCOPE,
+    SALES_TERMS_TYPES,
     XeroClient,
     XeroCredentials,
     XeroFormatError,
@@ -584,7 +585,7 @@ def cmd_credit_decide(args: argparse.Namespace) -> int:
     with unit_of_work(_actor(args)) as conn:
         if not credit.claim_desk_request(conn, args.request, "decision", args.subject):
             return _already_applied(args)
-        terms = _terms_arg(args)
+        terms = _terms_arg(args, conn)
         credit.decide(
             conn,
             args.subject,
@@ -596,49 +597,88 @@ def cmd_credit_decide(args: argparse.Namespace) -> int:
         credit.queue_filing(conn)
     print(
         f"{args.subject}: credit limit set to {gbp(Decimal(args.limit))}"
-        + (f"; payment terms {_terms_words(terms)}" if terms else "")
+        + (f"; one-off payment terms {_terms_words(terms)}" if terms else "")
         + "; snapshot filed to Xero on the next run"
+        + ("; terms written to Xero by credit-write-terms-to-xero" if terms else "")
     )
     return 0
 
 
-def _terms_arg(args: argparse.Namespace) -> credit.PaymentTerms | None:
-    given = (args.recurring_days, args.recurring_method, args.one_off_days)
-    if all(v is None for v in given) and not args.one_off_prepay:
-        return None  # terms unchanged
-    if any(v is None for v in given):
-        raise SalesOrderError(
-            "payment terms need --recurring-days, --recurring-method and --one-off-days together"
-        )
-    return credit.PaymentTerms(
-        args.recurring_days, args.recurring_method, args.one_off_days, args.one_off_prepay
-    )
+def _terms_arg(args: argparse.Namespace, conn: Any) -> credit.PaymentTerms | None:
+    """New one-off terms (recurring terms follow the invoices in Xero), or None to keep the current terms."""
+    if args.one_off_days is None:
+        return None
+    return credit.with_one_off_terms(conn, args.subject, args.one_off_days, args.one_off_basis)
 
 
 def _terms_words(t: credit.PaymentTerms) -> str:
-    one = "payment with order" if t.one_off_prepay else f"{t.one_off_days} days"
-    return f"recurring {t.recurring_days} days ({t.recurring_method.replace('_', ' ')}), one-off {one}"
+    return credit.basis_text(t.one_off_days, t.one_off_basis)
 
 
 def _add_terms_args(p: argparse.ArgumentParser) -> None:
-    p.add_argument("--recurring-days", type=int, help="days from the invoice date for recurring invoices")
     p.add_argument(
-        "--recurring-method", choices=credit.PAYMENT_METHODS, help="how recurring invoices are paid"
+        "--one-off-days", type=int, help="new payment terms for one-off invoices (0 = due on invoice)"
     )
-    p.add_argument("--one-off-days", type=int, help="days from the invoice date for one-off invoices")
-    p.add_argument("--one-off-prepay", action="store_true", help="one-off work is paid with the order")
+    p.add_argument(
+        "--one-off-basis",
+        default="DAYSAFTERBILLDATE",
+        choices=SALES_TERMS_TYPES,
+        help="Xero's kind of terms (default: days after the invoice date)",
+    )
 
 
 def cmd_credit_set_terms(args: argparse.Namespace) -> int:
-    terms = _terms_arg(args)
-    if terms is None:
-        raise SalesOrderError("give the terms: --recurring-days, --recurring-method and --one-off-days")
+    if args.one_off_days is None:
+        raise SalesOrderError("give the new one-off terms: --one-off-days")
     with unit_of_work(_actor(args)) as conn:
         if not credit.claim_desk_request(conn, args.request, "terms", args.subject):
             return _already_applied(args)
+        terms = _terms_arg(args, conn)
+        assert terms is not None  # noqa: S101 - one_off_days given
         credit.set_payment_terms(conn, args.subject, terms, args.reason)
-    print(f"{args.subject}: payment terms from today: {_terms_words(terms)}")
+    print(
+        f"{args.subject}: one-off payment terms from today: {_terms_words(terms)}; run credit-write-terms-to-xero"
+    )
     return 0
+
+
+def cmd_credit_load_invoices(args: argparse.Namespace) -> int:
+    with unit_of_work(_actor(args)) as conn:
+        snap, unmatched = credit.load_invoices(conn, json.loads(Path(args.file).read_text(encoding="utf-8")))
+    print(f"invoices snapshot {snap} loaded; {len(unmatched)} invoice(s) for contacts not in the Xero list")
+    return 0
+
+
+def cmd_credit_sync_terms(args: argparse.Namespace) -> int:
+    with unit_of_work(_actor(args)) as conn:
+        changes = credit.sync_terms_from_xero(conn)
+    print(f"payment terms from Xero: {len(changes)} change(s)")
+    for c in changes:
+        print(f"  {c['customer']}: {c['terms']}")
+    return 0
+
+
+def cmd_credit_write_terms_to_xero(args: argparse.Namespace) -> int:
+    xero = _xero_credit_client()
+    with unit_of_work(_actor(args)) as conn:
+        todo = credit.terms_to_write_to_xero(conn)
+    if args.dry_run or xero is None:
+        for r in todo:
+            print(f"  would set {r['display_name']}: {credit.basis_text(int(r['days']), str(r['kind']))}")
+        return 0 if args.dry_run else 1
+    problems = 0
+    for r in todo:
+        try:
+            xero.set_sales_terms(UUID(str(r["xero_contact_id"])), int(r["days"]), str(r["kind"]))
+        except Exception as exc:  # reported, never stops the others
+            problems += 1
+            print(f"  PROBLEM {r['display_name']}: {type(exc).__name__}: {exc}")
+            continue
+        with unit_of_work(_actor(args)) as conn:
+            credit.mark_terms_written(conn, UUID(str(r["xero_contact_id"])), int(r["days"]), str(r["kind"]))
+        print(f"  set {r['display_name']}: {credit.basis_text(int(r['days']), str(r['kind']))}")
+    print(f"payment terms written to Xero: {len(todo) - problems} of {len(todo)}")
+    return 1 if problems else 0
 
 
 def cmd_credit_register_export(args: argparse.Namespace) -> int:
@@ -962,6 +1002,17 @@ def _add_credit_terms_commands(sub: Any) -> None:
     p.add_argument("--request", help="the Credit Desk request id (decision job): applied once only")
     _add_terms_args(p)
     p.set_defaults(func=cmd_credit_set_terms)
+
+    p = sub.add_parser("credit-load-invoices", help="daily job: load the recent Xero sales invoices (JSON)")
+    p.add_argument("file")
+    p.set_defaults(func=cmd_credit_load_invoices)
+
+    p = sub.add_parser("credit-sync-terms", help="daily job: make customers' payment terms match Xero")
+    p.set_defaults(func=cmd_credit_sync_terms)
+
+    p = sub.add_parser("credit-write-terms-to-xero", help="put the CFO's payment terms on the Xero contacts")
+    p.add_argument("--dry-run", action="store_true")
+    p.set_defaults(func=cmd_credit_write_terms_to_xero)
 
     p = sub.add_parser(
         "credit-register-export", help="write the internal Customer Credit Register page's data"
