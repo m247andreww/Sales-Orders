@@ -4,9 +4,10 @@ Kept current by Claude every turn. Newest state wins.
 
 ## Your actions (now)
 
-1. **Share the Customer Credit Register** (https://claude.ai/artifact/L91Dh8ny3uAZ96Jw9ybEft) with colleagues from its
+1. **Oikos Storage limit**: automatic limit £6,000 (standard new-customer allowance; no recurring revenue yet). Customer asked
+   for £100,000. Reply with a figure (recommended £10,000, review in 3 months) or leave at £6,000.
+2. **Share the Customer Credit Register** (https://claude.ai/artifact/L91Dh8ny3uAZ96Jw9ybEft) with colleagues from its
    Share menu, as view-only.
-2. **LMAX: Xero shows 31 days** (every other customer is a round number): correct the contact in Xero if it is a typo.
 3. **Stopford**: one-off invoice PI-260478 (£2,820, Cyber Essentials Plus) was due 16 Sep 2026 and is unpaid.
 4. **Creditsafe**: Sam passed us to Dan James (integration specialist), 6 Oct 2026. Reply-all to Dan with the five
    questions (price for ~50 rising to ~80 companies; what is included; usage limits; same renewal date or separate
@@ -52,6 +53,10 @@ Kept current by Claude every turn. Newest state wins.
 | Creditsafe Safe numbers recorded: Tilbury UK00067419, QPR UK00005232 | Claude | Done 5 Oct 2026 |
 | Review dates set: Cardano Holding £1,375,300 review 5 Nov 2026; Pragmatic Semiconductor £24,000 review 19 Oct 2026 | CFO / Claude | Done 5 Oct 2026 |
 | Decisions: Tilbury £200,000 (review 30 Oct), Rascal £75,000 (30 Oct), QPR £44,000 (5 Nov) | CFO | Done 5 Oct 2026 |
+| LMAX terms corrected to 30 days in Xero and the register; McGill 90 days confirmed (CFO) | CFO / Claude | Done 9 Oct 2026 |
+| Oikos Storage Ltd (00315280) set up: Experian £570,000 Very Low Risk, Creditsafe £645,000 (UK00072450); limit £6,000 automatic. Signed Meraki quote £1,191; PS quote £4,200 viewed | Claude | Done 9 Oct 2026 |
+| Oikos: link the Xero contact once Finance creates it (its credit PDF files then) | Claude (daily run) | Open |
+| A one-step command for new customers not yet in the ARR file (Oikos was set up by hand) | Claude | Open |
 | Payment terms now read from Xero daily (one-off = contact terms; monthly = repeating invoices; RD = Direct Debit); 25 customers updated 9 Oct; Princes and Motive 60 days, McGill 90, LMAX 31, Stopford one-off 14 | Claude | Done 9 Oct 2026 |
 | Payment terms in the credit process (standard 30 days; decision card step 3); Customer Credit Register page for colleagues; Stopford one-off 14 days, recurring 30 days by Direct Debit | CFO / Claude | Done 9 Oct 2026 |
 | Rule: new figures do not re-open a same-day decision when nothing changed (CFO: "no"; migration 0025). Napier held at £9,300, review 12 Oct | CFO / Claude | Done 5 Oct 2026 |
