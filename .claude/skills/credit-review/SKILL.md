@@ -71,6 +71,10 @@ environment credentials. The database is restored from, and saved back to, Azure
    English>"]`; ArtifactData `get` desk/latest (for its version), then `set` desk/latest with `file_path`
    /tmp/desk.json and `if_version`. The routine's own notification tells the CFO the run finished. Never
    send email.
+8b. **Publish the Customer Credit Register** (internal, shareable; CFO 9 Oct 2026): `sales-orders credit-register-export
+   --out /tmp/register.json`; ArtifactData `get` register/latest on https://claude.ai/artifact/L91Dh8ny3uAZ96Jw9ybEft
+   (for its version), then `set` register/latest with `file_path` /tmp/register.json and `if_version`. It shows limits,
+   payment terms and what is owed; never bureau figures or decision reasons.
 9. **Update the open actions (CFO, 6 Oct 2026: "allow updated actions")**: edit `docs/owner-guides/open-actions.md`
    with what this run found or closed (Your actions, Still open table, newest state wins; whole pounds; facts only,
    no invoice line detail). Commit ONLY that file ("Open actions: daily run <date>: <one line>"), then
@@ -129,6 +133,10 @@ The CFO replies to the summary, e.g. "set Acme at £12,000 because they pay by D
    reason and a review / follow-up date after today (CFO, 2026-10-05; the database refuses either missing, 0022).
 
 ## Rules that never change
+
+- Payment terms (CFO, 9 Oct 2026; migration 0026): standard is 30 days from the invoice date, recurring and one-off.
+  Anything else is non-standard, set only by the CFO (`credit-set-terms`, or with a decision) with a reason. Never
+  infer a customer's terms; a customer with no register entry is on the standard terms.
 
 - A CFO decision made today is held (outcome override_in_force, `held_by_credit_limit_id`) when new figures leave the
   requirement unchanged and add no new reason (migration 0025). Never re-ask the CFO in that case.

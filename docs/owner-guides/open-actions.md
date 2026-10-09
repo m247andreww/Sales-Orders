@@ -4,13 +4,16 @@ Kept current by Claude every turn. Newest state wins.
 
 ## Your actions (now)
 
-1. **Creditsafe**: Sam passed us to Dan James (integration specialist), 6 Oct 2026. Reply-all to Dan with the five
+1. **Share the Customer Credit Register** (https://claude.ai/artifact/L91Dh8ny3uAZ96Jw9ybEft) with colleagues from its
+   Share menu, as view-only.
+2. **Stopford**: one-off invoice PI-260478 (£2,820, Cyber Essentials Plus) was due 16 Sep 2026 and is unpaid.
+3. **Creditsafe**: Sam passed us to Dan James (integration specialist), 6 Oct 2026. Reply-all to Dan with the five
    questions (price for ~50 rising to ~80 companies; what is included; usage limits; same renewal date or separate
    contract and minimum term; sandbox). On any call: ask for the price in writing; decline CRM plug-ins.
    Ready-to-send reply drafted 6 Oct (adds a sixth question: how the connection signs in, fixed IP addresses or not).
-2. **McGill figures**: in Experian and in Creditsafe, look up McGill and Partners Ltd (11877412) and reply with each
+4. **McGill figures**: in Experian and in Creditsafe, look up McGill and Partners Ltd (11877412) and reply with each
    one's credit limit (or "no limit shown"). Claude enters them. The figures on file are May workbook figures.
-3. **Cardano Holding decision (Credit Desk, top of the page)**: Experian cut Cardano Holding (09740394) from
+5. **Cardano Holding decision (Credit Desk, top of the page)**: Experian cut Cardano Holding (09740394) from
    £110,000 to £750 on 7 Oct (score 70 to 38); Creditsafe RAISED it from £1,150,000 to £1,450,000 on 9 Oct. We hold £97,309, due 26 Oct; your limit is £1,375,300 (review 5 Nov).
    Cardano belongs to Marsh McLennan (Mercer bought it in Nov 2024) and its invoices go to Marsh McLennan's mailbox,
    so the drop most likely reflects holding-company accounts. Choose: keep the limit on group strength, or ask
@@ -48,6 +51,7 @@ Kept current by Claude every turn. Newest state wins.
 | Creditsafe Safe numbers recorded: Tilbury UK00067419, QPR UK00005232 | Claude | Done 5 Oct 2026 |
 | Review dates set: Cardano Holding £1,375,300 review 5 Nov 2026; Pragmatic Semiconductor £24,000 review 19 Oct 2026 | CFO / Claude | Done 5 Oct 2026 |
 | Decisions: Tilbury £200,000 (review 30 Oct), Rascal £75,000 (30 Oct), QPR £44,000 (5 Nov) | CFO | Done 5 Oct 2026 |
+| Payment terms in the credit process (standard 30 days; decision card step 3); Customer Credit Register page for colleagues; Stopford one-off 14 days, recurring 30 days by Direct Debit | CFO / Claude | Done 9 Oct 2026 |
 | Rule: new figures do not re-open a same-day decision when nothing changed (CFO: "no"; migration 0025). Napier held at £9,300, review 12 Oct | CFO / Claude | Done 5 Oct 2026 |
 | Direct link to the agencies (5 Oct 2026): Experian Business Express has no API (enterprise Commercial Credit API is a separate contract); Creditsafe Connect API is documented and covers limits, monitoring and portfolio adds. Both blocked by this environment's network until allowed. Ask Creditsafe whether API access is in our subscription and its cost; Experian for a quote | CFO | Open |
 | Matrix SCM limit £0 (former customer; owes £42k early-termination charges): collection, not credit | CFO | Open |

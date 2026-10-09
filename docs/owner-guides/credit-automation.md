@@ -141,9 +141,12 @@ decision is applied straight away (limit, Xero PDF and note), not the next morni
 2. For each client under **Needs your decision**, in the box **Your decision**:
    1. **Limit:** tick "Accept the recommended £…", or tick "A different amount" and type it (whole pounds).
    2. **Reason:** type why (always required), e.g. "pays by Direct Debit".
-   3. **Review / follow up on:** press "1 week", "2 weeks", "Last working day of this month" (skips weekends and bank holidays), "1 month" or "3 months", or
+   3. **Payment terms:** tick "Keep: …" (the terms shown), or tick "Change to:" and type the days for recurring
+      and one-off invoices (standard is 30 days from the invoice date for both), choose how recurring invoices are
+      paid, or tick "payment with order" for one-off work. Your reason covers the terms too.
+   4. **Review / follow up on:** press "1 week", "2 weeks", "Last working day of this month" (skips weekends and bank holidays), "1 month" or "3 months", or
       "Pick a date" (always required; after today). The box shows the date chosen, with its weekday.
-   4. Click **Confirm decision**. If a step is missing, the box says which.
+   5. Click **Confirm decision**. If a step is missing, the box says which.
    *Within about 5 minutes the line should say "Done at HH:MM: limit £…".*
 3. Under **Customers with no credit limit** (customers in the ARR file nobody monitors; "new" = first seen
    today): press **Copy** next to the company number, add it in Experian (Monitoring) and Creditsafe (Live
@@ -164,3 +167,19 @@ decision is applied straight away (limit, Xero PDF and note), not the next morni
 **If it doesn't look like that:** if the date is not today's by 9am, or a line has not said "Done" after 10 minutes, tell Claude "the Credit Desk didn't update" and send a screenshot of the page.
 
 **Done when:** the **Needs your decision** list is empty and every decision reads "Done".
+
+## Part 6 — Share the Customer Credit Register with colleagues (you, once, ~2 minutes)
+
+**What this does and why.** The Customer Credit Register shows every customer's credit limit, payment terms and what
+they owe, so sales and credit control can check before taking an order. It never shows agency figures or the reasons
+for your decisions. It refreshes itself after every daily run and every decision. Only you can see it until you share it.
+
+1. Open the register: https://claude.ai/artifact/L91Dh8ny3uAZ96Jw9ybEft
+   *You should see "Customer Credit Register" and a table of customers.*
+2. Click **Share** (top right of the page).
+3. Add the colleagues (or your organisation) as **viewers**, then click **Share** / **Done**.
+   *You should see their names listed as able to view.*
+
+**If it doesn't look like that:** send Claude a screenshot of the Share window.
+
+**Done when:** a colleague can open the link and see the table. They cannot change anything.

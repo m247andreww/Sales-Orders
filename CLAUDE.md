@@ -99,6 +99,10 @@ These are the owner's stated preferences; follow them in every session.
   review / follow-up date are required (page, Python and database, migration 0022). No hidden defaults on the page.
   Same-day decisions hold (CFO, 2026-10-05, migration 0025): new bureau figures do NOT re-open a decision made the
   same day when the requirement is unchanged and every reason was already a reason; anything new still goes to the CFO.
+  Payment terms (CFO, 2026-10-09, migration 0026): standard 30 days from the invoice date (recurring and one-off);
+  anything else is non-standard with a reason, chosen on the decision card. Limits and terms are shared internally on
+  the Customer Credit Register page (no bureau figures or decision reasons there). Stopford: one-off 14 days;
+  recurring stays 30 days because it is collected by Direct Debit.
   Review choices (CFO, 2026-10-05): 1 week, 2 weeks, last WORKING day of this month (skip weekends and England &
   Wales bank holidays), 1 month, 3 months, pick a date.
 - **Money shown to people is whole pounds (CFO, 2026-10-02: "lose the dp from the outputs").** PDFs, Xero notes,
