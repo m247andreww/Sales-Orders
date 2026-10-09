@@ -164,3 +164,18 @@ def test_no_monthly_invoices_seen_is_said_not_guessed(conn: Connection, master_d
     _invoices(conn, ("PI-7", ACME, "2026-09-01", "2026-11-30"))  # one-off only
     credit.sync_terms_from_xero(conn)
     assert _terms(conn, "Acme Widgets") == ("no monthly invoices seen", "90 days", "xero")
+
+
+def test_one_off_terms_can_change_when_no_monthly_invoices_were_seen(
+    conn: Connection, master_data: MasterDataIn
+) -> None:
+    _setup(conn, (31, "DAYSAFTERBILLDATE"))
+    _invoices(conn, ("PI-8", ACME, "2026-09-01", "2026-10-02"))
+    credit.sync_terms_from_xero(conn)
+    credit.set_payment_terms(
+        conn, "Acme Widgets", credit.with_one_off_terms(conn, "Acme Widgets", 30), "Xero showed 31 in error"
+    )
+    assert _terms(conn, "Acme Widgets") == ("no monthly invoices seen", "30 days", "cfo")
+    assert [(r["days"], r["kind"]) for r in credit.terms_to_write_to_xero(conn)] == [
+        (30, "DAYSAFTERBILLDATE")
+    ]

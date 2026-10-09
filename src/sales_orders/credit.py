@@ -633,7 +633,10 @@ class PaymentTerms:
                 raise SalesOrderError(f"{label} payment terms must be a whole number of days from 0 to 180")
         if self.one_off_basis not in SALES_TERMS_TYPES:
             raise SalesOrderError(f"unknown kind of payment terms {self.one_off_basis!r}")
-        if self.recurring_method not in PAYMENT_METHODS:
+        if self.recurring_method not in (
+            *PAYMENT_METHODS,
+            "not_seen",
+        ):  # not_seen: no monthly invoices (0028)
             raise SalesOrderError(
                 f"unknown payment method {self.recurring_method!r}: {', '.join(PAYMENT_METHODS)}"
             )
