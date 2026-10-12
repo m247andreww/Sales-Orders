@@ -17,15 +17,26 @@ Kept current by Claude every turn. Newest state wins.
    Cardano belongs to Marsh McLennan (Mercer bought it in Nov 2024) and its invoices go to Marsh McLennan's mailbox,
    so the drop most likely reflects holding-company accounts. Choose: keep the limit on group strength, or ask
    for a parent-company guarantee or letter of comfort. Either way give a reason and a review date.
+5. **ASR decision (Credit Desk)**: Africa Specialty Risks Ltd (12395404) is a live customer (£324,351 a year
+   contracted, £21,846 owed, all due 26 Oct) that had no credit record until today. Experian: limit £24,000, score
+   74 (Below Average Risk). Trading need £121,900. Also look it up in Creditsafe and give the limit on the desk's
+   first-figures box (it has no Creditsafe figure).
+6. **Payment-terms sync**: the daily job cannot update payment terms from Xero, because the database only lets
+   your own login do it. Reply "run terms as credit job" to give the job its own permission (a small code change I
+   make in a development session), or "leave it" to keep updating terms by hand.
 
 ## Still open
 
 | Item | Owner | Status |
 |---|---|---|
+| Daily run 12 Oct (covers 9-11 Oct alerts): owed £1,260,574; overdue £593,873 (Sunspel £18,293 fell due 10 Oct; MiTAD paid £3,900); 3 Experian alerts; Clarendon ARR +£616 (signed quote); 3 decisions on the desk | Claude | Done 12 Oct 2026 |
+| ASR added to credit monitoring (live customer, had no credit record); needs CFO decision and a Creditsafe figure | CFO | Open (Your action 5) |
+| Alert companies recorded: Ingram Micro (supplier); Benoy, Untamed Cat Food (former customers); AS Holdco (not in Xero): monitored only | Claude | Done 12 Oct 2026 |
+| Payment-terms sync (skill step 6c) refused for the daily job: needs a job permission or the CFO's login; terms not updated 12 Oct | CFO decision, then Claude | Open (Your action 6) |
 | Daily run 9 Oct: owed £1,264,630 (new invoices; overdue unchanged £576,485); 2 alerts (Experian 1, Creditsafe 3); Sunspel limit raised automatically (ARR +£1,412); 2 decisions still on the desk | Claude | Done 9 Oct 2026 |
 | FremantleMedia (00276928) in an Experian alert: former customer, no invoices since before 2024, nothing owed; recorded as for information only | Claude | Done 9 Oct 2026 |
 | Daily run 8 Oct: owed £1,258,509 (The Television Corporation paid £3,745); 2 alerts (Experian 35 companies, Creditsafe 4); no ARR change; 2 decisions on the desk (Cardano, First Steps Care) | Claude | Done 8 Oct 2026 |
-| Cardano Holding: Experian £750 vs Creditsafe £1,450,000 (agencies now disagree); owned by Marsh McLennan; keep limit or ask for a parent guarantee | CFO | Open (Your action 3) |
+| Cardano Holding: Experian £750 vs Creditsafe £1,450,000 (agencies now disagree); owned by Marsh McLennan; keep limit or ask for a parent guarantee | CFO | Open (Your action 4) |
 | Pragmatic Semiconductor proposal V1.4 shows £678,848 in PandaDoc but adds alternative price options together: overstated | Claude | Noted 8 Oct 2026 |
 | Daily run 7 Oct: Motive paid £199,158 and Hypnos £33,844; owed now £1,262,254 (BPCE non-trade excluded); 1 Creditsafe alert filed; no ARR change over £50,000 | Claude | Done 7 Oct 2026 |
 | Vistair: ARR shows no committed contract lines from 7 Oct (was £26,327 a year); one invoice of £7,898 open, not yet due | Claude to watch | Open |
