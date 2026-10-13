@@ -13,7 +13,7 @@ Kept current by Claude every turn. Newest state wins.
 3. **McGill figures**: in Experian and in Creditsafe, look up McGill and Partners Ltd (11877412) and reply with each
    one's credit limit (or "no limit shown"). Claude enters them. The figures on file are May workbook figures.
 4. **Cardano Holding decision (Credit Desk, top of the page)**: Experian cut Cardano Holding (09740394) from
-   £110,000 to £750 on 7 Oct (score 70 to 38); Creditsafe RAISED it from £1,150,000 to £1,450,000 on 9 Oct. We hold £97,309, due 26 Oct; your limit is £1,375,300 (review 5 Nov).
+   £110,000 to £750 on 7 Oct (score 70 to 38); Creditsafe RAISED it from £1,150,000 to £1,450,000 on 9 Oct. Update 13 Oct: we now hold £109,426 (new £12,117 invoice) and contracted revenue rose £9,971 a year, so the trading need is £1,387,300, which is £12,000 ABOVE your limit of £1,375,300 (review 5 Nov).
    Cardano belongs to Marsh McLennan (Mercer bought it in Nov 2024) and its invoices go to Marsh McLennan's mailbox,
    so the drop most likely reflects holding-company accounts. Choose: keep the limit on group strength, or ask
    for a parent-company guarantee or letter of comfort. Either way give a reason and a review date.
@@ -24,11 +24,18 @@ Kept current by Claude every turn. Newest state wins.
 6. **Payment-terms sync**: the daily job cannot update payment terms from Xero, because the database only lets
    your own login do it. Reply "run terms as credit job" to give the job its own permission (a small code change I
    make in a development session), or "leave it" to keep updating terms by hand.
+7. **Seven credit limits passed their review date (12 Oct)**: Motive UK £191,000, Metropolitan Gaming £100,000,
+   Tinopolis £70,600, Fuelsoft £55,600, Napier Parking £9,300, Stopford £8,100 and Agechecked £8,000. They still
+   apply, and the Credit Desk lists them under "needs attention", but the desk has no button to renew them. Reply
+   "renew all to <date>", or "re-assess", which lets the system recalculate each one: within your risk appetite it
+   sets the limit itself, otherwise it puts the customer on the desk for your decision.
 
 ## Still open
 
 | Item | Owner | Status |
 |---|---|---|
+| Daily run 13 Oct: owed £1,212,259; overdue £533,441 (The Parks Trust paid £60,357); no new alerts; Cardano ARR +£9,971 and new £12,117 invoice, so its need of £1,387,300 is now above its limit; payment-terms step skipped (permission); 3 decisions on the desk | Claude | Done 13 Oct 2026 |
+| Seven CFO limits passed their 12 Oct review date. The system never re-opens a limit when only the review date has passed (code gap): fix in a development session so the limit goes back on the desk | CFO decision (Your action 7), then Claude | Open |
 | Daily run 12 Oct (covers 9-11 Oct alerts): owed £1,260,574; overdue £593,873 (Sunspel £18,293 fell due 10 Oct; MiTAD paid £3,900); 3 Experian alerts; Clarendon ARR +£616 (signed quote); 3 decisions on the desk | Claude | Done 12 Oct 2026 |
 | ASR added to credit monitoring (live customer, had no credit record); needs CFO decision and a Creditsafe figure | CFO | Open (Your action 5) |
 | Alert companies recorded: Ingram Micro (supplier); Benoy, Untamed Cat Food (former customers); AS Holdco (not in Xero): monitored only | Claude | Done 12 Oct 2026 |
