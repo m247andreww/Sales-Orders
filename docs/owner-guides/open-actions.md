@@ -29,11 +29,18 @@ Kept current by Claude every turn. Newest state wins.
    apply, and the Credit Desk lists them under "needs attention", but the desk has no button to renew them. Reply
    "renew all to <date>", or "re-assess", which lets the system recalculate each one: within your risk appetite it
    sets the limit itself, otherwise it puts the customer on the desk for your decision.
+8. **Reconnect Microsoft 365 (urgent, 14 Oct)**: the credit job's Microsoft 365 sign-in has expired, so it cannot read
+   the credit alert emails or the contracts file (ARR file). (a) Open https://claude.ai/customize/connectors .
+   (b) Click "Microsoft 365", then "Connect" (or "Reconnect"). (c) Sign in with your usual work login. You should
+   then see it listed as connected. If it does not look like that, send a screenshot. Done when tomorrow's run
+   note no longer says "Microsoft 365 is signed out"; that run reads any alerts it missed.
 
 ## Still open
 
 | Item | Owner | Status |
 |---|---|---|
+| Daily run 14 Oct (part run): Microsoft 365 signed out, so no alert emails or ARR file read; Xero and PandaDoc read: owed £1,217,260, overdue £533,838 (Star Lizard paid £12,013; Clarendon new £11,471 invoice); Cardano owes £110,271, still above its limit | Claude | Done 14 Oct 2026 |
+| Microsoft 365 connection expired 14 Oct: alerts and ARR not read until it is reconnected | CFO (Your action 8), then Claude catches up | Open |
 | Daily run 13 Oct: owed £1,212,259; overdue £533,441 (The Parks Trust paid £60,357); no new alerts; Cardano ARR +£9,971 and new £12,117 invoice, so its need of £1,387,300 is now above its limit; payment-terms step skipped (permission); 3 decisions on the desk | Claude | Done 13 Oct 2026 |
 | Seven CFO limits passed their 12 Oct review date. The system never re-opens a limit when only the review date has passed (code gap): fix in a development session so the limit goes back on the desk | CFO decision (Your action 7), then Claude | Open |
 | Daily run 12 Oct (covers 9-11 Oct alerts): owed £1,260,574; overdue £593,873 (Sunspel £18,293 fell due 10 Oct; MiTAD paid £3,900); 3 Experian alerts; Clarendon ARR +£616 (signed quote); 3 decisions on the desk | Claude | Done 12 Oct 2026 |
