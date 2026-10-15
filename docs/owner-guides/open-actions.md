@@ -13,7 +13,7 @@ Kept current by Claude every turn. Newest state wins.
 3. **McGill figures**: in Experian and in Creditsafe, look up McGill and Partners Ltd (11877412) and reply with each
    one's credit limit (or "no limit shown"). Claude enters them. The figures on file are May workbook figures.
 4. **Cardano Holding decision (Credit Desk, top of the page)**: Experian cut Cardano Holding (09740394) from
-   £110,000 to £750 on 7 Oct (score 70 to 38); Creditsafe RAISED it from £1,150,000 to £1,450,000 on 9 Oct. Update 13 Oct: we now hold £109,426 (new £12,117 invoice) and contracted revenue rose £9,971 a year, so the trading need is £1,387,300, which is £12,000 ABOVE your limit of £1,375,300 (review 5 Nov).
+   £110,000 to £750 on 7 Oct (score 70 to 38); Creditsafe RAISED it from £1,150,000 to £1,450,000 on 9 Oct. Update 15 Oct: we now hold £110,271 and contracted revenue has risen, so the trading need is £1,388,300, which is £13,000 ABOVE your limit of £1,375,300 (review 5 Nov).
    Cardano belongs to Marsh McLennan (Mercer bought it in Nov 2024) and its invoices go to Marsh McLennan's mailbox,
    so the drop most likely reflects holding-company accounts. Choose: keep the limit on group strength, or ask
    for a parent-company guarantee or letter of comfort. Either way give a reason and a review date.
@@ -29,18 +29,15 @@ Kept current by Claude every turn. Newest state wins.
    apply, and the Credit Desk lists them under "needs attention", but the desk has no button to renew them. Reply
    "renew all to <date>", or "re-assess", which lets the system recalculate each one: within your risk appetite it
    sets the limit itself, otherwise it puts the customer on the desk for your decision.
-8. **Reconnect Microsoft 365 (urgent, 14 Oct)**: the credit job's Microsoft 365 sign-in has expired, so it cannot read
-   the credit alert emails or the contracts file (ARR file). (a) Open https://claude.ai/customize/connectors .
-   (b) Click "Microsoft 365", then "Connect" (or "Reconnect"). (c) Sign in with your usual work login. You should
-   then see it listed as connected. If it does not look like that, send a screenshot. Done when tomorrow's run
-   note no longer says "Microsoft 365 is signed out"; that run reads any alerts it missed.
 
 ## Still open
 
 | Item | Owner | Status |
 |---|---|---|
+| Daily run 15 Oct: 3 Experian alerts (13-14 Oct; FremantleMedia, Benoy, Untamed information only); no Creditsafe alerts; ARR: no change over £50,000 (PrimeSys committed revenue fell £21,564 to nil); owed £1,217,745, overdue £535,856; Sunspel limit raised automatically to £50,100; Cardano need £1,388,300, above its limit; Pragmatic's £678,848 proposal back to draft (being revised) | Claude | Done 15 Oct 2026 |
+| Capital & Regional PLC (01399411, Experian alert 13 Oct) added for information: group parent of The Mall centres we invoice (ARR prefixes CAP, TMM, TMS, TMW, none credit-checked yet) | Claude | Done 15 Oct 2026 |
 | Daily run 14 Oct (part run): Microsoft 365 signed out, so no alert emails or ARR file read; Xero and PandaDoc read: owed £1,217,260, overdue £533,838 (Star Lizard paid £12,013; Clarendon new £11,471 invoice); Cardano owes £110,271, still above its limit | Claude | Done 14 Oct 2026 |
-| Microsoft 365 connection expired 14 Oct: alerts and ARR not read until it is reconnected | CFO (Your action 8), then Claude catches up | Open |
+| Microsoft 365 connection expired 14 Oct; reconnected by 15 Oct and the missed alerts and ARR file were caught up | CFO / Claude | Done 15 Oct 2026 |
 | Daily run 13 Oct: owed £1,212,259; overdue £533,441 (The Parks Trust paid £60,357); no new alerts; Cardano ARR +£9,971 and new £12,117 invoice, so its need of £1,387,300 is now above its limit; payment-terms step skipped (permission); 3 decisions on the desk | Claude | Done 13 Oct 2026 |
 | Seven CFO limits passed their 12 Oct review date. The system never re-opens a limit when only the review date has passed (code gap): fix in a development session so the limit goes back on the desk | CFO decision (Your action 7), then Claude | Open |
 | Daily run 12 Oct (covers 9-11 Oct alerts): owed £1,260,574; overdue £593,873 (Sunspel £18,293 fell due 10 Oct; MiTAD paid £3,900); 3 Experian alerts; Clarendon ARR +£616 (signed quote); 3 decisions on the desk | Claude | Done 12 Oct 2026 |
