@@ -12,9 +12,11 @@ Kept current by Claude every turn. Newest state wins.
    Ready-to-send reply drafted 6 Oct (adds a sixth question: how the connection signs in, fixed IP addresses or not).
 3. **McGill figures**: in Experian and in Creditsafe, look up McGill and Partners Ltd (11877412) and reply with each
    one's credit limit (or "no limit shown"). Claude enters them. The figures on file are May workbook figures.
+   Now more urgent (16 Oct): the system raised McGill's limit automatically to £140,100 using those May figures, which
+   probably belong to the old McGill company; treat that limit as provisional until you send fresh figures.
 4. **Cardano Holding decision (Credit Desk, top of the page)**: Experian cut Cardano Holding (09740394) from
    £110,000 to £750 on 7 Oct (score 70 to 38); Creditsafe RAISED it from £1,150,000 to £1,450,000 on 9 Oct. Update 15 Oct: we now hold £110,271 and contracted revenue has risen, so the trading need is £1,388,300, which is £13,000 ABOVE your limit of £1,375,300 (review 5 Nov).
-   Cardano belongs to Marsh McLennan (Mercer bought it in Nov 2024) and its invoices go to Marsh McLennan's mailbox,
+   Creditsafe (15 Oct) also shows a change of Cardano's ultimate parent company (and Now:Pensions'). Cardano belongs to Marsh McLennan (Mercer bought it in Nov 2024) and its invoices go to Marsh McLennan's mailbox,
    so the drop most likely reflects holding-company accounts. Choose: keep the limit on group strength, or ask
    for a parent-company guarantee or letter of comfort. Either way give a reason and a review date.
 5. **ASR decision (Credit Desk)**: Africa Specialty Risks Ltd (12395404) is a live customer (£324,351 a year
@@ -34,6 +36,9 @@ Kept current by Claude every turn. Newest state wins.
 
 | Item | Owner | Status |
 |---|---|---|
+| Daily run 16 Oct: Experian alert (Alpha Schools (Holdings) added for information, same group as AS Holdco); Creditsafe alert: Cardano and Now:Pensions ultimate parent changed; McGill limit auto-raised to £140,100 on May figures (provisional); ARR no change over £50,000; owed £1,217,069, overdue £528,316 (Clarendon paid £7,540); Pragmatic revised £618,863 proposal sent 15 Oct | Claude | Done 16 Oct 2026 |
+| Pragmatic Semiconductor: limit £24,000 due for review 19 Oct while a £618,863 proposal (30 months at £9,587 a month) is out; if signed, the need rises far above the limit | CFO at review, then Claude | Open |
+| Code fix now urgent: old bureau figures must stop counting after a company-number change (McGill limit raised on old-company figures 16 Oct) | Claude (development session) | Open |
 | Daily run 15 Oct: 3 Experian alerts (13-14 Oct; FremantleMedia, Benoy, Untamed information only); no Creditsafe alerts; ARR: no change over £50,000 (PrimeSys committed revenue fell £21,564 to nil); owed £1,217,745, overdue £535,856; Sunspel limit raised automatically to £50,100; Cardano need £1,388,300, above its limit; Pragmatic's £678,848 proposal back to draft (being revised) | Claude | Done 15 Oct 2026 |
 | Capital & Regional PLC (01399411, Experian alert 13 Oct) added for information: group parent of The Mall centres we invoice (ARR prefixes CAP, TMM, TMS, TMW, none credit-checked yet) | Claude | Done 15 Oct 2026 |
 | Daily run 14 Oct (part run): Microsoft 365 signed out, so no alert emails or ARR file read; Xero and PandaDoc read: owed £1,217,260, overdue £533,838 (Star Lizard paid £12,013; Clarendon new £11,471 invoice); Cardano owes £110,271, still above its limit | Claude | Done 14 Oct 2026 |
