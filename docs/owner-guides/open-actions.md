@@ -26,16 +26,24 @@ Kept current by Claude every turn. Newest state wins.
 6. **Payment-terms sync**: the daily job cannot update payment terms from Xero, because the database only lets
    your own login do it. Reply "run terms as credit job" to give the job its own permission (a small code change I
    make in a development session), or "leave it" to keep updating terms by hand.
-7. **Seven credit limits passed their review date (12 Oct)**: Motive UK £191,000, Metropolitan Gaming £100,000,
-   Tinopolis £70,600, Fuelsoft £55,600, Napier Parking £9,300, Stopford £8,100 and Agechecked £8,000. They still
+7. **Six credit limits passed their review date (12 Oct)**: Motive UK £191,000, Metropolitan Gaming £100,000,
+   Fuelsoft £55,600, Napier Parking £9,300, Stopford £8,100 and Agechecked £8,000 (Tinopolis is now on the desk,
+   action 8). They still
    apply, and the Credit Desk lists them under "needs attention", but the desk has no button to renew them. Reply
    "renew all to <date>", or "re-assess", which lets the system recalculate each one: within your risk appetite it
    sets the limit itself, otherwise it puts the customer on the desk for your decision.
+8. **Two new decisions on the Credit Desk (19 Oct)**: QPR (your £44,000 limit; Creditsafe still £3,500, Experian
+   £490,000; re-opened only because Experian eased slightly) and Tinopolis (needs £70,600; Experian cut to £770,000,
+   Creditsafe £75,000 allows £37,500). Give each a limit, a reason and a review date.
+9. **Everywoman (consider chasing)**: Experian cut its limit from £110,000 to £23,000 and its score from 93 to 37
+   (Above Average Risk). It owes £6,124, of which £4,459 has been overdue since 25 Aug.
 
 ## Still open
 
 | Item | Owner | Status |
 |---|---|---|
+| Daily run 19 Oct: Experian alert of 10 companies (QPR and Tinopolis to the desk; Everywoman cut to £23,000, score 37; Sunspel and Dayla cut but within need); Kynetec and Sinclair Pharmaceuticals added for information; Creditsafe: Weil Gotshal up to £10.4m; owed £1,218,586, overdue £525,826; Metropolitan Gaming 36-month agreement (£241,552) lapsed unsigned 16 Oct | Claude | Done 19 Oct 2026 |
+| Xero refuses more attachments for Weil Gotshal and Sunspel (most likely Xero's 10-files-per-contact limit): alert copies not filed in Xero from 19 Oct (still kept in the database). Fix: file one rolling evidence file per customer, or stop filing alert copies in Xero | Claude (development session) | Open |
 | Daily run 16 Oct: Experian alert (Alpha Schools (Holdings) added for information, same group as AS Holdco); Creditsafe alert: Cardano and Now:Pensions ultimate parent changed; McGill limit auto-raised to £140,100 on May figures (provisional); ARR no change over £50,000; owed £1,217,069, overdue £528,316 (Clarendon paid £7,540); Pragmatic revised £618,863 proposal sent 15 Oct | Claude | Done 16 Oct 2026 |
 | Pragmatic Semiconductor: limit £24,000 due for review 19 Oct while a £618,863 proposal (30 months at £9,587 a month) is out; if signed, the need rises far above the limit | CFO at review, then Claude | Open |
 | Code fix now urgent: old bureau figures must stop counting after a company-number change (McGill limit raised on old-company figures 16 Oct) | Claude (development session) | Open |
