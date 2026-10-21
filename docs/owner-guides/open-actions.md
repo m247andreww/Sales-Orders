@@ -26,9 +26,9 @@ Kept current by Claude every turn. Newest state wins.
 6. **Payment-terms sync**: the daily job cannot update payment terms from Xero, because the database only lets
    your own login do it. Reply "run terms as credit job" to give the job its own permission (a small code change I
    make in a development session), or "leave it" to keep updating terms by hand.
-7. **Six credit limits passed their review date (12 Oct)**: Motive UK £191,000, Metropolitan Gaming £100,000,
-   Fuelsoft £55,600, Napier Parking £9,300, Stopford £8,100 and Agechecked £8,000 (Tinopolis is now on the desk,
-   action 8). They still
+7. **Four credit limits passed their review date (12 Oct)**: Motive UK £191,000, Fuelsoft £55,600,
+   Napier Parking £9,300 and Agechecked £8,000 (Tinopolis, Metropolitan Gaming and Stopford are now on the desk:
+   decide them there). They still
    apply, and the Credit Desk lists them under "needs attention", but the desk has no button to renew them. Reply
    "renew all to <date>", or "re-assess", which lets the system recalculate each one: within your risk appetite it
    sets the limit itself, otherwise it puts the customer on the desk for your decision.
@@ -42,6 +42,7 @@ Kept current by Claude every turn. Newest state wins.
 
 | Item | Owner | Status |
 |---|---|---|
+| Daily run 21 Oct: ARR file changed (Metropolitan Gaming down £98,888 to £164,883 a year); Metropolitan Gaming (needs £63,000, Creditsafe only £5,000) and Stopford (needs £7,400, no bureau limit) back on the desk; Clarendon reset automatically to £266,200; Analysys Mason improved (Experian £1,100,000); Benoy Creditsafe limit halved to £1,250,000 (information only); Eckoh Limited (parent of Eckoh UK) added for information; owed £1,031,342, overdue £448,042 (Tilbury Douglas paid £76,086); QPR renewal proposal raised to £104,424 | Claude | Done 21 Oct 2026 |
 | Daily run 20 Oct: Experian alert of 2 companies (Cyber Media Solutions, Chester Zoo Enterprises: Xero contacts with no invoices since 2024, added for information); no limits changed; ARR file unchanged; Cardano paid about £97,300; owed £1,108,617, overdue £522,676; new proposals Tilbury Douglas laptops £59,063 and Branston £10,158; Starlizard Nutanix quote £207,809 expired; Xero still refuses alert copies for Sunspel and Weil Gotshal | Claude | Done 20 Oct 2026 |
 | Daily run 19 Oct: Experian alert of 10 companies (QPR and Tinopolis to the desk; Everywoman cut to £23,000, score 37; Sunspel and Dayla cut but within need); Kynetec and Sinclair Pharmaceuticals added for information; Creditsafe: Weil Gotshal up to £10.4m; owed £1,218,586, overdue £525,826; Metropolitan Gaming 36-month agreement (£241,552) lapsed unsigned 16 Oct | Claude | Done 19 Oct 2026 |
 | Xero refuses more attachments for Weil Gotshal and Sunspel (most likely Xero's 10-files-per-contact limit): alert copies not filed in Xero from 19 Oct (still kept in the database). Fix: file one rolling evidence file per customer, or stop filing alert copies in Xero | Claude (development session) | Open |
