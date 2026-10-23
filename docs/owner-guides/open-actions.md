@@ -4,10 +4,14 @@ Kept current by Claude every turn. Newest state wins.
 
 ## Your actions (now)
 
-0. **Reconnect Microsoft 365 (22 Oct, urgent)**: the connector was not connected for the 22 Oct run, so that day's
-   bureau alert emails and the ARR file were not read. Go to https://claude.ai/customize/connectors, click
+0. **Reconnect Microsoft 365 (since 22 Oct, urgent; still signed out 23 Oct)**: the connector was not connected for the 22 and
+   23 Oct runs, so bureau alert emails since 21 Oct and the ARR file were not read. Go to https://claude.ai/customize/connectors, click
    "Microsoft 365" and then "Connect" (or "Reconnect"), and sign in with your work account. Done when it shows
    as connected; the next morning's run then catches up automatically.
+0b. **B3 Communications Ltd (13983075), new customer (23 Oct)**: signed our application form 21 Oct and a service desk
+   proposal 22 Oct (about £1,108 a month). Look it up in Experian and Creditsafe and reply with each one's credit limit.
+   Note: the bank account on its form is in the name of B3 Networks Ltd (17166950), a different company set up in April
+   2026; confirm which company we invoice before the first invoice.
 1. **Share the Customer Credit Register** (https://claude.ai/artifact/L91Dh8ny3uAZ96Jw9ybEft) with colleagues from its
    Share menu, as view-only.
 2. **Creditsafe**: Sam passed us to Dan James (integration specialist), 6 Oct 2026. Reply-all to Dan with the five
@@ -46,6 +50,7 @@ Kept current by Claude every turn. Newest state wins.
 
 | Item | Owner | Status |
 |---|---|---|
+| Daily run 23 Oct (PARTLY COMPLETED): Microsoft 365 still signed out (alerts and ARR file not read); owed £829,168, overdue £231,338; QPR revised CSP renewal fully signed 22 Oct (about £47,500 a year from 13 Nov); new customer B3 Communications Ltd added for information (no credit check yet; bank account in the name of B3 Networks Ltd) | Claude | Done 23 Oct 2026 |
 | Daily run 22 Oct (PARTLY COMPLETED): Microsoft 365 not connected, so alert emails and ARR file not read (catch-up next run); Princes Group paid £216,704; owed £814,638, overdue £231,338; QPR signed the CSP renewal on 21 Oct (our countersignature pending) and a revised £94,953 version was also sent | Claude | Done 22 Oct 2026 |
 | Daily run 21 Oct: ARR file changed (Metropolitan Gaming down £98,888 to £164,883 a year); Metropolitan Gaming (needs £63,000, Creditsafe only £5,000) and Stopford (needs £7,400, no bureau limit) back on the desk; Clarendon reset automatically to £266,200; Analysys Mason improved (Experian £1,100,000); Benoy Creditsafe limit halved to £1,250,000 (information only); Eckoh Limited (parent of Eckoh UK) added for information; owed £1,031,342, overdue £448,042 (Tilbury Douglas paid £76,086); QPR renewal proposal raised to £104,424 | Claude | Done 21 Oct 2026 |
 | Daily run 20 Oct: Experian alert of 2 companies (Cyber Media Solutions, Chester Zoo Enterprises: Xero contacts with no invoices since 2024, added for information); no limits changed; ARR file unchanged; Cardano paid about £97,300; owed £1,108,617, overdue £522,676; new proposals Tilbury Douglas laptops £59,063 and Branston £10,158; Starlizard Nutanix quote £207,809 expired; Xero still refuses alert copies for Sunspel and Weil Gotshal | Claude | Done 20 Oct 2026 |
