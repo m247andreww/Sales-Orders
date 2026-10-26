@@ -4,10 +4,14 @@ Kept current by Claude every turn. Newest state wins.
 
 ## Your actions (now)
 
-0. **Reconnect Microsoft 365 (since 22 Oct, urgent; still signed out 23 Oct)**: the connector was not connected for the 22 and
-   23 Oct runs, so bureau alert emails since 21 Oct and the ARR file were not read. Go to https://claude.ai/customize/connectors, click
+0. **Reconnect Microsoft 365 (since 22 Oct, urgent; still signed out 26 Oct)**: the connector was not connected for the 22, 23
+   and 26 Oct runs, so bureau alert emails since 21 Oct and the ARR file were not read. Go to https://claude.ai/customize/connectors, click
    "Microsoft 365" and then "Connect" (or "Reconnect"), and sign in with your work account. Done when it shows
    as connected; the next morning's run then catches up automatically.
+0a. **Starlizard (26 Oct)**: three Palo Alto proposals went out 23 Oct in US dollars ($1,392,373 or $733,686 as
+   alternatives, plus $279,271). The largest would put Starlizard over its £690,900 credit limit if signed, and its
+   £79,320 licence invoice has been overdue since 4 Oct. Decide whether to raise the limit or ask for staged billing
+   before they sign.
 0b. **B3 Communications Ltd (13983075), new customer (23 Oct)**: signed our application form 21 Oct and a service desk
    proposal 22 Oct (about £1,108 a month). Look it up in Experian and Creditsafe and reply with each one's credit limit.
    Note: the bank account on its form is in the name of B3 Networks Ltd (17166950), a different company set up in April
@@ -50,6 +54,8 @@ Kept current by Claude every turn. Newest state wins.
 
 | Item | Owner | Status |
 |---|---|---|
+| Daily run 26 Oct (PARTLY COMPLETED): Microsoft 365 still signed out (alerts and ARR file not read); owed £614,830 (down £214,338 since 23 Oct), Stopford paid its overdue £2,820; Starlizard sent US-dollar Palo Alto proposals (largest $1,392,373) that would exceed its £690,900 limit if signed | Claude | Done 26 Oct 2026 |
+| Pipeline treats US-dollar PandaDoc proposals as pounds and counts alternative quotes twice (Starlizard 23 Oct): convert currency and group alternatives | Claude (development session) | Open |
 | Daily run 23 Oct (PARTLY COMPLETED): Microsoft 365 still signed out (alerts and ARR file not read); owed £829,168, overdue £231,338; QPR revised CSP renewal fully signed 22 Oct (about £47,500 a year from 13 Nov); new customer B3 Communications Ltd added for information (no credit check yet; bank account in the name of B3 Networks Ltd) | Claude | Done 23 Oct 2026 |
 | Daily run 22 Oct (PARTLY COMPLETED): Microsoft 365 not connected, so alert emails and ARR file not read (catch-up next run); Princes Group paid £216,704; owed £814,638, overdue £231,338; QPR signed the CSP renewal on 21 Oct (our countersignature pending) and a revised £94,953 version was also sent | Claude | Done 22 Oct 2026 |
 | Daily run 21 Oct: ARR file changed (Metropolitan Gaming down £98,888 to £164,883 a year); Metropolitan Gaming (needs £63,000, Creditsafe only £5,000) and Stopford (needs £7,400, no bureau limit) back on the desk; Clarendon reset automatically to £266,200; Analysys Mason improved (Experian £1,100,000); Benoy Creditsafe limit halved to £1,250,000 (information only); Eckoh Limited (parent of Eckoh UK) added for information; owed £1,031,342, overdue £448,042 (Tilbury Douglas paid £76,086); QPR renewal proposal raised to £104,424 | Claude | Done 21 Oct 2026 |
