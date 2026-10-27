@@ -4,10 +4,11 @@ Kept current by Claude every turn. Newest state wins.
 
 ## Your actions (now)
 
-0. **Reconnect Microsoft 365 (since 22 Oct, urgent; still signed out 26 Oct)**: the connector was not connected for the 22, 23
-   and 26 Oct runs, so bureau alert emails since 21 Oct and the ARR file were not read. Go to https://claude.ai/customize/connectors, click
-   "Microsoft 365" and then "Connect" (or "Reconnect"), and sign in with your work account. Done when it shows
-   as connected; the next morning's run then catches up automatically.
+0. **Restore the ARR file (27 Oct, urgent)**: "ARR Live.xlsx" in OneDrive (3 AW Filing > 10. Claude > Revenue
+   Forecasting) now shows as EMPTY (0 bytes), so the credit job cannot read ARR; it is still using the 21 Oct figures.
+   Open that folder in OneDrive in your browser, right-click "ARR Live.xlsx", choose "Version history", and click
+   "Restore" on the latest version that shows a normal size (about 3 MB). Done when the file opens with its data;
+   the next morning's run then loads it automatically. (Microsoft 365 is connected again: thank you.)
 0a. **Starlizard (26 Oct)**: three Palo Alto proposals went out 23 Oct in US dollars ($1,392,373 or $733,686 as
    alternatives, plus $279,271). The largest would put Starlizard over its £690,900 credit limit if signed, and its
    £79,320 licence invoice has been overdue since 4 Oct. Decide whether to raise the limit or ask for staged billing
@@ -15,7 +16,11 @@ Kept current by Claude every turn. Newest state wins.
 0b. **B3 Communications Ltd (13983075), new customer (23 Oct)**: signed our application form 21 Oct and a service desk
    proposal 22 Oct (about £1,108 a month). Look it up in Experian and Creditsafe and reply with each one's credit limit.
    Note: the bank account on its form is in the name of B3 Networks Ltd (17166950), a different company set up in April
-   2026; confirm which company we invoice before the first invoice.
+   2026; confirm which company we invoice. Update 27 Oct: the first two invoices went out 26 Oct (£2,659, numbered RD-,
+   so collected by Direct Debit) to the Xero contact "B3 Communications"; still no credit check.
+0c. **Hitachi Vantara (27 Oct)**: Experian alerts show it is a customer we invoice (46 invoices since 2024, last June
+   2026; two UPS quotes of £882 open) but it has no customer credit record, only "for information" monitoring. Experian
+   cut its Credit Limit from £1,800,000 to £1,600,000. Reply "set up Hitachi as a customer" or "monitor only".
 1. **Share the Customer Credit Register** (https://claude.ai/artifact/L91Dh8ny3uAZ96Jw9ybEft) with colleagues from its
    Share menu, as view-only.
 2. **Creditsafe**: Sam passed us to Dan James (integration specialist), 6 Oct 2026. Reply-all to Dan with the five
@@ -54,6 +59,7 @@ Kept current by Claude every turn. Newest state wins.
 
 | Item | Owner | Status |
 |---|---|---|
+| Daily run 27 Oct (COMPLETED except ARR): Microsoft 365 back; 6 alerts since 21 Oct loaded; Hitachi Vantara, Passion Pictures, Displaydata added for information; ARR Live.xlsx empty (0 bytes) so ARR not refreshed; owed £506,311 (down £108,519): Rascal £62,827, Metropolitan Gaming £26,699 and IFS £21,795 paid; Metropolitan Gaming £295,734 extension left PandaDoc unsigned | Claude | Done 27 Oct 2026 |
 | Daily run 26 Oct (PARTLY COMPLETED): Microsoft 365 still signed out (alerts and ARR file not read); owed £614,830 (down £214,338 since 23 Oct), Stopford paid its overdue £2,820; Starlizard sent US-dollar Palo Alto proposals (largest $1,392,373) that would exceed its £690,900 limit if signed | Claude | Done 26 Oct 2026 |
 | Pipeline treats US-dollar PandaDoc proposals as pounds and counts alternative quotes twice (Starlizard 23 Oct): convert currency and group alternatives | Claude (development session) | Open |
 | Daily run 23 Oct (PARTLY COMPLETED): Microsoft 365 still signed out (alerts and ARR file not read); owed £829,168, overdue £231,338; QPR revised CSP renewal fully signed 22 Oct (about £47,500 a year from 13 Nov); new customer B3 Communications Ltd added for information (no credit check yet; bank account in the name of B3 Networks Ltd) | Claude | Done 23 Oct 2026 |
@@ -61,7 +67,7 @@ Kept current by Claude every turn. Newest state wins.
 | Daily run 21 Oct: ARR file changed (Metropolitan Gaming down £98,888 to £164,883 a year); Metropolitan Gaming (needs £63,000, Creditsafe only £5,000) and Stopford (needs £7,400, no bureau limit) back on the desk; Clarendon reset automatically to £266,200; Analysys Mason improved (Experian £1,100,000); Benoy Creditsafe limit halved to £1,250,000 (information only); Eckoh Limited (parent of Eckoh UK) added for information; owed £1,031,342, overdue £448,042 (Tilbury Douglas paid £76,086); QPR renewal proposal raised to £104,424 | Claude | Done 21 Oct 2026 |
 | Daily run 20 Oct: Experian alert of 2 companies (Cyber Media Solutions, Chester Zoo Enterprises: Xero contacts with no invoices since 2024, added for information); no limits changed; ARR file unchanged; Cardano paid about £97,300; owed £1,108,617, overdue £522,676; new proposals Tilbury Douglas laptops £59,063 and Branston £10,158; Starlizard Nutanix quote £207,809 expired; Xero still refuses alert copies for Sunspel and Weil Gotshal | Claude | Done 20 Oct 2026 |
 | Daily run 19 Oct: Experian alert of 10 companies (QPR and Tinopolis to the desk; Everywoman cut to £23,000, score 37; Sunspel and Dayla cut but within need); Kynetec and Sinclair Pharmaceuticals added for information; Creditsafe: Weil Gotshal up to £10.4m; owed £1,218,586, overdue £525,826; Metropolitan Gaming 36-month agreement (£241,552) lapsed unsigned 16 Oct | Claude | Done 19 Oct 2026 |
-| Xero refuses more attachments for Weil Gotshal and Sunspel (most likely Xero's 10-files-per-contact limit): alert copies not filed in Xero from 19 Oct (still kept in the database). Fix: file one rolling evidence file per customer, or stop filing alert copies in Xero | Claude (development session) | Open |
+| Xero refuses more attachments for Weil Gotshal, Sunspel and (from 27 Oct) Analysys Mason (most likely Xero's 10-files-per-contact limit): alert copies not filed in Xero from 19 Oct (still kept in the database). Fix: file one rolling evidence file per customer, or stop filing alert copies in Xero | Claude (development session) | Open |
 | Daily run 16 Oct: Experian alert (Alpha Schools (Holdings) added for information, same group as AS Holdco); Creditsafe alert: Cardano and Now:Pensions ultimate parent changed; McGill limit auto-raised to £140,100 on May figures (provisional); ARR no change over £50,000; owed £1,217,069, overdue £528,316 (Clarendon paid £7,540); Pragmatic revised £618,863 proposal sent 15 Oct | Claude | Done 16 Oct 2026 |
 | Pragmatic Semiconductor: limit £24,000 due for review 19 Oct while a £618,863 proposal (30 months at £9,587 a month) is out; if signed, the need rises far above the limit | CFO at review, then Claude | Open |
 | Code fix now urgent: old bureau figures must stop counting after a company-number change (McGill limit raised on old-company figures 16 Oct) | Claude (development session) | Open |
