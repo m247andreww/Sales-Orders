@@ -4,7 +4,7 @@ Kept current by Claude every turn. Newest state wins.
 
 ## Your actions (now)
 
-0. **Restore the ARR file (27 Oct, urgent)**: "ARR Live.xlsx" in OneDrive (3 AW Filing > 10. Claude > Revenue
+0. **Restore the ARR file (since 27 Oct, urgent; still empty 28 Oct)**: "ARR Live.xlsx" in OneDrive (3 AW Filing > 10. Claude > Revenue
    Forecasting) now shows as EMPTY (0 bytes), so the credit job cannot read ARR; it is still using the 21 Oct figures.
    Open that folder in OneDrive in your browser, right-click "ARR Live.xlsx", choose "Version history", and click
    "Restore" on the latest version that shows a normal size (about 3 MB). Done when the file opens with its data;
@@ -21,6 +21,12 @@ Kept current by Claude every turn. Newest state wins.
 0c. **Hitachi Vantara (27 Oct)**: Experian alerts show it is a customer we invoice (46 invoices since 2024, last June
    2026; two UPS quotes of £882 open) but it has no customer credit record, only "for information" monitoring. Experian
    cut its Credit Limit from £1,800,000 to £1,600,000. Reply "set up Hitachi as a customer" or "monitor only".
+0d. **Watford FC (28 Oct)**: a Service Desk proposal went out 27 Oct: about £79,600 for 12 months (£6,161 a month plus
+   £5,694 set-up), or up to £342,500 over 60 months. Its credit limit is £22,800 and it already owes £9,455 (£4,727
+   overdue since 25 Sep). Decide before it signs: raise the limit (with bureau figures), or ask for monthly Direct Debit.
+0e. **Interserve Group Limited (in liquidation) (28 Oct)**: a £6,486 "IGL Tenancy" invoice went to it, care of PwC,
+   on 26 Oct. Check the liquidator agreed to pay it as a cost of the liquidation; otherwise it ranks with the old
+   £73,262 debt.
 1. **Share the Customer Credit Register** (https://claude.ai/artifact/L91Dh8ny3uAZ96Jw9ybEft) with colleagues from its
    Share menu, as view-only.
 2. **Creditsafe**: Sam passed us to Dan James (integration specialist), 6 Oct 2026. Reply-all to Dan with the five
@@ -59,9 +65,10 @@ Kept current by Claude every turn. Newest state wins.
 
 | Item | Owner | Status |
 |---|---|---|
+| Daily run 28 Oct (COMPLETED except ARR): no new alerts; ARR Live.xlsx still empty; owed £512,797 (up £6,486: new invoice to Interserve Group Limited in liquidation); Watford FC Service Desk proposal (about £79,600 a year) far above its £22,800 limit; Fuelsoft signed £912 a month Veeam licence | Claude | Done 28 Oct 2026 |
 | Daily run 27 Oct (COMPLETED except ARR): Microsoft 365 back; 6 alerts since 21 Oct loaded; Hitachi Vantara, Passion Pictures, Displaydata added for information; ARR Live.xlsx empty (0 bytes) so ARR not refreshed; owed £506,311 (down £108,519): Rascal £62,827, Metropolitan Gaming £26,699 and IFS £21,795 paid; Metropolitan Gaming £295,734 extension left PandaDoc unsigned | Claude | Done 27 Oct 2026 |
 | Daily run 26 Oct (PARTLY COMPLETED): Microsoft 365 still signed out (alerts and ARR file not read); owed £614,830 (down £214,338 since 23 Oct), Stopford paid its overdue £2,820; Starlizard sent US-dollar Palo Alto proposals (largest $1,392,373) that would exceed its £690,900 limit if signed | Claude | Done 26 Oct 2026 |
-| Pipeline treats US-dollar PandaDoc proposals as pounds and counts alternative quotes twice (Starlizard 23 Oct): convert currency and group alternatives | Claude (development session) | Open |
+| Pipeline treats US-dollar PandaDoc proposals as pounds and counts alternative quotes and optional contract lengths in the total (Starlizard 23 Oct; Watford FC 28 Oct shows £203,855 instead of about £79,600): convert currency, group alternatives, exclude unselected optional lines | Claude (development session) | Open |
 | Daily run 23 Oct (PARTLY COMPLETED): Microsoft 365 still signed out (alerts and ARR file not read); owed £829,168, overdue £231,338; QPR revised CSP renewal fully signed 22 Oct (about £47,500 a year from 13 Nov); new customer B3 Communications Ltd added for information (no credit check yet; bank account in the name of B3 Networks Ltd) | Claude | Done 23 Oct 2026 |
 | Daily run 22 Oct (PARTLY COMPLETED): Microsoft 365 not connected, so alert emails and ARR file not read (catch-up next run); Princes Group paid £216,704; owed £814,638, overdue £231,338; QPR signed the CSP renewal on 21 Oct (our countersignature pending) and a revised £94,953 version was also sent | Claude | Done 22 Oct 2026 |
 | Daily run 21 Oct: ARR file changed (Metropolitan Gaming down £98,888 to £164,883 a year); Metropolitan Gaming (needs £63,000, Creditsafe only £5,000) and Stopford (needs £7,400, no bureau limit) back on the desk; Clarendon reset automatically to £266,200; Analysys Mason improved (Experian £1,100,000); Benoy Creditsafe limit halved to £1,250,000 (information only); Eckoh Limited (parent of Eckoh UK) added for information; owed £1,031,342, overdue £448,042 (Tilbury Douglas paid £76,086); QPR renewal proposal raised to £104,424 | Claude | Done 21 Oct 2026 |
