@@ -4,7 +4,7 @@ Kept current by Claude every turn. Newest state wins.
 
 ## Your actions (now)
 
-0. **Restore the ARR file (since 27 Oct, urgent; still empty 28 Oct)**: "ARR Live.xlsx" in OneDrive (3 AW Filing > 10. Claude > Revenue
+0. **Restore the ARR file (since 27 Oct, urgent; still empty 29 Oct)**: "ARR Live.xlsx" in OneDrive (3 AW Filing > 10. Claude > Revenue
    Forecasting) now shows as EMPTY (0 bytes), so the credit job cannot read ARR; it is still using the 21 Oct figures.
    Open that folder in OneDrive in your browser, right-click "ARR Live.xlsx", choose "Version history", and click
    "Restore" on the latest version that shows a normal size (about 3 MB). Done when the file opens with its data;
@@ -24,9 +24,9 @@ Kept current by Claude every turn. Newest state wins.
 0d. **Watford FC (28 Oct)**: a Service Desk proposal went out 27 Oct: about £79,600 for 12 months (£6,161 a month plus
    £5,694 set-up), or up to £342,500 over 60 months. Its credit limit is £22,800 and it already owes £9,455 (£4,727
    overdue since 25 Sep). Decide before it signs: raise the limit (with bureau figures), or ask for monthly Direct Debit.
-0e. **Interserve Group Limited (in liquidation) (28 Oct)**: a £6,486 "IGL Tenancy" invoice went to it, care of PwC,
-   on 26 Oct. Check the liquidator agreed to pay it as a cost of the liquidation; otherwise it ranks with the old
-   £73,262 debt.
+0e. **Sunspel and Everywoman over their limits (29 Oct)**: after October's invoices, Sunspel owes £51,533 against a
+   £50,700 limit (more proposals open, largest £30,329), and Everywoman owes £10,583 against £7,500 with £4,459 overdue
+   since 25 Aug. Decide on the Credit Desk: raise the limit, or hold new orders until paid down.
 1. **Share the Customer Credit Register** (https://claude.ai/artifact/L91Dh8ny3uAZ96Jw9ybEft) with colleagues from its
    Share menu, as view-only.
 2. **Creditsafe**: Sam passed us to Dan James (integration specialist), 6 Oct 2026. Reply-all to Dan with the five
@@ -65,6 +65,7 @@ Kept current by Claude every turn. Newest state wins.
 
 | Item | Owner | Status |
 |---|---|---|
+| Daily run 29 Oct (COMPLETED except ARR): ARR Live.xlsx still empty; October monthly invoices posted, owed £745,895; Sunspel and Everywoman over limit; Sunspel paid £14,953 overdue; Interserve liquidation invoice (£6,486) gone from Xero; Experian raised Dayla Drinks to £1,200,000 | Claude | Done 29 Oct 2026 |
 | Daily run 28 Oct (COMPLETED except ARR): no new alerts; ARR Live.xlsx still empty; owed £512,797 (up £6,486: new invoice to Interserve Group Limited in liquidation); Watford FC Service Desk proposal (about £79,600 a year) far above its £22,800 limit; Fuelsoft signed £912 a month Veeam licence | Claude | Done 28 Oct 2026 |
 | Daily run 27 Oct (COMPLETED except ARR): Microsoft 365 back; 6 alerts since 21 Oct loaded; Hitachi Vantara, Passion Pictures, Displaydata added for information; ARR Live.xlsx empty (0 bytes) so ARR not refreshed; owed £506,311 (down £108,519): Rascal £62,827, Metropolitan Gaming £26,699 and IFS £21,795 paid; Metropolitan Gaming £295,734 extension left PandaDoc unsigned | Claude | Done 27 Oct 2026 |
 | Daily run 26 Oct (PARTLY COMPLETED): Microsoft 365 still signed out (alerts and ARR file not read); owed £614,830 (down £214,338 since 23 Oct), Stopford paid its overdue £2,820; Starlizard sent US-dollar Palo Alto proposals (largest $1,392,373) that would exceed its £690,900 limit if signed | Claude | Done 26 Oct 2026 |
